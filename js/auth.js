@@ -5,8 +5,8 @@
 
 // ⚠️ REEMPLAZA con tus credenciales reales de Supabase
 // Panel: https://app.supabase.com → Settings → API
-const SB_URL = 'https://TU_PROYECTO.supabase.co';
-const SB_KEY = 'TU_ANON_PUBLIC_KEY';
+const SB_URL = 'https://flsixfuzvbapwnfepmwr.supabase.co';
+const SB_KEY = 'sb_publishable_zf5bkvNdhlr1AJQNrd8vcA_aCIe2NDH';
 
 const DEMO = SB_URL.includes('TU_PROYECTO');
 let sb = null;
