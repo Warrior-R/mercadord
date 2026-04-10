@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MercadoRD — Compra y Vende en República Dominicana</title>
+<meta name="description" content="El marketplace #1 de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#003087;--primary-light:#0a4ab8;--accent:#e43e2b;--accent2:#f5a623;
+  --bg:#f4f6f9;--card:#fff;--text:#1a1a2e;--text2:#555;--border:#dde3ee;
+  --green:#0a8a4a;--red:#c62828;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+/* HEADER */
+.header{background:var(--primary);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.header-top{display:flex;align-items:center;gap:12px;padding:10px 20px}
+.logo{font-size:24px;font-weight:700;color:#fff;letter-spacing:-.5px;white-space:nowrap;cursor:pointer}
+.logo span{color:var(--accent2)}
+.search-bar{flex:1;display:flex;max-width:620px}
+.search-bar input{flex:1;padding:10px 16px;border:none;border-radius:6px 0 0 6px;font-size:14px;font-family:'Sora',sans-serif;outline:none}
+.search-bar button{padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:0 6px 6px 0;cursor:pointer;font-weight:600;font-size:14px;font-family:'Sora',sans-serif}
+.header-icons{display:flex;gap:8px;align-items:center;margin-left:auto}
+.hbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap;font-family:'Sora',sans-serif;transition:background .2s}
+.hbtn:hover{background:rgba(255,255,255,.28)}
+.cart-badge{background:var(--accent);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;font-weight:700}
+.nav{background:var(--primary-light);display:flex;overflow-x:auto;padding:0 12px;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-item{color:rgba(255,255,255,.85);padding:9px 16px;font-size:13px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;font-weight:500}
+.nav-item:hover,.nav-item.active{color:#fff;border-bottom-color:var(--accent2)}
+
+/* BANNER */
+.banner{background:linear-gradient(135deg,#003087 0%,#0a4ab8 55%,#1565c0 100%);padding:36px 24px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.banner::before{content:'';position:absolute;right:-80px;top:-80px;width:280px;height:280px;background:rgba(255,255,255,.05);border-radius:50%}
+.banner::after{content:'';position:absolute;left:-50px;bottom:-50px;width:200px;height:200px;background:rgba(255,255,255,.05);border-radius:50%}
+.banner h1{font-size:28px;font-weight:700;margin-bottom:10px;position:relative;z-index:1}
+.banner p{font-size:15px;opacity:.85;margin-bottom:20px;position:relative;z-index:1}
+.banner-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+.bbtn{padding:12px 26px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;border:none;font-family:'Sora',sans-serif}
+.bbtn-main{background:var(--accent2);color:#1a1a2e}
+.bbtn-sec{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)}
+.banner-stats{display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap;position:relative;z-index:1}
+.bstat-num{font-size:20px;font-weight:700;color:var(--accent2)}
+.bstat-label{font-size:11px;opacity:.75}
+
+/* LAYOUT */
+.main{display:flex;gap:18px;padding:20px;max-width:1280px;margin:0 auto}
+.sidebar{width:210px;flex-shrink:0}
+.content{flex:1;min-width:0}
+
+/* SIDEBAR */
+.scard{background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
+.scard-title{padding:10px 14px;font-size:13px;font-weight:600;background:#f0f3f8;border-bottom:1px solid var(--border);color:var(--primary)}
+.scard-body{padding:6px 0}
+.scat{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text2);transition:all .2s}
+.scat:hover,.scat.active{background:#f0f3f8;color:var(--primary);font-weight:500}
+.scat-icon{font-size:16px;width:20px;text-align:center}
+.filter-row{padding:10px 14px}
+.filter-row label{font-size:12px;color:var(--text2);display:block;margin-bottom:5px}
+.filter-row input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
+.fprice{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:3px}
+
+/* TABS & PRODUCTS */
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--card);border-radius:8px;padding:4px;border:1px solid var(--border)}
+.tab{padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;color:var(--text2);transition:all .2s;border:none;background:none;font-family:'Sora',sans-serif}
+.tab.active{background:var(--primary);color:#fff}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:16px;font-weight:700}
+.sort-select{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;background:#fff;font-family:'Sora',sans-serif;cursor:pointer}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.product-card{background:var(--card);border-radius:10px;border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.product-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,48,135,.12)}
+.product-img{height:160px;display:flex;align-items:center;justify-content:center;font-size:58px;background:#f8f9fc;position:relative}
+.badge{position:absolute;top:8px;left:8px;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:700}
+.badge-new{background:#e8f5e9;color:#2e7d32}
+.badge-hot{background:#fce4ec;color:#c62828}
+.badge-deal{background:#fff3e0;color:#e65100}
+.fav-btn{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer}
+.product-info{padding:12px}
+.product-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;line-height:1.4;height:38px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.product-seller{font-size:11px;color:var(--text2);margin-bottom:8px}
+.product-price{font-size:18px;font-weight:700;color:var(--accent)}
+.product-price-old{font-size:11px;color:var(--text2);text-decoration:line-through;margin-left:6px}
+.product-discount{font-size:11px;color:var(--green);font-weight:600;margin-left:4px}
+.product-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.rating{font-size:11px;color:var(--accent2)}
+.add-cart{padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Sora',sans-serif}
+
+/* AUCTION */
+.auction-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:16px;margin-bottom:12px;cursor:pointer;transition:box-shadow .2s}
+.auction-card:hover{box-shadow:0 6px 20px rgba(0,48,135,.1)}
+.auction-img{width:88px;height:88px;border-radius:8px;background:#f8f9fc;display:flex;align-items:center;justify-content:center;font-size:44px;flex-shrink:0}
+.auction-info{flex:1;min-width:0}
+.auction-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.auction-meta{font-size:12px;color:var(--text2);margin-bottom:6px}
+.auction-bids{font-size:12px;color:var(--green);font-weight:500}
+.auction-price-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.auction-price{font-size:20px;font-weight:700;color:var(--accent)}
+.bid-btn{padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif}
+
+/* DETAIL */
+.detail-panel{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:22px;margin-bottom:16px}
+.back-btn{background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:500;font-family:'Sora',sans-serif;margin-bottom:14px;display:flex;align-items:center;gap:4px}
+.detail-img-area{height:240px;background:#f8f9fc;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:100px;margin-bottom:18px}
+.detail-title{font-size:20px;font-weight:700;margin-bottom:8px}
+.detail-price{font-size:30px;font-weight:700;color:var(--accent)}
+.detail-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin:12px 0}
+.detail-meta span{background:#f0f3f8;padding:5px 12px;border-radius:20px}
+.detail-desc{font-size:13px;color:var(--text2);line-height:1.7;padding:14px;background:#f8f9fc;border-radius:8px;margin:12px 0}
+.detail-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn-buy{padding:13px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;flex:1;font-family:'Sora',sans-serif}
+.btn-cart2{padding:13px 24px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;flex:1;font-family:'Sora',sans-serif}
+.btn-fav2{padding:13px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:20px;cursor:pointer}
+.seller-card{background:#f8f9fc;border-radius:8px;padding:14px;display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.seller-avatar{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0}
+
+/* CART */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:flex-end}
+.cart-panel{background:#fff;width:360px;height:100vh;overflow-y:auto;padding:22px;display:flex;flex-direction:column}
+.cart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.cart-header h3{font-size:18px;font-weight:700}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2)}
+.cart-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.cart-item-img{width:60px;height:60px;border-radius:8px;background:#f8f9fc;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0}
+.cart-item-info{flex:1;min-width:0}
+.cart-item-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cart-qty{display:flex;align-items:center;gap:8px;margin-top:6px}
+.qty-btn{width:24px;height:24px;border:1px solid var(--border);background:none;cursor:pointer;border-radius:4px;font-size:16px;display:flex;align-items:center;justify-content:center}
+.qty-num{font-size:13px;font-weight:600;min-width:20px;text-align:center}
+.remove-item{font-size:11px;color:var(--accent);cursor:pointer;margin-left:8px}
+.cart-item-total{font-size:15px;font-weight:700;color:var(--accent);align-self:center;flex-shrink:0}
+.cart-total-section{margin-top:auto;padding-top:18px;border-top:1px solid var(--border)}
+.total-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px}
+.total-row.final{font-weight:700;font-size:17px;color:var(--primary);padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
+.checkout-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;font-family:'Sora',sans-serif}
+.payment-icons{display:flex;gap:8px;justify-content:center;margin-top:12px;font-size:11px;color:var(--text2)}
+
+/* ═══ AUTH MODAL ═══ */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}
+.auth-box{background:#fff;border-radius:16px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:95vh;overflow-y:auto}
+.auth-header{background:var(--primary);padding:22px;text-align:center;color:#fff;position:relative}
+.auth-logo{font-size:22px;font-weight:700;margin-bottom:3px}
+.auth-logo span{color:var(--accent2)}
+.auth-subtitle{font-size:13px;opacity:.8}
+.auth-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(255,255,255,.7);line-height:1}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border)}
+.auth-tab{flex:1;padding:13px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);border:none;border-bottom:2px solid transparent;background:none;font-family:'Sora',sans-serif;transition:all .2s}
+.auth-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.auth-body{padding:22px}
+.auth-step{display:none}
+.auth-step.active{display:block}
+.fg{margin-bottom:15px}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Sora',sans-serif;outline:none;transition:border .2s;background:#fff;color:var(--text)}
+.fg input:focus,.fg select:focus{border-color:var(--primary)}
+.fg input.err{border-color:var(--red)}
+.ferr{font-size:11px;color:var(--red);margin-top:4px;display:none}
+.ferr.show{display:block}
+.iicon{position:relative}
+.iicon input{padding-right:42px}
+.iicon .eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;cursor:pointer;color:var(--text2)}
+.pwd-bar{height:4px;border-radius:2px;background:#eee;overflow:hidden;margin:5px 0 3px}
+.pwd-fill{height:100%;border-radius:2px;width:0;transition:width .3s,background .3s}
+.pwd-lbl{font-size:11px;color:var(--text2)}
+.phone-row{display:flex;gap:8px}
+.phone-row select{padding:11px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Sora',sans-serif;background:#fff}
+.otp-row{display:flex;gap:8px;justify-content:center;margin:10px 0}
+.otp-d{width:46px;height:52px;border:1.5px solid var(--border);border-radius:8px;font-size:22px;font-weight:700;text-align:center;font-family:'Sora',sans-serif;outline:none;transition:border .2s}
+.otp-d:focus{border-color:var(--primary)}
+.auth-btn{width:100%;padding:13px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;transition:all .2s}
+.btn-pri{background:var(--primary);color:#fff}
+.btn-pri:hover{background:var(--primary-light)}
+.btn-pri:disabled{background:#99a;cursor:not-allowed}
+.btn-goog{background:#fff;color:var(--text);border:1.5px solid var(--border);margin-bottom:10px}
+.btn-goog:hover{background:#f5f5f5}
+.btn-sms{background:#25D366;color:#fff;margin-bottom:10px}
+.divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--text2);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.alink{color:var(--primary);cursor:pointer;font-weight:500;font-size:13px}
+.alink:hover{text-decoration:underline}
+.auth-alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:13px;display:none}
+.auth-alert.show{display:block}
+.auth-alert.ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+.auth-alert.fail{background:#ffebee;color:var(--red);border:1px solid #ef9a9a}
+.auth-alert.info{background:#e3f2fd;color:#1565c0;border:1px solid #90caf9}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.step-dots{display:flex;gap:6px;justify-content:center;margin-bottom:18px}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s}
+.sdot.active{background:var(--primary);width:22px;border-radius:4px}
+.sdot.done{background:var(--green)}
+.vc{display:flex;flex-direction:column;align-items:center;padding:16px;text-align:center}
+.vc-icon{font-size:48px;margin-bottom:10px}
+.vc-title{font-size:17px;font-weight:700;margin-bottom:5px}
+.vc-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.resend-t{font-size:12px;color:var(--text2);text-align:center;margin-top:8px}
+.cedula-warn{background:#fff3e0;border:1px solid #ffcc02;border-radius:8px;padding:10px 12px;font-size:12px;color:#795548;margin-bottom:12px}
+.trust-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.tbadge{display:flex;align-items:center;gap:4px;background:#f0f3f8;padding:5px 9px;border-radius:20px;font-size:11px;color:var(--text2)}
+.user-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer}
+.uav{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.vtick{color:#4CAF50;font-size:11px;margin-left:2px}
+
+/* SELL */
+.sell-form{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:22px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.fg2{margin-bottom:0}
+.fg2 label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.fg2 input,.fg2 select,.fg2 textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Sora',sans-serif;outline:none;background:#fff;color:var(--text)}
+.fg2 textarea{height:90px;resize:vertical}
+.photo-area{border:2px dashed var(--border);border-radius:8px;padding:26px;text-align:center;color:var(--text2);cursor:pointer;margin-bottom:16px}
+.photo-area:hover{border-color:var(--primary);background:#f0f3f8}
+.submit-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif}
+
+/* ACCOUNT */
+.account-panel{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:22px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-box{background:#f8f9fc;border-radius:8px;padding:14px;text-align:center;cursor:pointer}
+.stat-box:hover{background:#f0f3f8}
+.menu-list{border-top:1px solid var(--border);padding-top:14px}
+.menu-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.menu-item:hover{color:var(--primary)}
+.menu-item-left{display:flex;align-items:center;gap:10px;font-size:14px}
+
+/* TOAST & MISC */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a2e;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;z-index:400;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.no-results{text-align:center;padding:60px 20px;color:var(--text2)}
+.no-results div{font-size:50px;margin-bottom:14px}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);z-index:100}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;font-size:10px;color:var(--text2);cursor:pointer;gap:2px;border:none;background:none;font-family:'Sora',sans-serif}
+.bnav-item.active,.bnav-item:hover{color:var(--primary)}
+.bnav-icon{font-size:20px}
+
+@media(max-width:900px){.form-grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .sidebar{display:none}.main{padding:12px;gap:0}.bottom-nav{display:flex}
+  .products-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  body{padding-bottom:65px}.cart-panel{width:100vw}.banner h1{font-size:22px}
+  .header-top{padding:8px 12px;gap:8px}.hbtn{padding:6px 10px;font-size:11px}
+}
+
+/* ═══════════════ FOOTER ═══════════════ */
+.footer{background:#0d1b3e;color:#c8d4e8;margin-top:40px}
+.footer-newsletter{background:linear-gradient(90deg,#003087,#0a4ab8);padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.footer-newsletter-text h3{color:#fff;font-size:17px;font-weight:700;margin-bottom:4px}
+.footer-newsletter-text p{font-size:13px;opacity:.8}
+.newsletter-form{display:flex;gap:0;max-width:380px;width:100%}
+.newsletter-form input{flex:1;padding:11px 16px;border:none;border-radius:6px 0 0 6px;font-size:13px;font-family:'Sora',sans-serif;outline:none;background:#fff}
+.newsletter-form button{padding:11px 20px;background:var(--accent2);border:none;border-radius:0 6px 6px 0;font-weight:700;font-size:13px;cursor:pointer;color:#1a1a2e;font-family:'Sora',sans-serif;white-space:nowrap}
+.footer-main{padding:40px 32px 28px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:32px;max-width:1280px;margin:0 auto}
+.footer-brand .footer-logo{font-size:26px;font-weight:700;color:#fff;margin-bottom:10px}
+.footer-brand .footer-logo span{color:var(--accent2)}
+.footer-brand p{font-size:13px;line-height:1.7;color:#93a8c6;margin-bottom:18px}
+.footer-trust{display:flex;flex-direction:column;gap:8px}
+.ftrust-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#7a9ac0}
+.ftrust-item span:first-child{font-size:16px}
+.footer-col h4{color:#fff;font-size:13px;font-weight:700;margin-bottom:14px;letter-spacing:.5px;text-transform:uppercase}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.footer-col ul li a{font-size:13px;color:#93a8c6;text-decoration:none;transition:color .2s;cursor:pointer;display:flex;align-items:center;gap:6px}
+.footer-col ul li a:hover{color:#fff}
+.footer-col ul li a .flink-icon{font-size:13px;opacity:.7}
+.footer-badge-link{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:7px 12px;font-size:12px;color:#c8d4e8;text-decoration:none;transition:all .2s;cursor:pointer;margin-bottom:8px;width:100%}
+.footer-badge-link:hover{background:rgba(255,255,255,.15);color:#fff}
+.footer-badge-link .fbl-icon{font-size:18px}
+.footer-socials{margin-top:4px}
+.footer-socials h4{color:#fff;font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.social-row{display:flex;gap:10px;flex-wrap:wrap}
+.social-btn{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;text-decoration:none;transition:transform .2s,opacity .2s;border:none}
+.social-btn:hover{transform:translateY(-2px);opacity:.85}
+.sb-fb{background:#1877F2}
+.sb-ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}
+.sb-tw{background:#000}
+.sb-yt{background:#FF0000}
+.sb-wa{background:#25D366}
+.sb-tk{background:#010101}
+.footer-divider{height:1px;background:rgba(255,255,255,.07);margin:0 32px}
+.footer-bottom{padding:20px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;max-width:1280px;margin:0 auto}
+.footer-bottom-left{font-size:12px;color:#5a7a9a;line-height:1.7}
+.footer-bottom-left strong{color:#7a9ac0}
+.footer-legal{display:flex;gap:0;flex-wrap:wrap}
+.footer-legal a{font-size:12px;color:#5a7a9a;text-decoration:none;padding:3px 12px;border-right:1px solid #1e3060;transition:color .2s;cursor:pointer}
+.footer-legal a:last-child{border-right:none}
+.footer-legal a:hover{color:#fff}
+.footer-payments{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fpay{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:4px 10px;font-size:11px;color:#7a9ac0;font-weight:600}
+.footer-country{display:flex;align-items:center;gap:6px;font-size:12px;color:#5a7a9a;margin-top:8px}
+.footer-apps{display:flex;gap:8px;margin-top:6px}
+.app-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:7px 12px;font-size:11px;color:#c8d4e8;cursor:pointer;transition:background .2s;text-decoration:none}
+.app-btn:hover{background:rgba(255,255,255,.15)}
+.app-btn .app-icon{font-size:18px}
+
+@media(max-width:960px){.footer-main{grid-template-columns:1fr 1fr 1fr;gap:24px}}
+@media(max-width:640px){
+  .footer-main{grid-template-columns:1fr 1fr;gap:20px;padding:28px 20px 20px}
+  .footer-newsletter{padding:20px;flex-direction:column}
+  .newsletter-form{max-width:100%}
+  .footer-bottom{flex-direction:column;align-items:flex-start;padding:16px 20px}
+  .footer-legal{gap:0}
+  .footer-divider{margin:0 20px}
+}
+</style>
+</head>
+<body>
+<h2 class="sr-only">MercadoRD — Marketplace con autenticación segura Supabase para República Dominicana.</h2>
+
+<!-- ═══════════════════════════ AUTH MODAL ═══════════════════════════ -->
+<div class="auth-overlay" id="authOverlay" style="display:none">
+ <div class="auth-box">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="closeAuth()">✕</button>
+   <div class="auth-logo">Mercado<span>RD</span></div>
+   <div class="auth-subtitle">Marketplace seguro de República Dominicana 🇩🇴</div>
+  </div>
+  <div class="auth-tabs">
+   <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Iniciar sesión</button>
+   <button class="auth-tab" id="tabReg" onclick="switchTab('register')">Crear cuenta</button>
+  </div>
+  <div class="auth-body">
+   <div class="auth-alert" id="authAlert"></div>
+
+   <!-- ── LOGIN ── -->
+   <div id="loginFlow">
+    <div class="auth-step active" id="ls1">
+     <button class="auth-btn btn-goog" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" style="vertical-align:middle;margin-right:8px">Continuar con Google
+     </button>
+     <button class="auth-btn btn-sms" onclick="switchTab('register');gotoStep('r',2)">📱 Continuar con teléfono</button>
+     <div class="divider">o con tu email</div>
+     <div class="fg"><label>Correo electrónico</label><input type="email" id="lEmail" placeholder="tu@email.com"><div class="ferr" id="lEmailE"></div></div>
+     <div class="fg"><label>Contraseña</label>
+      <div class="iicon"><input type="password" id="lPwd" placeholder="••••••••"><span class="eye" onclick="toggleEye('lPwd',this)">👁</span></div>
+      <div class="ferr" id="lPwdE"></div>
+     </div>
+     <div style="text-align:right;margin:-6px 0 14px"><span class="alink" onclick="gotoStep('l',3)">¿Olvidaste tu contraseña?</span></div>
+     <button class="auth-btn btn-pri" id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
+     <div class="trust-row">
+      <div class="tbadge">🔒 SSL 256-bit</div>
+      <div class="tbadge">🛡 Anti-fraude</div>
+      <div class="tbadge">✅ Datos cifrados</div>
+      <div class="tbadge">🔐 2FA disponible</div>
+     </div>
+    </div>
+    <div class="auth-step" id="ls2">
+     <div class="vc"><div class="vc-icon">🔐</div><div class="vc-title">Verificación en dos pasos</div><div class="vc-desc">Ingresa el código de 6 dígitos enviado a tu dispositivo.</div></div>
+     <div class="otp-row">
+      <input class="otp-d" maxlength="1" id="lo0" oninput="onext(this,1,'l')" onkeydown="oback(event,this,null,'l')">
+      <input class="otp-d" maxlength="1" id="lo1" oninput="onext(this,2,'l')" onkeydown="oback(event,this,0,'l')">
+      <input class="otp-d" maxlength="1" id="lo2" oninput="onext(this,3,'l')" onkeydown="oback(event,this,1,'l')">
+      <input class="otp-d" maxlength="1" id="lo3" oninput="onext(this,4,'l')" onkeydown="oback(event,this,2,'l')">
+      <input class="otp-d" maxlength="1" id="lo4" oninput="onext(this,5,'l')" onkeydown="oback(event,this,3,'l')">
+      <input class="otp-d" maxlength="1" id="lo5" oninput="onext(this,-1,'l')" onkeydown="oback(event,this,4,'l')">
+     </div>
+     <div class="resend-t" id="otpT">Reenviar en <span id="otpC">60</span>s</div>
+     <button class="auth-btn btn-pri" style="margin-top:14px" onclick="verify2fa()">Verificar código</button>
+    </div>
+    <div class="auth-step" id="ls3">
+     <div class="vc"><div class="vc-icon">📧</div><div class="vc-title">Recuperar contraseña</div><div class="vc-desc">Te enviaremos un enlace para restablecer tu contraseña.</div></div>
+     <div class="fg"><label>Correo electrónico</label><input type="email" id="resetE" placeholder="tu@email.com"></div>
+     <button class="auth-btn btn-pri" onclick="doReset()">Enviar enlace de recuperación</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('l',1)">← Volver</span></div>
+    </div>
+   </div>
+
+   <!-- ── REGISTER ── -->
+   <div id="registerFlow" style="display:none">
+    <div class="step-dots">
+     <div class="sdot active" id="sd1"></div>
+     <div class="sdot" id="sd2"></div>
+     <div class="sdot" id="sd3"></div>
+     <div class="sdot" id="sd4"></div>
+    </div>
+
+    <!-- Paso 1: Datos + contraseña -->
+    <div class="auth-step active" id="rs1">
+     <button class="auth-btn btn-goog" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" style="vertical-align:middle;margin-right:8px">Registrarse con Google
+     </button>
+     <div class="divider">o con formulario</div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg" style="margin-bottom:0"><label>Nombre</label><input type="text" id="rNom" placeholder="Juan"><div class="ferr" id="rNomE"></div></div>
+      <div class="fg" style="margin-bottom:0"><label>Apellido</label><input type="text" id="rApe" placeholder="Pérez"><div class="ferr" id="rApeE"></div></div>
+     </div>
+     <div class="fg" style="margin-top:12px"><label>Correo electrónico</label><input type="email" id="rEmail" placeholder="tu@email.com"><div class="ferr" id="rEmailE"></div></div>
+     <div class="fg"><label>Contraseña</label>
+      <div class="iicon"><input type="password" id="rPwd" placeholder="Mínimo 8 caracteres" oninput="pwdStrength(this.value)"><span class="eye" onclick="toggleEye('rPwd',this)">👁</span></div>
+      <div class="pwd-bar"><div class="pwd-fill" id="pwdF"></div></div>
+      <div class="pwd-lbl" id="pwdL">Ingresa una contraseña</div>
+      <div class="ferr" id="rPwdE"></div>
+     </div>
+     <div class="fg"><label>Confirmar contraseña</label>
+      <div class="iicon"><input type="password" id="rPwd2" placeholder="Repite tu contraseña"><span class="eye" onclick="toggleEye('rPwd2',this)">👁</span></div>
+      <div class="ferr" id="rPwd2E"></div>
+     </div>
+     <button class="auth-btn btn-pri" onclick="rs1next()">Continuar →</button>
+    </div>
+
+    <!-- Paso 2: Teléfono SMS -->
+    <div class="auth-step" id="rs2">
+     <div class="vc" style="padding:10px 0 16px">
+      <div class="vc-icon">📱</div>
+      <div class="vc-title">Verifica tu teléfono</div>
+      <div class="vc-desc">El código SMS previene cuentas falsas y protege a toda la comunidad.</div>
+     </div>
+     <div class="fg"><label>Número de teléfono</label>
+      <div class="phone-row">
+       <select id="phPfx">
+        <option value="+1809">🇩🇴 +1(809)</option>
+        <option value="+1829">🇩🇴 +1(829)</option>
+        <option value="+1849">🇩🇴 +1(849)</option>
+        <option value="+1">🇺🇸 +1</option>
+        <option value="+34">🇪🇸 +34</option>
+       </select>
+       <input type="tel" id="rPhone" placeholder="000-0000" style="flex:1">
+      </div>
+      <div class="ferr" id="rPhoneE"></div>
+     </div>
+     <button class="auth-btn btn-pri" id="smsBtnSend" onclick="sendSMS()">Enviar código SMS</button>
+     <div id="smsSection" style="display:none;margin-top:14px">
+      <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:10px">Código enviado a <strong id="phoneTo"></strong></div>
+      <div class="otp-row">
+       <input class="otp-d" maxlength="1" id="so0" oninput="onext(this,1,'s')" onkeydown="oback(event,this,null,'s')">
+       <input class="otp-d" maxlength="1" id="so1" oninput="onext(this,2,'s')" onkeydown="oback(event,this,0,'s')">
+       <input class="otp-d" maxlength="1" id="so2" oninput="onext(this,3,'s')" onkeydown="oback(event,this,1,'s')">
+       <input class="otp-d" maxlength="1" id="so3" oninput="onext(this,4,'s')" onkeydown="oback(event,this,2,'s')">
+       <input class="otp-d" maxlength="1" id="so4" oninput="onext(this,5,'s')" onkeydown="oback(event,this,3,'s')">
+       <input class="otp-d" maxlength="1" id="so5" oninput="onext(this,-1,'s')" onkeydown="oback(event,this,4,'s')">
+      </div>
+      <div class="resend-t" id="smsT">Reenviar en <span id="smsC">60</span>s</div>
+      <button class="auth-btn btn-pri" style="margin-top:10px" onclick="verifySMS()">Verificar código</button>
+     </div>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',1)">← Atrás</span></div>
+    </div>
+
+    <!-- Paso 3: Cédula / identidad -->
+    <div class="auth-step" id="rs3">
+     <div class="vc" style="padding:10px 0 14px">
+      <div class="vc-icon">🪪</div>
+      <div class="vc-title">Verificación de identidad</div>
+      <div class="vc-desc">Requerido para vender. Protege a los compradores de posibles estafas.</div>
+     </div>
+     <div class="cedula-warn">⚠️ Tus datos están cifrados con AES-256. MercadoRD no comparte tu cédula con terceros.</div>
+     <div class="fg"><label>Cédula de identidad</label><input type="text" id="rCed" placeholder="000-0000000-0" maxlength="13" oninput="fmtCed(this)"><div class="ferr" id="rCedE"></div></div>
+     <div class="fg"><label>Fecha de nacimiento</label><input type="date" id="rDob"><div class="ferr" id="rDobE"></div></div>
+     <div class="fg"><label>Provincia</label>
+      <select id="rProv" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Sora',sans-serif;background:#fff">
+       <option value="">Selecciona tu provincia</option>
+       <option>Distrito Nacional</option><option>Santo Domingo</option><option>Santiago</option>
+       <option>Puerto Plata</option><option>La Romana</option><option>San Cristóbal</option>
+       <option>San Pedro de Macorís</option><option>La Vega</option><option>La Altagracia</option><option>Otra</option>
+      </select>
+     </div>
+     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+      <input type="checkbox" id="rTerms" style="margin-top:3px;width:auto;flex-shrink:0">
+      <label for="rTerms" style="font-size:12px;color:var(--text2);cursor:pointer">
+       Acepto los <span class="alink">Términos de Uso</span>, la <span class="alink">Política de Privacidad</span> y las <span class="alink">Normas anti-fraude</span>.
+      </label>
+     </div>
+     <button class="auth-btn btn-pri" onclick="rs3next()">Continuar →</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',2)">← Atrás</span></div>
+    </div>
+
+    <!-- Paso 4: Confirmar y crear cuenta -->
+    <div class="auth-step" id="rs4">
+     <div class="vc">
+      <div class="vc-icon">✉️</div>
+      <div class="vc-title">¡Todo listo!</div>
+      <div class="vc-desc">Crearemos tu cuenta y enviaremos un correo de verificación a <strong id="emailTo"></strong>.</div>
+     </div>
+     <button class="auth-btn btn-pri" onclick="doCreateAccount()">Crear cuenta y verificar email</button>
+     <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="resendEmail()">Reenviar correo de verificación</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',3)">← Atrás</span></div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<div class="header">
+ <div class="header-top">
+  <div class="logo" onclick="goHome()">Mercado<span>RD</span></div>
+  <div class="search-bar">
+   <input type="text" placeholder="Buscar productos, marcas o vendedores..." id="searchInput" oninput="filterProducts()">
+   <button onclick="filterProducts()">Buscar</button>
+  </div>
+  <div class="header-icons">
+   <button class="hbtn" onclick="requireAuth('sell')">+ Vender</button>
+   <button class="hbtn" onclick="toggleCart()">🛒 Carrito <span class="cart-badge" id="cartCount">0</span></button>
+   <button class="hbtn" id="authBtn" onclick="openAuth()">👤 Ingresar</button>
+  </div>
+ </div>
+ <div class="nav">
+  <div class="nav-item active" onclick="setNav(this,'all')">🏪 Inicio</div>
+  <div class="nav-item" onclick="setNav(this,'electronics')">📱 Electrónica</div>
+  <div class="nav-item" onclick="setNav(this,'vehicles')">🚗 Vehículos</div>
+  <div class="nav-item" onclick="setNav(this,'fashion')">👗 Moda</div>
+  <div class="nav-item" onclick="setNav(this,'home2')">🏠 Hogar</div>
+  <div class="nav-item" onclick="setNav(this,'sports')">⚽ Deportes</div>
+  <div class="nav-item" onclick="setNav(this,'services')">🔧 Servicios</div>
+  <div class="nav-item" onclick="setNav(this,'agro')">🌿 Agropecuario</div>
+  <div class="nav-item" onclick="showView('auctions')" style="color:var(--accent2);font-weight:600">🔥 Subastas</div>
+ </div>
+</div>
+
+<!-- BANNER -->
+<div class="banner" id="heroBanner">
+ <div style="font-size:28px;margin-bottom:8px">🇩🇴</div>
+ <h1>Compra y vende en República Dominicana</h1>
+ <p>Millones de productos · Vendedores verificados · Envíos a todo el país</p>
+ <div class="banner-btns">
+  <button class="bbtn bbtn-main" onclick="requireAuth('sell')">Comenzar a vender gratis</button>
+  <button class="bbtn bbtn-sec" onclick="showView('auctions')">Ver subastas activas 🔥</button>
+ </div>
+ <div class="banner-stats">
+  <div class="bstat"><div class="bstat-num">+120K</div><div class="bstat-label">Productos activos</div></div>
+  <div class="bstat"><div class="bstat-num">+45K</div><div class="bstat-label">Vendedores verificados</div></div>
+  <div class="bstat"><div class="bstat-num">+800K</div><div class="bstat-label">Compradores</div></div>
+  <div class="bstat"><div class="bstat-num">32</div><div class="bstat-label">Provincias cubiertas</div></div>
+ </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainContent">
+ <div class="sidebar">
+  <div class="scard">
+   <div class="scard-title">Categorías</div>
+   <div class="scard-body">
+    <div class="scat active" onclick="filterCat('all',this)"><span class="scat-icon">🏪</span>Todas</div>
+    <div class="scat" onclick="filterCat('electronics',this)"><span class="scat-icon">📱</span>Electrónica</div>
+    <div class="scat" onclick="filterCat('vehicles',this)"><span class="scat-icon">🚗</span>Vehículos</div>
+    <div class="scat" onclick="filterCat('fashion',this)"><span class="scat-icon">👗</span>Moda</div>
+    <div class="scat" onclick="filterCat('home2',this)"><span class="scat-icon">🏠</span>Hogar</div>
+    <div class="scat" onclick="filterCat('sports',this)"><span class="scat-icon">⚽</span>Deportes</div>
+    <div class="scat" onclick="filterCat('services',this)"><span class="scat-icon">🔧</span>Servicios</div>
+    <div class="scat" onclick="filterCat('agro',this)"><span class="scat-icon">🌿</span>Agropecuario</div>
+   </div>
+  </div>
+  <div class="scard">
+   <div class="scard-title">Precio máximo (DOP)</div>
+   <div class="scard-body">
+    <div class="filter-row">
+     <label>Máximo: <strong id="priceOut">RD$200,000</strong></label>
+     <input type="range" min="500" max="200000" value="200000" step="500" oninput="filterPrice(this.value)">
+     <div class="fprice"><span>RD$500</span><span>RD$200K+</span></div>
+    </div>
+   </div>
+  </div>
+  <div class="scard">
+   <div class="scard-title">Condición</div>
+   <div class="scard-body">
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">✨</span>Nuevo</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">♻️</span>Usado</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">🔧</span>Reacondicionado</div>
+   </div>
+  </div>
+  <div class="scard">
+   <div class="scard-title">Ubicación</div>
+   <div class="scard-body">
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Santo Domingo</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Santiago</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Puerto Plata</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>La Romana</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Punta Cana</div>
+   </div>
+  </div>
+ </div>
+ <div class="content" id="contentArea">
+  <div class="tabs" id="mainTabs">
+   <button class="tab active" onclick="setTab(this)">⭐ Destacados</button>
+   <button class="tab" onclick="setTab(this)">🆕 Más nuevos</button>
+   <button class="tab" onclick="setTab(this)">🔥 Ofertas del día</button>
+   <button class="tab" onclick="setTab(this)">📍 Cerca de mí</button>
+  </div>
+  <div id="productArea"></div>
+ </div>
+</div>
+
+<!-- CART -->
+<div class="modal-overlay" id="cartOverlay" style="display:none" onclick="closeCartOut(event)">
+ <div class="cart-panel">
+  <div class="cart-header"><h3>🛒 Mi Carrito</h3><button class="close-btn" onclick="toggleCart()">✕</button></div>
+  <div id="cartItems"></div>
+  <div id="cartTotal"></div>
+ </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="footer" id="siteFooter">
+
+ <!-- Newsletter -->
+ <div class="footer-newsletter">
+  <div class="footer-newsletter-text">
+   <h3>📬 Suscríbete y ahorra más</h3>
+   <p>Recibe ofertas exclusivas, subastas nuevas y novedades de MercadoRD directo en tu correo.</p>
+  </div>
+  <div class="newsletter-form">
+   <input type="email" placeholder="tu@correo.com">
+   <button onclick="toast('¡Suscrito! 🎉 Bienvenido/a a la comunidad MercadoRD')">Suscribirse</button>
+  </div>
+ </div>
+
+ <!-- Main grid -->
+ <div class="footer-main">
+
+  <!-- Brand + trust -->
+  <div class="footer-brand">
+   <div class="footer-logo">Mercado<span>RD</span></div>
+   <p>El marketplace #1 de República Dominicana. Compra, vende y subasta de forma segura con vendedores verificados en las 32 provincias del país.</p>
+   <div class="footer-trust">
+    <div class="ftrust-item"><span>🔒</span><span>Compras protegidas con cifrado SSL 256-bit</span></div>
+    <div class="ftrust-item"><span>🛡️</span><span>Garantía MercadoRD en todas las compras</span></div>
+    <div class="ftrust-item"><span>✅</span><span>Vendedores verificados con cédula RD</span></div>
+    <div class="ftrust-item"><span>📦</span><span>Envíos a las 32 provincias del país</span></div>
+    <div class="ftrust-item"><span>💳</span><span>Pagos seguros: BHD, Popular, BanReservas</span></div>
+   </div>
+   <div class="footer-apps" style="margin-top:16px">
+    <a class="app-btn" onclick="toast('App iOS — próximamente 🍎')"><span class="app-icon">🍎</span><div><div style="font-size:9px;opacity:.7">Descargar en</div><div style="font-weight:600">App Store</div></div></a>
+    <a class="app-btn" onclick="toast('App Android — próximamente 🤖')"><span class="app-icon">🤖</span><div><div style="font-size:9px;opacity:.7">Descargar en</div><div style="font-weight:600">Google Play</div></div></a>
+   </div>
+  </div>
+
+  <!-- Compradores -->
+  <div class="footer-col">
+   <h4>🛒 Compradores</h4>
+   <ul>
+    <li><a onclick="requireAuth('account')"><span class="flink-icon">👤</span>Mi cuenta</a></li>
+    <li><a onclick="requireAuth('account')"><span class="flink-icon">📦</span>Mis compras</a></li>
+    <li><a onclick="requireAuth('account')"><span class="flink-icon">❤️</span>Mis favoritos</a></li>
+    <li><a onclick="showView('auctions')"><span class="flink-icon">🔥</span>Subastas activas</a></li>
+    <li><a onclick="toast('Protección al comprador — próximamente')"><span class="flink-icon">🛡️</span>Protección al comprador</a></li>
+    <li><a onclick="toast('Cómo comprar — próximamente')"><span class="flink-icon">❓</span>¿Cómo comprar?</a></li>
+    <li><a onclick="toast('Guía de pagos — próximamente')"><span class="flink-icon">💳</span>Métodos de pago</a></li>
+    <li><a onclick="toast('Seguimiento de envíos — próximamente')"><span class="flink-icon">🚚</span>Seguimiento de envío</a></li>
+   </ul>
+  </div>
+
+  <!-- Vendedores -->
+  <div class="footer-col">
+   <h4>🏷️ Vendedores</h4>
+   <ul>
+    <li><a onclick="requireAuth('sell')"><span class="flink-icon">➕</span>Publicar anuncio</a></li>
+    <li><a onclick="toast('Seller Center — próximamente')"><span class="flink-icon">📊</span>Seller Center</a></li>
+    <li><a onclick="requireAuth('account')"><span class="flink-icon">📈</span>Mi panel de ventas</a></li>
+    <li><a onclick="toast('Cómo vender — próximamente')"><span class="flink-icon">❓</span>¿Cómo vender?</a></li>
+    <li><a onclick="toast('Tarifas — próximamente')"><span class="flink-icon">💰</span>Tarifas y comisiones</a></li>
+    <li><a onclick="toast('Vendedor Premium — próximamente')"><span class="flink-icon">⭐</span>Vendedor Premium</a></li>
+    <li><a onclick="toast('Publicidad — próximamente')"><span class="flink-icon">📣</span>Publicidad en MercadoRD</a></li>
+    <li><a onclick="toast('Reglas del vendedor — próximamente')"><span class="flink-icon">📋</span>Reglas del vendedor</a></li>
+   </ul>
+  </div>
+
+  <!-- MercadoRD -->
+  <div class="footer-col">
+   <h4>🏪 MercadoRD</h4>
+   <ul>
+    <li><a onclick="toast('Quiénes somos — próximamente')"><span class="flink-icon">🇩🇴</span>Quiénes somos</a></li>
+    <li><a onclick="toast('Noticias — próximamente')"><span class="flink-icon">📰</span>Sala de prensa</a></li>
+    <li><a onclick="toast('Trabaja con nosotros — próximamente')"><span class="flink-icon">💼</span>Trabaja con nosotros</a></li>
+    <li><a onclick="toast('MercadoRD Retorno — próximamente')"><span class="flink-icon">🔄</span>MercadoRD Retorno</a></li>
+    <li><a onclick="toast('Comunidad — próximamente')"><span class="flink-icon">👥</span>Comunidad</a></li>
+    <li><a onclick="toast('Blog — próximamente')"><span class="flink-icon">✍️</span>Blog y consejos</a></li>
+    <li><a onclick="toast('Afiliados — próximamente')"><span class="flink-icon">🤝</span>Programa de afiliados</a></li>
+    <li><a onclick="toast('Inversionistas — próximamente')"><span class="flink-icon">📊</span>Inversionistas</a></li>
+   </ul>
+  </div>
+
+  <!-- Ayuda + Redes -->
+  <div class="footer-col">
+   <h4>📞 Contacto y ayuda</h4>
+   <ul>
+    <li><a onclick="toast('Centro de ayuda — próximamente')"><span class="flink-icon">❓</span>Centro de ayuda</a></li>
+    <li><a onclick="toast('Abriendo chat de soporte...')"><span class="flink-icon">💬</span>Chat en vivo</a></li>
+    <li><a href="tel:+18095551234" onclick="toast('Llamando al +1(809) 555-1234...')"><span class="flink-icon">📞</span>+1 (809) 555-1234</a></li>
+    <li><a href="mailto:soporte@mercadord.do" onclick="toast('Abriendo correo...')"><span class="flink-icon">📧</span>soporte@mercadord.do</a></li>
+    <li><a onclick="toast('WhatsApp soporte — próximamente')"><span class="flink-icon">📱</span>WhatsApp soporte</a></li>
+    <li><a onclick="toast('Reportar fraude — próximamente')"><span class="flink-icon">🚨</span>Reportar fraude</a></li>
+   </ul>
+   <div class="footer-socials" style="margin-top:18px">
+    <h4>Síguenos</h4>
+    <div class="social-row">
+     <a class="social-btn sb-fb" onclick="toast('Facebook — @MercadoRD')" title="Facebook">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+     </a>
+     <a class="social-btn sb-ig" onclick="toast('Instagram — @mercadord.do')" title="Instagram">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="#fff" stroke="none"/></svg>
+     </a>
+     <a class="social-btn sb-tw" onclick="toast('Twitter / X — @MercadoRD')" title="Twitter/X">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+     </a>
+     <a class="social-btn sb-yt" onclick="toast('YouTube — MercadoRD Oficial')" title="YouTube">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#FF0000"/></svg>
+     </a>
+     <a class="social-btn sb-wa" onclick="toast('WhatsApp — +1(809) 555-1234')" title="WhatsApp">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+     </a>
+     <a class="social-btn sb-tk" onclick="toast('TikTok — @mercadord.do')" title="TikTok">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.74a4.85 4.85 0 0 1-1.01-.05z"/></svg>
+     </a>
+    </div>
+   </div>
+  </div>
+
+ </div><!-- /footer-main -->
+
+ <!-- Sitios especiales -->
+ <div style="background:rgba(0,0,0,.2);padding:20px 32px;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+  <a class="footer-badge-link" onclick="requireAuth('sell')">
+   <span class="fbl-icon">🏷️</span>
+   <div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Vendedor</div><div style="font-size:11px;opacity:.7">Gestiona tus anuncios y ventas</div></div>
+  </a>
+  <a class="footer-badge-link" onclick="requireAuth('account')">
+   <span class="fbl-icon">🛒</span>
+   <div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Comprador</div><div style="font-size:11px;opacity:.7">Historial, favoritos y pedidos</div></div>
+  </a>
+  <a class="footer-badge-link" onclick="toast('Seller Center — Panel profesional de ventas. Próximamente 📊')">
+   <span class="fbl-icon">📊</span>
+   <div><div style="font-weight:700;font-size:13px;color:#fff">Seller Center</div><div style="font-size:11px;opacity:.7">Panel de métricas y campañas</div></div>
+  </a>
+  <a class="footer-badge-link" onclick="toast('MercadoRD Retorno — Política de devoluciones. Próximamente 🔄')">
+   <span class="fbl-icon">🔄</span>
+   <div><div style="font-weight:700;font-size:13px;color:#fff">MercadoRD Retorno</div><div style="font-size:11px;opacity:.7">Devoluciones fáciles en 15 días</div></div>
+  </a>
+  <a class="footer-badge-link" onclick="toast('Comunidad MercadoRD — Foros y grupos. Próximamente 👥')">
+   <span class="fbl-icon">👥</span>
+   <div><div style="font-weight:700;font-size:13px;color:#fff">Comunidad</div><div style="font-size:11px;opacity:.7">Foros, tips y grupos de compras</div></div>
+  </a>
+  <a class="footer-badge-link" onclick="toast('Publicidad en MercadoRD — Próximamente 📣')">
+   <span class="fbl-icon">📣</span>
+   <div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Llega a +800K compradores activos</div></div>
+  </a>
+ </div>
+
+ <div class="footer-divider"></div>
+
+ <!-- Bottom bar -->
+ <div class="footer-bottom">
+  <div>
+   <div class="footer-bottom-left">
+    © 2025 <strong>MercadoRD S.R.L.</strong> · RNC: 1-30-12345-6 · Santo Domingo, República Dominicana 🇩🇴<br>
+    Todos los derechos reservados. MercadoRD es una marca registrada en la República Dominicana.
+   </div>
+   <div class="footer-country" style="margin-top:8px">
+    <span>🌐 Idioma: Español (RD)</span>
+    <span style="margin:0 8px;opacity:.3">|</span>
+    <span>💵 Moneda: Peso Dominicano (DOP)</span>
+    <span style="margin:0 8px;opacity:.3">|</span>
+    <span>🏛️ Regulado por PROCONSUMIDOR</span>
+   </div>
+  </div>
+  <div>
+   <div class="footer-legal">
+    <a onclick="openLegal('terms')">Términos de uso</a>
+    <a onclick="openLegal('privacy')">Política de privacidad</a>
+    <a onclick="openLegal('cookies')">Cookies</a>
+    <a onclick="openLegal('fraud')">Política anti-fraude</a>
+    <a onclick="openLegal('returns')">Devoluciones</a>
+    <a onclick="openLegal('accessibility')">Accesibilidad</a>
+   </div>
+   <div class="footer-payments" style="margin-top:10px">
+    <span style="font-size:11px;color:#5a7a9a;margin-right:4px">Pagos aceptados:</span>
+    <span class="fpay">🏦 BHD León</span>
+    <span class="fpay">🏦 Popular</span>
+    <span class="fpay">🏦 BanReservas</span>
+    <span class="fpay">💳 Visa</span>
+    <span class="fpay">💳 Mastercard</span>
+    <span class="fpay">📱 mPago</span>
+    <span class="fpay">💵 Efectivo</span>
+   </div>
+  </div>
+ </div>
+
+</footer>
+
+<!-- Modal Legal (Términos, Privacidad, etc.) -->
+<div class="auth-overlay" id="legalOverlay" style="display:none">
+ <div class="auth-box" style="max-width:560px">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="document.getElementById('legalOverlay').style.display='none'">✕</button>
+   <div class="auth-logo" id="legalTitle">Términos de uso</div>
+   <div class="auth-subtitle">MercadoRD S.R.L.</div>
+  </div>
+  <div class="auth-body" id="legalBody" style="max-height:65vh;overflow-y:auto"></div>
+ </div>
+</div>
+
+<div class="bottom-nav">
+ <button class="bnav-item active" id="bnH" onclick="goHome();setBNav('bnH')"><span class="bnav-icon">🏠</span>Inicio</button>
+ <button class="bnav-item" id="bnS" onclick="document.getElementById('searchInput').focus();setBNav('bnS')"><span class="bnav-icon">🔍</span>Buscar</button>
+ <button class="bnav-item" id="bnV" onclick="requireAuth('sell');setBNav('bnV')"><span class="bnav-icon">➕</span>Vender</button>
+ <button class="bnav-item" id="bnA" onclick="showView('auctions');setBNav('bnA')"><span class="bnav-icon">🔥</span>Subastas</button>
+ <button class="bnav-item" id="bnAc" onclick="requireAuth('account');setBNav('bnAc')"><span class="bnav-icon">👤</span>Cuenta</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// SUPABASE — reemplaza con tus credenciales reales
+// Panel: https://app.supabase.com → Settings → API
+// ═══════════════════════════════════════════════════════
+const SB_URL = 'https://TU_PROYECTO.supabase.co';
+const SB_KEY = 'TU_ANON_PUBLIC_KEY';
+let sb = null;
+const DEMO = SB_URL.includes('TU_PROYECTO');
+try { if (!DEMO) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e){}
+
+// ═══ AUTH STATE ═══
+let user = null, pending = null, attempts = 0, lockTs = 0, demoOTP = null;
+
+if (sb) {
+  sb.auth.onAuthStateChange((ev, session) => {
+    user = session?.user ?? null;
+    refreshHeader();
+    if (ev === 'SIGNED_IN') {
+      toast(`¡Bienvenido/a! ${user?.user_metadata?.full_name || user?.email} 👋`);
+      closeAuth();
+      if (pending) { showView(pending); pending = null; }
+    }
+    if (ev === 'SIGNED_OUT') { toast('Sesión cerrada. ¡Hasta pronto!'); }
+  });
+}
+
+function refreshHeader() {
+  const btn = document.getElementById('authBtn');
+  if (!btn) return;
+  if (user) {
+    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+    const ini  = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    btn.outerHTML = `<div class="user-pill" id="authBtn" onclick="requireAuth('account')"><div class="uav">${ini}</div>${name.split(' ')[0]}<span class="vtick">✓</span></div>`;
+  } else {
+    const el = document.getElementById('authBtn');
+    if (el && el.tagName !== 'BUTTON')
+      el.outerHTML = `<button class="hbtn" id="authBtn" onclick="openAuth()">👤 Ingresar</button>`;
+  }
+}
+
+// ── open / close ──
+function openAuth(tab) {
+  document.getElementById('authOverlay').style.display = 'flex';
+  switchTab(tab||'login'); clearAlert();
+}
+function closeAuth() { document.getElementById('authOverlay').style.display = 'none'; }
+document.getElementById('authOverlay').addEventListener('click', e => { if (e.target.id==='authOverlay') closeAuth(); });
+
+function requireAuth(v) {
+  if (user) { showView(v); }
+  else { pending=v; openAuth('login'); showAlert('info','Inicia sesión o crea una cuenta para continuar.'); }
+}
+
+// ── tabs ──
+function switchTab(t) {
+  clearAlert();
+  const isL = t==='login';
+  document.getElementById('tabLogin').classList.toggle('active',isL);
+  document.getElementById('tabReg').classList.toggle('active',!isL);
+  document.getElementById('loginFlow').style.display    = isL?'':'none';
+  document.getElementById('registerFlow').style.display = isL?'none':'';
+  gotoStep(isL?'l':'r', 1);
+}
+
+function gotoStep(flow, n) {
+  const pfx = flow==='l' ? 'ls' : 'rs';
+  const max  = flow==='l' ? 3 : 4;
+  for (let i=1;i<=max;i++) {
+    const el = document.getElementById(pfx+i);
+    if (el) el.classList.toggle('active', i===n);
+  }
+  if (flow==='r') {
+    for (let i=1;i<=4;i++) {
+      const d = document.getElementById('sd'+i);
+      if (d) { d.classList.toggle('active',i===n); d.classList.toggle('done',i<n); }
+    }
+  }
+}
+
+// ── alerts ──
+function showAlert(type,msg){ const e=document.getElementById('authAlert'); e.className='auth-alert '+({ok:'ok',fail:'fail',info:'info'}[type]||'info')+' show'; e.textContent=msg; }
+function clearAlert(){ const e=document.getElementById('authAlert'); if(e){e.className='auth-alert';e.textContent='';} }
+
+// ── field errors ──
+function fe(id,msg){ const e=document.getElementById(id); if(!e)return; e.textContent=msg; e.classList.toggle('show',!!msg); }
+function cfe(...ids){ ids.forEach(id=>fe(id,'')); }
+
+// ── eye toggle ──
+function toggleEye(id,el){ const i=document.getElementById(id); if(!i)return; i.type=i.type==='password'?'text':'password'; el.textContent=i.type==='password'?'👁':'🙈'; }
+
+// ── pwd strength ──
+function pwdStrength(v) {
+  let s=0;
+  if(v.length>=8)s++; if(/[A-Z]/.test(v))s++; if(/[0-9]/.test(v))s++; if(/[^A-Za-z0-9]/.test(v))s++;
+  const cfg=[['0%','#eee',''],['25%','#e43e2b','Muy débil 🔴'],['50%','#f5a623','Débil 🟠'],['75%','#2196F3','Buena 🔵'],['100%','#0a8a4a','Muy segura 🟢']];
+  const f=document.getElementById('pwdF'); const l=document.getElementById('pwdL');
+  if(f){f.style.width=cfg[s][0];f.style.background=cfg[s][1];}
+  if(l)l.textContent=cfg[s][2];
+}
+
+// ── cédula format ──
+function fmtCed(el){ let v=el.value.replace(/\D/g,'').slice(0,11); if(v.length>3)v=v.slice(0,3)+'-'+v.slice(3); if(v.length>11)v=v.slice(0,11)+'-'+v.slice(11); el.value=v; }
+
+// ── OTP ──
+function onext(el,ni,p){ if(el.value&&ni>=0){ const n=document.getElementById((p==='s'?'so':'lo')+ni); if(n)n.focus(); } }
+function oback(e,el,pi,p){ if(e.key==='Backspace'&&!el.value&&pi!==null){ const pr=document.getElementById((p==='s'?'so':'lo')+pi); if(pr){pr.value='';pr.focus();} } }
+function getOTP(p){ return [0,1,2,3,4,5].map(i=>document.getElementById((p==='s'?'so':'lo')+i)?.value||'').join(''); }
+function countdown(spanId,sec){ const s=document.getElementById(spanId); if(!s)return; let t=sec; s.textContent=t; const iv=setInterval(()=>{ t--; s.textContent=t; if(t<=0){clearInterval(iv); s.parentElement.innerHTML='<span class="alink" onclick="sendSMS()">Reenviar código</span>';} },1000); }
+
+// ═══ LOGIN ═══
+async function doLogin() {
+  clearAlert(); cfe('lEmailE','lPwdE');
+  if(Date.now()<lockTs){ showAlert('fail',`Cuenta bloqueada. Espera ${Math.ceil((lockTs-Date.now())/1000)}s.`); return; }
+  const email=document.getElementById('lEmail').value.trim();
+  const pwd=document.getElementById('lPwd').value;
+  let ok=true;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ fe('lEmailE','Correo no válido.'); ok=false; }
+  if(pwd.length<6){ fe('lPwdE','Contraseña incorrecta.'); ok=false; }
+  if(!ok)return;
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Verificando...';
+  try {
+    if(sb) {
+      const {error}=await sb.auth.signInWithPassword({email,password:pwd});
+      if(error)throw error;
+      attempts=0;
+    } else {
+      await new Promise(r=>setTimeout(r,800));
+      user={email,user_metadata:{full_name:'Usuario Demo'}};
+      refreshHeader(); toast('Sesión iniciada (modo demo) ✓'); closeAuth();
+      if(pending){showView(pending);pending=null;}
+    }
+  } catch(err) {
+    attempts++;
+    if(attempts>=5){ lockTs=Date.now()+60000; attempts=0; showAlert('fail','🔒 Demasiados intentos. Bloqueado 60 segundos.'); }
+    else showAlert('fail',`Correo o contraseña incorrectos. (${attempts}/5)`);
+  } finally { btn.disabled=false; btn.innerHTML='Iniciar sesión'; }
+}
+
+async function loginGoogle() {
+  clearAlert();
+  try {
+    if(sb){ const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}}); if(error)throw error; }
+    else { await new Promise(r=>setTimeout(r,600)); user={email:'demo@gmail.com',user_metadata:{full_name:'Usuario Google'}}; refreshHeader(); toast('Sesión con Google (modo demo) ✓'); closeAuth(); if(pending){showView(pending);pending=null;} }
+  } catch(e){ showAlert('fail','Error con Google. Intenta de nuevo.'); }
+}
+
+function verify2fa(){ const c=getOTP('l'); if(c.length<6){showAlert('fail','Ingresa los 6 dígitos.');return;} toast('2FA verificado ✓'); closeAuth(); }
+
+async function doReset() {
+  const email=document.getElementById('resetE').value.trim();
+  if(!email){showAlert('fail','Ingresa tu correo.');return;}
+  try{
+    if(sb){ const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href+'?reset=true'}); if(error)throw error; }
+    showAlert('ok',`✅ Enlace enviado a ${email}. Revisa tu bandeja.`);
+  } catch(e){ showAlert('fail','Error al enviar. Verifica la dirección.'); }
+}
+
+// ═══ REGISTER ═══
+function rs1next() {
+  cfe('rNomE','rApeE','rEmailE','rPwdE','rPwd2E'); clearAlert();
+  const nom=document.getElementById('rNom').value.trim();
+  const ape=document.getElementById('rApe').value.trim();
+  const em=document.getElementById('rEmail').value.trim();
+  const pw=document.getElementById('rPwd').value;
+  const pw2=document.getElementById('rPwd2').value;
+  let ok=true;
+  if(nom.length<2){fe('rNomE','Ingresa tu nombre.');ok=false;}
+  if(ape.length<2){fe('rApeE','Ingresa tu apellido.');ok=false;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){fe('rEmailE','Correo no válido.');ok=false;}
+  if(pw.length<8){fe('rPwdE','Mínimo 8 caracteres.');ok=false;}
+  else if(!/[A-Z]/.test(pw)){fe('rPwdE','Debe tener al menos una mayúscula.');ok=false;}
+  else if(!/[0-9]/.test(pw)){fe('rPwdE','Debe tener al menos un número.');ok=false;}
+  if(pw!==pw2){fe('rPwd2E','Las contraseñas no coinciden.');ok=false;}
+  if(!ok)return;
+  document.getElementById('emailTo').textContent=em;
+  gotoStep('r',2);
+}
+
+async function sendSMS() {
+  clearAlert(); cfe('rPhoneE');
+  const pfx=document.getElementById('phPfx').value;
+  const ph=document.getElementById('rPhone').value.replace(/\D/g,'');
+  if(ph.length<7){fe('rPhoneE','Número no válido.');return;}
+  const full=pfx+ph;
+  document.getElementById('phoneTo').textContent=full;
+  const btn=document.getElementById('smsBtnSend');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Enviando...';
+  try {
+    if(sb&&!DEMO){ const {error}=await sb.auth.signInWithOtp({phone:full}); if(error)throw error; }
+    else {
+      demoOTP=Math.floor(100000+Math.random()*900000).toString();
+      console.log('%c🔑 Demo OTP: '+demoOTP,'color:#003087;font-size:16px;font-weight:bold');
+      showAlert('info','📱 Modo demo: código en consola del navegador (F12)');
+    }
+    document.getElementById('smsSection').style.display='';
+    btn.style.display='none';
+    countdown('smsC',60);
+  } catch(e){ showAlert('fail','Error enviando SMS. Verifica el número.'); btn.disabled=false; btn.innerHTML='Enviar código SMS'; }
+}
+
+function verifySMS() {
+  const code=getOTP('s');
+  if(code.length<6){showAlert('fail','Ingresa los 6 dígitos.');return;}
+  if(DEMO&&demoOTP&&code!==demoOTP){showAlert('fail','❌ Código incorrecto. Revisa la consola (F12).');return;}
+  showAlert('ok','✅ Teléfono verificado.'); setTimeout(()=>{clearAlert();gotoStep('r',3);},900);
+}
+
+function rs3next() {
+  cfe('rCedE','rDobE'); clearAlert();
+  const ced=document.getElementById('rCed').value.replace(/\D/g,'');
+  const dob=document.getElementById('rDob').value;
+  const prov=document.getElementById('rProv').value;
+  const terms=document.getElementById('rTerms').checked;
+  let ok=true;
+  if(ced.length!==11){fe('rCedE','La cédula debe tener 11 dígitos.');ok=false;}
+  if(!dob){fe('rDobE','Ingresa tu fecha de nacimiento.');ok=false;}
+  else{ const age=(Date.now()-new Date(dob))/(365.25*24*3600*1000); if(age<18){fe('rDobE','Debes ser mayor de 18 años.');ok=false;} }
+  if(!prov){showAlert('fail','Selecciona tu provincia.');ok=false;}
+  if(!terms){showAlert('fail','Debes aceptar los términos.');ok=false;}
+  if(!ok)return;
+  gotoStep('r',4);
+}
+
+async function doCreateAccount() {
+  clearAlert();
+  const nom=document.getElementById('rNom')?.value.trim()||'Usuario';
+  const ape=document.getElementById('rApe')?.value.trim()||'';
+  const em=document.getElementById('rEmail')?.value.trim();
+  const pw=document.getElementById('rPwd')?.value;
+  const btn=document.querySelector('#rs4 .btn-pri');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Creando cuenta...';}
+  try{
+    if(sb&&!DEMO){
+      const {error}=await sb.auth.signUp({email:em,password:pw,options:{data:{full_name:`${nom} ${ape}`.trim()},emailRedirectTo:location.href}});
+      if(error)throw error;
+      showAlert('ok',`✅ Cuenta creada. Revisa ${em} para verificar tu correo.`);
+    } else {
+      await new Promise(r=>setTimeout(r,900));
+      user={email:em,user_metadata:{full_name:`${nom} ${ape}`.trim()}};
+      refreshHeader(); toast(`¡Cuenta creada! Bienvenido/a ${nom} 🎉`); closeAuth();
+    }
+  } catch(e){ showAlert('fail',e.message||'Error al crear la cuenta.'); }
+  finally{ if(btn){btn.disabled=false;btn.innerHTML='Crear cuenta y verificar email';} }
+}
+
+async function resendEmail() {
+  const em=document.getElementById('rEmail')?.value.trim();
+  if(!em)return;
+  try{ if(sb&&!DEMO)await sb.auth.resend({type:'signup',email:em}); showAlert('ok',`Reenviado a ${em}.`); }
+  catch(e){ showAlert('fail','Error al reenviar.'); }
+}
+
+async function doLogout() {
+  if(sb&&!DEMO)await sb.auth.signOut();
+  else{ user=null; refreshHeader(); toast('Sesión cerrada ✓'); goHome(); }
+}
+
+// ═══════════════════════════════════════════════════════
+// PRODUCTS
+// ═══════════════════════════════════════════════════════
+const products=[
+  {id:1, title:"iPhone 14 Pro Max 256GB",          price:68500, old:75000,  icon:"📱",cat:"electronics",cond:"used",loc:"SD", rating:4.8,reviews:312,seller:"TechShop RD",  badge:"hot"},
+  {id:2, title:"Samsung 65\" QLED 4K Smart TV",    price:45000, old:55000,  icon:"📺",cat:"electronics",cond:"new", loc:"SD", rating:4.7,reviews:89, seller:"ElectroMax",   badge:"new"},
+  {id:3, title:"MacBook Pro M3 14\" 512GB",         price:125000,old:null,   icon:"💻",cat:"electronics",cond:"new", loc:"STI",rating:4.9,reviews:56, seller:"AppleRD",      badge:"new"},
+  {id:4, title:"Toyota Corolla 2019 Automático",    price:890000,old:null,   icon:"🚗",cat:"vehicles",   cond:"used",loc:"SD", rating:4.5,reviews:23, seller:"AutosElite",   badge:null},
+  {id:5, title:"Vestido Casual Verano Colores",     price:1800,  old:2500,   icon:"👗",cat:"fashion",    cond:"new", loc:"SD", rating:4.3,reviews:145,seller:"ModaRD",       badge:"deal"},
+  {id:6, title:"Aire Acondicionado 18000 BTU",      price:28000, old:33000,  icon:"❄️",cat:"home2",      cond:"new", loc:"PP", rating:4.6,reviews:78, seller:"ClimaxRD",     badge:null},
+  {id:7, title:"Bicicleta MTB 27.5\" 21v",          price:12500, old:null,   icon:"🚲",cat:"sports",     cond:"new", loc:"STI",rating:4.4,reviews:34, seller:"DeportesSD",   badge:null},
+  {id:8, title:"Silla Gamer Ergonómica Pro RGB",    price:9800,  old:12000,  icon:"🪑",cat:"home2",      cond:"new", loc:"SD", rating:4.7,reviews:201,seller:"GamerZone",    badge:"deal"},
+  {id:9, title:"Nevera Samsung 20 Pies Inox",       price:38500, old:null,   icon:"🧊",cat:"home2",      cond:"new", loc:"SD", rating:4.8,reviews:167,seller:"ElectroMax",   badge:null},
+  {id:10,title:"Nike Air Max 270 Original",          price:5500,  old:7200,   icon:"👟",cat:"fashion",    cond:"new", loc:"SD", rating:4.5,reviews:289,seller:"ShoesRD",      badge:"deal"},
+  {id:11,title:"PlayStation 5 + 2 Juegos",          price:42000, old:45000,  icon:"🎮",cat:"electronics",cond:"new", loc:"STI",rating:4.9,reviews:543,seller:"GameStoreRD",  badge:"hot"},
+  {id:12,title:"Terreno 200m² Zona Turística",      price:1800000,old:null,  icon:"🏗️",cat:"services",   cond:"new", loc:"PP", rating:5.0,reviews:8,  seller:"InmoBienes",   badge:null},
+  {id:13,title:"Lavadora LG 20 Lbs Carga Frontal",  price:22000, old:26000,  icon:"🫧",cat:"home2",      cond:"new", loc:"SD", rating:4.6,reviews:112,seller:"ElectroMax",   badge:"deal"},
+  {id:14,title:"Honda Civic 2020 EX Turbo",         price:1150000,old:null,  icon:"🚙",cat:"vehicles",   cond:"used",loc:"STI",rating:4.7,reviews:15, seller:"AutosElite",   badge:null},
+  {id:15,title:"JBL Boombox 3 Speaker",             price:18500, old:22000,  icon:"🔊",cat:"electronics",cond:"new", loc:"SD", rating:4.8,reviews:234,seller:"AudioRD",      badge:"hot"},
+  {id:16,title:"Generador Yamaha 3000W Inverter",   price:65000, old:72000,  icon:"⚡",cat:"services",   cond:"new", loc:"SD", rating:4.9,reviews:189,seller:"GeneraRD",     badge:"hot"},
+];
+const auctions=[
+  {id:101,title:"Toyota Hilux 2020 4x4 Diesel",      icon:"🛻",cur:650000,bids:18,ends:"2h 34min",seller:"AutosRD",  loc:"SD"},
+  {id:102,title:"MacBook Air M2 256GB",               icon:"💻",cur:58000, bids:31,ends:"5h 12min",seller:"TechShop", loc:"STI"},
+  {id:103,title:"Generador Eléctrico 8KW",            icon:"⚡",cur:35000, bids:9, ends:"1d 2h",   seller:"GeneraRD", loc:"SD"},
+  {id:104,title:"Colección Relojes Vintage Suizos",   icon:"⌚",cur:22000, bids:14,ends:"3h 50min",seller:"LujoRD",   loc:"SD"},
+  {id:105,title:"iPhone 15 Pro Max 1TB",              icon:"📱",cur:85000, bids:42,ends:"45min",   seller:"AppleRD",  loc:"STI"},
+];
+
+// ═══ APP STATE ═══
+let cart=[],pmax=200000,acat='all',stxt='',favs=new Set(),cview='home';
+
+// ═══ UTILS ═══
+function fmt(n){return 'RD$'+Math.round(n).toLocaleString('es-DO');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
+function setBNav(id){document.querySelectorAll('.bnav-item').forEach(x=>x.classList.remove('active'));document.getElementById(id)?.classList.add('active');}
+
+// ═══ NAV ═══
+function restoreHome(){
+  if(!document.getElementById('productArea')){
+    document.getElementById('contentArea').innerHTML=`
+      <div class="tabs" id="mainTabs">
+        <button class="tab active" onclick="setTab(this)">⭐ Destacados</button>
+        <button class="tab" onclick="setTab(this)">🆕 Más nuevos</button>
+        <button class="tab" onclick="setTab(this)">🔥 Ofertas del día</button>
+        <button class="tab" onclick="setTab(this)">📍 Cerca de mí</button>
+      </div><div id="productArea"></div>`;
+  }
+  document.getElementById('mainTabs')&&(document.getElementById('mainTabs').style.display='');
+}
+
+function goHome(){
+  cview='home';
+  document.getElementById('heroBanner').style.display='';
+  restoreHome();
+  document.querySelectorAll('.scat').forEach((x,i)=>x.classList.toggle('active',i===0));
+  document.querySelectorAll('.nav-item').forEach((x,i)=>x.classList.toggle('active',i===0));
+  acat='all';
+  doRender();
+}
+
+function setNav(el,cat){
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  cview='home'; acat=cat;
+  document.getElementById('heroBanner').style.display='';
+  restoreHome();
+  const cats=['all','electronics','vehicles','fashion','home2','sports','services','agro'];
+  const idx=cats.indexOf(cat);
+  document.querySelectorAll('.scat').forEach((x,i)=>x.classList.toggle('active',i===idx));
+  doRender();
+}
+
+function setTab(el){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderProducts();}
+
+function filterProducts(){stxt=document.getElementById('searchInput').value;if(cview!=='home'){cview='home';goHome();}else renderProducts();}
+function filterCat(cat,el){acat=cat;document.querySelectorAll('.scat').forEach(x=>x.classList.remove('active'));el.classList.add('active');if(cview!=='home'){cview='home';goHome();}else renderProducts();}
+function filterPrice(v){pmax=parseInt(v);document.getElementById('priceOut').textContent=fmt(parseInt(v));if(cview!=='home'){cview='home';goHome();}else renderProducts();}
+
+function renderProducts(){if(cview!=='home'){cview='home';goHome();return;}const a=document.getElementById('productArea');if(!a)return;doRender();}
+function doRender(){
+  const area=document.getElementById('productArea'); if(!area)return;
+  let fp=products.filter(p=>{
+    const mc=acat==='all'||p.cat===acat;
+    const mp=p.price<=pmax;
+    const ms=!stxt||p.title.toLowerCase().includes(stxt.toLowerCase())||p.seller.toLowerCase().includes(stxt.toLowerCase());
+    return mc&&mp&&ms;
+  });
+  if(!fp.length){area.innerHTML='<div class="no-results"><div>🔍</div><p>No se encontraron productos.</p></div>';return;}
+  area.innerHTML=`
+    <div class="section-header">
+      <div class="section-title">${fp.length} producto${fp.length!==1?'s':''}</div>
+      <select class="sort-select" onchange="doRender()"><option>Relevancia</option><option>Menor precio</option><option>Mayor precio</option><option>Mejor calificados</option></select>
+    </div>
+    <div class="products-grid">
+      ${fp.map(p=>`
+        <div class="product-card" onclick="showDetail(${p.id})">
+          <div class="product-img">
+            ${p.badge==='new'?'<div class="badge badge-new">NUEVO</div>':''}
+            ${p.badge==='hot'?'<div class="badge badge-hot">🔥 HOT</div>':''}
+            ${p.badge==='deal'?'<div class="badge badge-deal">OFERTA</div>':''}
+            <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)">${favs.has(p.id)?'❤️':'♡'}</div>
+            ${p.icon}
+          </div>
+          <div class="product-info">
+            <div class="product-title">${p.title}</div>
+            <div class="product-seller">🏪 ${p.seller}</div>
+            <div><span class="product-price">${fmt(p.price)}</span>${p.old?`<span class="product-price-old">${fmt(p.old)}</span><span class="product-discount">-${Math.round((1-p.price/p.old)*100)}%</span>`:''}</div>
+            <div class="product-footer">
+              <div class="rating">★ ${p.rating} <span style="color:var(--text2)">(${p.reviews})</span></div>
+              <button class="add-cart" onclick="event.stopPropagation();addCart(${p.id})">+ Carrito</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function showDetail(id){
+  const p=products.find(x=>x.id===id); if(!p)return;
+  document.getElementById('mainTabs')&&(document.getElementById('mainTabs').style.display='none');
+  document.getElementById('contentArea').innerHTML=`
+    <button class="back-btn" onclick="backProd()">← Volver</button>
+    <div class="detail-panel">
+      <div class="detail-img-area">${p.icon}</div>
+      <div class="detail-title">${p.title}</div>
+      <div><span class="detail-price">${fmt(p.price)}</span>${p.old?` <span style="font-size:14px;color:var(--text2);text-decoration:line-through">${fmt(p.old)}</span>`:''}</div>
+      <div class="detail-meta"><span>📍 ${p.loc}</span><span>📦 ${p.cond==='new'?'Nuevo':p.cond==='used'?'Usado':'Reacondicionado'}</span><span>⭐ ${p.rating} (${p.reviews})</span><span>🚚 Envío RD</span><span>🔒 Compra segura</span></div>
+      <div class="detail-desc">Producto disponible para entrega en todo RD. Garantía incluida. Acepta BHD, Popular, BanReservas, tarjeta y efectivo.</div>
+      <div class="detail-actions">
+        <button class="btn-buy" onclick="requireAuth('buy')">Comprar ahora</button>
+        <button class="btn-cart2" onclick="addCart(${p.id})">Añadir al carrito</button>
+        <button class="btn-fav2" onclick="toggleFav(${p.id},this)">${favs.has(p.id)?'❤️':'♡'}</button>
+      </div>
+      <div class="seller-card">
+        <div class="seller-avatar">${p.seller[0]}</div>
+        <div><div style="font-size:14px;font-weight:600">${p.seller}</div><div style="font-size:12px;color:var(--text2)">⭐ 4.9 · Verificado ✓</div></div>
+        <button style="margin-left:auto;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:13px" onclick="requireAuth('chat')">💬 Contactar</button>
+      </div>
+    </div>`;
+}
+
+function backProd(){cview='home';document.getElementById('contentArea').innerHTML=`<div class="tabs" id="mainTabs"><button class="tab active" onclick="setTab(this)">⭐ Destacados</button><button class="tab" onclick="setTab(this)">🆕 Más nuevos</button><button class="tab" onclick="setTab(this)">🔥 Ofertas del día</button><button class="tab" onclick="setTab(this)">📍 Cerca de mí</button></div><div id="productArea"></div>`;renderProducts();}
+
+// ═══ VIEWS ═══
+function showView(v){
+  cview=v;
+  document.getElementById('heroBanner').style.display='none';
+  if(v==='auctions'){
+    document.getElementById('contentArea').innerHTML=`
+      <div class="section-header" style="margin-bottom:18px">
+        <div class="section-title">🔥 Subastas Activas en RD</div>
+        <button onclick="requireAuth('sell')" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Subastar producto</button>
+      </div>
+      ${auctions.map(a=>`
+        <div class="auction-card">
+          <div class="auction-img">${a.icon}</div>
+          <div class="auction-info">
+            <div class="auction-title">${a.title}</div>
+            <div class="auction-meta">📍 ${a.loc} · <strong>${a.seller}</strong></div>
+            <div class="auction-bids">👥 ${a.bids} pujas · ⏰ <strong style="color:var(--accent)">${a.ends}</strong></div>
+            <div class="auction-price-row">
+              <div><div style="font-size:11px;color:var(--text2)">Puja actual</div><div class="auction-price">${fmt(a.cur)}</div></div>
+              <button class="bid-btn" onclick="requireAuth('bid')">Pujar →</button>
+            </div>
+          </div>
+        </div>`).join('')}`;
+  } else if(v==='sell'){
+    const uname=user?.user_metadata?.full_name||user?.email?.split('@')[0]||'usuario';
+    document.getElementById('contentArea').innerHTML=`
+      <div class="sell-form">
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">📦 Publicar un anuncio</h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Hola <strong>${uname}</strong> — Cuenta verificada ✓</p>
+        <div class="form-grid">
+          <div class="fg2"><label>Título *</label><input type="text" placeholder="Describe tu producto"></div>
+          <div class="fg2"><label>Precio (RD$) *</label><input type="number" placeholder="0.00"></div>
+          <div class="fg2"><label>Categoría *</label><select><option>Electrónica</option><option>Vehículos</option><option>Moda</option><option>Hogar</option><option>Deportes</option><option>Servicios</option></select></div>
+          <div class="fg2"><label>Condición *</label><select><option>Nuevo</option><option>Usado – Como nuevo</option><option>Usado – Buen estado</option><option>Reacondicionado</option></select></div>
+          <div class="fg2"><label>Tipo de anuncio</label><select><option>Precio fijo</option><option>Subasta</option><option>Mejor oferta</option></select></div>
+          <div class="fg2"><label>Provincia</label><select><option>Santo Domingo</option><option>Santiago</option><option>Puerto Plata</option><option>La Romana</option></select></div>
+        </div>
+        <div class="fg2" style="margin-bottom:14px"><label>Descripción</label><textarea placeholder="Describe el producto, estado, qué incluye..."></textarea></div>
+        <div class="photo-area" onclick="toast('Subida de fotos próximamente 📷')">
+          <div style="font-size:30px;margin-bottom:8px">📷</div>
+          <strong>Subir fotos</strong><div style="font-size:12px;margin-top:4px">Hasta 10 imágenes · JPG, PNG · 5MB máx</div>
+        </div>
+        <button class="submit-btn" onclick="toast('¡Anuncio publicado! 🎉')">✓ Publicar gratis</button>
+      </div>`;
+  } else if(v==='account'){
+    const name=user?.user_metadata?.full_name||user?.email?.split('@')[0]||'Usuario';
+    const email=user?.email||'';
+    const ini=name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('contentArea').innerHTML=`
+      <div class="account-panel">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700">${ini}</div>
+          <div>
+            <div style="font-size:20px;font-weight:700">${name}</div>
+            <div style="font-size:13px;color:var(--text2)">${email}</div>
+            <div style="font-size:12px;color:var(--green);margin-top:4px">✓ Email · 📱 Teléfono · 🪪 Identidad — Todo verificado</div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          ${[['📦','Compras','12'],['🏷️','Ventas','8'],['❤️','Favoritos',favs.size],['⏰','Subastas','3'],['💬','Mensajes','2'],['⭐','Reseñas','87']].map(([i,l,n])=>`<div class="stat-box" onclick="toast('${l}: próximamente')"><div style="font-size:24px;margin-bottom:4px">${i}</div><div style="font-size:11px;color:var(--text2)">${l}</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${n}</div></div>`).join('')}
+        </div>
+        <div class="menu-list">
+          ${[['⚙️','Configuración'],['💳','Métodos de pago'],['🚚','Direcciones'],['🔔','Notificaciones'],['🛡️','Protección al comprador'],['🔒','Seguridad y 2FA'],['❓','Centro de ayuda']].map(([i,l])=>`<div class="menu-item" onclick="toast('${l}: próximamente')"><div class="menu-item-left"><span>${i}</span><span>${l}</span></div><span style="color:var(--text2)">›</span></div>`).join('')}
+          <div class="menu-item" onclick="doLogout()" style="color:var(--red)"><div class="menu-item-left"><span>🚪</span><span>Cerrar sesión</span></div></div>
+        </div>
+      </div>`;
+  }
+}
+
+// ═══ CART ═══
+function addCart(id){const p=products.find(x=>x.id===id);if(!p)return;const e=cart.find(c=>c.id===id);if(e)e.qty++;else cart.push({...p,qty:1});updateCartBadge();toast(`"${p.title.slice(0,26)}..." añadido 🛒`);}
+function updateCartBadge(){document.getElementById('cartCount').textContent=cart.reduce((s,c)=>s+c.qty,0);}
+function renderCart(){
+  const ie=document.getElementById('cartItems');const te=document.getElementById('cartTotal');
+  if(!cart.length){ie.innerHTML='<div style="text-align:center;padding:50px 0;color:var(--text2)"><div style="font-size:48px">🛒</div><p style="margin-top:10px">Carrito vacío</p></div>';te.innerHTML='';return;}
+  ie.innerHTML=cart.map(c=>`<div class="cart-item"><div class="cart-item-img">${c.icon}</div><div class="cart-item-info"><div class="cart-item-title">${c.title}</div><div style="font-size:11px;color:var(--text2)">${fmt(c.price)} c/u</div><div class="cart-qty"><button class="qty-btn" onclick="chQty(${c.id},-1)">−</button><span class="qty-num">${c.qty}</span><button class="qty-btn" onclick="chQty(${c.id},1)">+</button><span class="remove-item" onclick="rmCart(${c.id})">✕</span></div></div><div class="cart-item-total">${fmt(c.price*c.qty)}</div></div>`).join('');
+  const sub=cart.reduce((s,c)=>s+c.price*c.qty,0);const itbis=Math.round(sub*.18);
+  te.innerHTML=`<div class="cart-total-section"><div class="total-row"><span>Subtotal</span><span>${fmt(sub)}</span></div><div class="total-row"><span>Envío</span><span>RD$350</span></div><div class="total-row"><span>ITBIS 18%</span><span>${fmt(itbis)}</span></div><div class="total-row final"><span>Total</span><span>${fmt(sub+350+itbis)}</span></div><button class="checkout-btn" onclick="requireAuth('checkout')">Proceder al pago →</button><div class="payment-icons">🏦 BHD &nbsp; 🏦 Popular &nbsp; 💳 Visa/MC &nbsp; 💵 Efectivo</div></div>`;
+}
+function chQty(id,d){const c=cart.find(x=>x.id===id);if(!c)return;c.qty+=d;if(c.qty<=0)cart=cart.filter(x=>x.id!==id);updateCartBadge();renderCart();}
+function rmCart(id){cart=cart.filter(x=>x.id!==id);updateCartBadge();renderCart();}
+function toggleCart(){const ov=document.getElementById('cartOverlay');const open=ov.style.display==='none'||!ov.style.display;ov.style.display=open?'flex':'none';if(open)renderCart();}
+function closeCartOut(e){if(e.target===document.getElementById('cartOverlay'))toggleCart();}
+
+// ═══ FAVS ═══
+function toggleFav(id,el){if(favs.has(id)){favs.delete(id);if(el)el.textContent='♡';toast('Eliminado de favoritos');}else{favs.add(id);if(el)el.textContent='❤️';toast('Añadido a favoritos ❤️');}}
+
+// ═══ LEGAL MODAL ═══
+const legalContent = {
+  terms: {
+    title: '📋 Términos de uso',
+    body: `
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">1. Aceptación de los términos</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Al acceder y utilizar MercadoRD, aceptas estar sujeto a estos Términos de Uso. Si no estás de acuerdo con alguna parte de estos términos, no podrás utilizar nuestros servicios.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">2. Registro y cuenta</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Para publicar anuncios debes ser mayor de 18 años, proporcionar información veraz y verificar tu identidad con cédula dominicana o pasaporte válido. Eres responsable de mantener la confidencialidad de tu contraseña.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">3. Conducta del usuario</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Está prohibido publicar artículos ilegales, engañar a otros usuarios, usar bots o automatizaciones no autorizadas, o intentar defraudar al sistema. MercadoRD se reserva el derecho de suspender cuentas que violen estas normas.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">4. Comisiones y pagos</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">La publicación básica es gratuita. MercadoRD cobra una comisión del 5% sobre ventas completadas. Los pagos están sujetos al ITBIS (18%) conforme la legislación dominicana.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">5. Limitación de responsabilidad</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD actúa como plataforma intermediaria. No somos responsables por la calidad, seguridad o legalidad de los artículos listados, ni por el incumplimiento de los usuarios en sus transacciones.</p>
+      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025 · MercadoRD S.R.L. · Santo Domingo, RD</p>`
+  },
+  privacy: {
+    title: '🔒 Política de privacidad',
+    body: `
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Datos que recopilamos</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Recopilamos nombre, correo electrónico, número de teléfono, cédula de identidad (cifrada), historial de compras/ventas y datos de navegación para mejorar tu experiencia en la plataforma.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Cómo usamos tus datos</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Usamos tus datos para verificar tu identidad, procesar transacciones, enviarte notificaciones relevantes y mejorar nuestros servicios. Nunca vendemos tu información personal a terceros.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Seguridad de datos</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Toda la información está cifrada con AES-256. Las contraseñas se almacenan usando bcrypt. Cumplimos con la Ley 172-13 de Protección de Datos Personales de la República Dominicana.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Tus derechos</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Tienes derecho a acceder, corregir o eliminar tus datos personales en cualquier momento. Envía tu solicitud a privacidad@mercadord.do con asunto "Solicitud de datos".</p>
+      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Conforme a Ley 172-13 · Última actualización: enero 2025</p>`
+  },
+  cookies: {
+    title: '🍪 Política de cookies',
+    body: `
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD usa cookies esenciales para el funcionamiento del sitio, cookies de preferencias para recordar tus configuraciones y cookies analíticas para mejorar la experiencia de usuario.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">No usamos cookies de publicidad de terceros. Puedes controlar las cookies desde la configuración de tu navegador. Deshabilitar cookies esenciales puede afectar la funcionalidad del sitio.</p>
+      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
+  },
+  fraud: {
+    title: '🛡️ Política anti-fraude',
+    body: `
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Nuestro compromiso</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD tiene cero tolerancia al fraude. Todo vendedor debe verificar su identidad con cédula RD y teléfono activo. Las cuentas sospechosas son suspendidas de forma inmediata.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Señales de alerta</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Desconfía si: el precio es demasiado bajo, te piden pagar fuera de la plataforma, el vendedor no tiene historial verificado, te piden datos personales por WhatsApp o te ofrecen productos sin foto real.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">¿Cómo reportar?</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Usa el botón "Reportar" en cualquier anuncio o escríbenos a fraude@mercadord.do. Respondemos en menos de 24 horas. También puedes llamar al +1(809) 555-1234.</p>
+      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">MercadoRD colabora con la Policía Nacional y el Departamento de Cibercrimen de la RD.</p>`
+  },
+  returns: {
+    title: '🔄 MercadoRD Retorno',
+    body: `
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Política de devoluciones</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Tienes hasta <strong>15 días calendario</strong> desde la recepción para solicitar una devolución si el producto no corresponde a la descripción, llegó dañado o es defectuoso.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Proceso de devolución</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">1. Abre un caso desde "Mis compras" → "Solicitar devolución". 2. Adjunta fotos del producto. 3. MercadoRD mediará entre comprador y vendedor. 4. Si procede, el reembolso se acredita en 3-5 días hábiles.</p>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Excepciones</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">No aplica devolución para artículos usados vendidos "como está", productos digitales descargados, artículos personalizados o vehículos con más de 200 km recorridos post-venta.</p>
+      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Conforme a Ley 358-05 del Consumidor de la República Dominicana.</p>`
+  },
+  accessibility: {
+    title: '♿ Accesibilidad',
+    body: `
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD está comprometido con hacer nuestra plataforma accesible para todos. Seguimos las pautas WCAG 2.1 nivel AA y continuamente mejoramos la experiencia para usuarios con discapacidades.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Si encuentras alguna barrera de accesibilidad, contáctanos en accesibilidad@mercadord.do y trabajaremos para resolverla en un plazo de 5 días hábiles.</p>
+      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
+  }
+};
+
+function openLegal(key) {
+  const c = legalContent[key];
+  if (!c) return;
+  document.getElementById('legalTitle').textContent = c.title;
+  document.getElementById('legalBody').innerHTML = c.body;
+  document.getElementById('legalOverlay').style.display = 'flex';
+}
+document.getElementById('legalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'legalOverlay') document.getElementById('legalOverlay').style.display = 'none';
+});
+
+// ═══ INIT ═══
+cview='home'; doRender();
+</script>
+</body>
+</html>

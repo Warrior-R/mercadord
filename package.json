@@ -1,0 +1,23 @@
+{
+  "name": "mercadord",
+  "version": "1.0.0",
+  "description": "Marketplace de República Dominicana - Compra, vende y subasta de forma segura",
+  "type": "module",
+  "scripts": {
+    "dev": "http-server -p 8000 -o",
+    "build": "echo 'Project is static HTML/CSS/JS'",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "marketplace",
+    "ecommerce",
+    "republica-dominicana",
+    "subastas",
+    "verificacion-identidad"
+  ],
+  "author": "Tu nombre",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

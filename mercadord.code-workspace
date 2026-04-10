@@ -1,0 +1,46 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "editor.fontSize": 14,
+    "editor.tabSize": 2,
+    "editor.wordWrap": "on",
+    "editor.formatOnSave": true,
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "liveServer.settings.CustomBrowser": "chrome",
+    "files.associations": {
+      "*.css": "css",
+      "*.js": "javascript",
+      "*.html": "html"
+    },
+    "emmet.includeLanguages": {
+      "html": "html"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[html]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "chrome",
+        "request": "launch",
+        "name": "Abrir MercadoRD en Chrome",
+        "url": "http://localhost:5500",
+        "webRoot": "${workspaceFolder}"
+      }
+    ]
+  }
+}

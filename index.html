@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MercadoRD — Compra y Vende en República Dominicana</title>
+<meta name="description" content="El marketplace #1 de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
+
+<!-- Estilos -->
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/auth.css">
+<link rel="stylesheet" href="css/footer.css">
+<link rel="stylesheet" href="css/subsections.css">
+<link rel="stylesheet" href="css/carousel.css">
+<link rel="stylesheet" href="css/verification.css">
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     AUTH MODAL
+════════════════════════════════════════════════════ -->
+<div class="auth-overlay" id="authOverlay" style="display:none">
+ <div class="auth-box">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="closeAuth()">✕</button>
+   <div class="auth-logo">Mercado<span>RD</span></div>
+   <div class="auth-subtitle">Marketplace seguro de República Dominicana 🇩🇴</div>
+  </div>
+  <div class="auth-tabs">
+   <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Iniciar sesión</button>
+   <button class="auth-tab" id="tabReg" onclick="switchTab('register')">Crear cuenta</button>
+  </div>
+  <div class="auth-body">
+   <div class="auth-alert" id="authAlert"></div>
+
+   <!-- LOGIN -->
+   <div id="loginFlow">
+    <div class="auth-step active" id="ls1">
+     <button class="auth-btn btn-goog" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" style="vertical-align:middle;margin-right:8px">Continuar con Google
+     </button>
+     <button class="auth-btn btn-sms" onclick="switchTab('register');gotoStep('r',2)">📱 Continuar con teléfono</button>
+     <div class="divider">o con tu email</div>
+     <div class="fg"><label>Correo electrónico</label><input type="email" id="lEmail" placeholder="tu@email.com"><div class="ferr" id="lEmailE"></div></div>
+     <div class="fg"><label>Contraseña</label>
+      <div class="iicon"><input type="password" id="lPwd" placeholder="••••••••"><span class="eye" onclick="toggleEye('lPwd',this)">👁</span></div>
+      <div class="ferr" id="lPwdE"></div>
+     </div>
+     <div style="text-align:right;margin:-6px 0 14px"><span class="alink" onclick="gotoStep('l',3)">¿Olvidaste tu contraseña?</span></div>
+     <button class="auth-btn btn-pri" id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
+     <div class="trust-row">
+      <div class="tbadge">🔒 SSL 256-bit</div>
+      <div class="tbadge">🛡 Anti-fraude</div>
+      <div class="tbadge">✅ Datos cifrados</div>
+      <div class="tbadge">🔐 2FA disponible</div>
+     </div>
+    </div>
+    <div class="auth-step" id="ls2">
+     <div class="vc"><div class="vc-icon">🔐</div><div class="vc-title">Verificación en dos pasos</div><div class="vc-desc">Ingresa el código de 6 dígitos enviado a tu dispositivo.</div></div>
+     <div class="otp-row">
+      <input class="otp-d" maxlength="1" id="lo0" oninput="onext(this,1,'l')" onkeydown="oback(event,this,null,'l')">
+      <input class="otp-d" maxlength="1" id="lo1" oninput="onext(this,2,'l')" onkeydown="oback(event,this,0,'l')">
+      <input class="otp-d" maxlength="1" id="lo2" oninput="onext(this,3,'l')" onkeydown="oback(event,this,1,'l')">
+      <input class="otp-d" maxlength="1" id="lo3" oninput="onext(this,4,'l')" onkeydown="oback(event,this,2,'l')">
+      <input class="otp-d" maxlength="1" id="lo4" oninput="onext(this,5,'l')" onkeydown="oback(event,this,3,'l')">
+      <input class="otp-d" maxlength="1" id="lo5" oninput="onext(this,-1,'l')" onkeydown="oback(event,this,4,'l')">
+     </div>
+     <div class="resend-t">Reenviar en <span id="otpC">60</span>s</div>
+     <button class="auth-btn btn-pri" style="margin-top:14px" onclick="verify2fa()">Verificar código</button>
+    </div>
+    <div class="auth-step" id="ls3">
+     <div class="vc"><div class="vc-icon">📧</div><div class="vc-title">Recuperar contraseña</div><div class="vc-desc">Te enviaremos un enlace para restablecer tu contraseña.</div></div>
+     <div class="fg"><label>Correo electrónico</label><input type="email" id="resetE" placeholder="tu@email.com"></div>
+     <button class="auth-btn btn-pri" onclick="doReset()">Enviar enlace de recuperación</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('l',1)">← Volver</span></div>
+    </div>
+   </div>
+
+   <!-- REGISTRO -->
+   <div id="registerFlow" style="display:none">
+    <div class="step-dots">
+     <div class="sdot active" id="sd1"></div>
+     <div class="sdot" id="sd2"></div>
+     <div class="sdot" id="sd3"></div>
+     <div class="sdot" id="sd4"></div>
+    </div>
+
+    <!-- Paso 1: Datos -->
+    <div class="auth-step active" id="rs1">
+     <button class="auth-btn btn-goog" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" style="vertical-align:middle;margin-right:8px">Registrarse con Google
+     </button>
+     <div class="divider">o con formulario</div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg" style="margin-bottom:0"><label>Nombre</label><input type="text" id="rNom" placeholder="Juan"><div class="ferr" id="rNomE"></div></div>
+      <div class="fg" style="margin-bottom:0"><label>Apellido</label><input type="text" id="rApe" placeholder="Pérez"><div class="ferr" id="rApeE"></div></div>
+     </div>
+     <div class="fg" style="margin-top:12px"><label>Correo electrónico</label><input type="email" id="rEmail" placeholder="tu@email.com"><div class="ferr" id="rEmailE"></div></div>
+     <div class="fg"><label>Contraseña</label>
+      <div class="iicon"><input type="password" id="rPwd" placeholder="Mínimo 8 caracteres" oninput="pwdStrength(this.value)"><span class="eye" onclick="toggleEye('rPwd',this)">👁</span></div>
+      <div class="pwd-bar"><div class="pwd-fill" id="pwdF"></div></div>
+      <div class="pwd-lbl" id="pwdL">Ingresa una contraseña</div>
+      <div class="ferr" id="rPwdE"></div>
+     </div>
+     <div class="fg"><label>Confirmar contraseña</label>
+      <div class="iicon"><input type="password" id="rPwd2" placeholder="Repite tu contraseña"><span class="eye" onclick="toggleEye('rPwd2',this)">👁</span></div>
+      <div class="ferr" id="rPwd2E"></div>
+     </div>
+     <button class="auth-btn btn-pri" onclick="rs1next()">Continuar →</button>
+    </div>
+
+    <!-- Paso 2: Teléfono -->
+    <div class="auth-step" id="rs2">
+     <div class="vc" style="padding:10px 0 16px">
+      <div class="vc-icon">📱</div>
+      <div class="vc-title">Verifica tu teléfono</div>
+      <div class="vc-desc">El SMS previene cuentas falsas y protege a la comunidad.</div>
+     </div>
+     <div class="fg"><label>Número de teléfono</label>
+      <div class="phone-row">
+       <select id="phPfx">
+        <option value="+1809">🇩🇴 +1(809)</option>
+        <option value="+1829">🇩🇴 +1(829)</option>
+        <option value="+1849">🇩🇴 +1(849)</option>
+        <option value="+1">🇺🇸 +1</option>
+        <option value="+34">🇪🇸 +34</option>
+       </select>
+       <input type="tel" id="rPhone" placeholder="000-0000" style="flex:1">
+      </div>
+      <div class="ferr" id="rPhoneE"></div>
+     </div>
+     <button class="auth-btn btn-pri" id="smsBtnSend" onclick="sendSMS()">Enviar código SMS</button>
+     <div id="smsSection" style="display:none;margin-top:14px">
+      <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:10px">Código enviado a <strong id="phoneTo"></strong></div>
+      <div class="otp-row">
+       <input class="otp-d" maxlength="1" id="so0" oninput="onext(this,1,'s')" onkeydown="oback(event,this,null,'s')">
+       <input class="otp-d" maxlength="1" id="so1" oninput="onext(this,2,'s')" onkeydown="oback(event,this,0,'s')">
+       <input class="otp-d" maxlength="1" id="so2" oninput="onext(this,3,'s')" onkeydown="oback(event,this,1,'s')">
+       <input class="otp-d" maxlength="1" id="so3" oninput="onext(this,4,'s')" onkeydown="oback(event,this,2,'s')">
+       <input class="otp-d" maxlength="1" id="so4" oninput="onext(this,5,'s')" onkeydown="oback(event,this,3,'s')">
+       <input class="otp-d" maxlength="1" id="so5" oninput="onext(this,-1,'s')" onkeydown="oback(event,this,4,'s')">
+      </div>
+      <div class="resend-t">Reenviar en <span id="smsC">60</span>s</div>
+      <button class="auth-btn btn-pri" style="margin-top:10px" onclick="verifySMS()">Verificar código</button>
+     </div>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',1)">← Atrás</span></div>
+    </div>
+
+    <!-- Paso 3: Cédula -->
+    <div class="auth-step" id="rs3">
+     <div class="vc" style="padding:10px 0 14px">
+      <div class="vc-icon">🪪</div>
+      <div class="vc-title">Verificación de identidad</div>
+      <div class="vc-desc">Requerido para vender. Protege a los compradores de estafas.</div>
+     </div>
+     <div class="cedula-warn">⚠️ Datos cifrados con AES-256. MercadoRD no comparte tu cédula con terceros.</div>
+     <div class="fg"><label>Cédula de identidad</label><input type="text" id="rCed" placeholder="000-0000000-0" maxlength="13" oninput="fmtCed(this)"><div class="ferr" id="rCedE"></div></div>
+     <div class="fg"><label>Fecha de nacimiento</label><input type="date" id="rDob"><div class="ferr" id="rDobE"></div></div>
+     <div class="fg"><label>Provincia</label>
+      <select id="rProv" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Sora',sans-serif;background:#fff">
+       <option value="">Selecciona tu provincia</option>
+       <option>Distrito Nacional</option><option>Santo Domingo</option><option>Santiago</option>
+       <option>Puerto Plata</option><option>La Romana</option><option>San Cristóbal</option>
+       <option>San Pedro de Macorís</option><option>La Vega</option><option>La Altagracia</option><option>Otra</option>
+      </select>
+     </div>
+     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+      <input type="checkbox" id="rTerms" style="margin-top:3px;width:auto;flex-shrink:0">
+      <label for="rTerms" style="font-size:12px;color:var(--text2);cursor:pointer">
+       Acepto los <span class="alink" onclick="openLegal('terms')">Términos de Uso</span>,
+       la <span class="alink" onclick="openLegal('privacy')">Política de Privacidad</span>
+       y las <span class="alink" onclick="openLegal('fraud')">Normas anti-fraude</span>.
+      </label>
+     </div>
+     <button class="auth-btn btn-pri" onclick="rs3next()">Continuar →</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',2)">← Atrás</span></div>
+    </div>
+
+    <!-- Paso 4: Email -->
+    <div class="auth-step" id="rs4">
+     <div class="vc">
+      <div class="vc-icon">✉️</div>
+      <div class="vc-title">¡Todo listo!</div>
+      <div class="vc-desc">Crearemos tu cuenta y enviaremos verificación a <strong id="emailTo"></strong>.</div>
+     </div>
+     <button class="auth-btn btn-pri" onclick="doCreateAccount()">Crear cuenta y verificar email</button>
+     <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="resendEmail()">Reenviar verificación</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',3)">← Atrás</span></div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- Legal Modal -->
+<div class="auth-overlay" id="legalOverlay" style="display:none">
+ <div class="auth-box" style="max-width:560px">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="document.getElementById('legalOverlay').style.display='none'">✕</button>
+   <div class="auth-logo" id="legalTitle">Documento legal</div>
+   <div class="auth-subtitle">MercadoRD S.R.L.</div>
+  </div>
+  <div class="auth-body" id="legalBody" style="max-height:65vh;overflow-y:auto"></div>
+ </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VERIFICACIÓN DE IDENTIDAD MODAL
+════════════════════════════════════════════════════ -->
+<div class="verification-overlay" id="verificationOverlay">
+ <div class="verification-panel">
+  <div class="verification-header">
+   <h2>🪪 Verificación de Identidad</h2>
+   <p>Verificamos tu identidad para proteger a la comunidad MercadoRD. El proceso es rápido y seguro.</p>
+  </div>
+
+  <div class="verification-content">
+   <!-- Paso 1: Documento -->
+   <div id="verificationStep1" class="verification-step-container">
+    <div class="verification-steps" style="margin-bottom:32px">
+     <div class="verification-step active">
+      <div class="verification-step-num">1</div>
+      <div class="verification-step-label">Documento</div>
+     </div>
+     <div class="verification-step">
+      <div class="verification-step-num">2</div>
+      <div class="verification-step-label">Upload</div>
+     </div>
+     <div class="verification-step">
+      <div class="verification-step-num">3</div>
+      <div class="verification-step-label">Rostro</div>
+     </div>
+    </div>
+
+    <div class="verification-info-box">
+     ℹ️ <strong>Para vender:</strong> La verificación es obligatoria. Necesitas documento válido (cédula RD o pasaporte) + verificación facial.
+    </div>
+
+    <div class="verification-form-group">
+     <label class="verification-label">Tipo de documento</label>
+     <select id="docType" class="verification-select">
+      <option value="">Selecciona un tipo...</option>
+      <option value="cedula">Cédula de identidad (RD)</option>
+      <option value="passport">Pasaporte</option>
+     </select>
+    </div>
+
+    <div class="verification-form-group">
+     <label class="verification-label">Número de documento</label>
+     <input type="text" id="docNumber" class="verification-input" placeholder="000-0000000-0 o pasaporte" maxlength="20">
+    </div>
+
+    <div class="verification-form-group">
+     <label class="verification-label">Nombre completo (como aparece en documento)</label>
+     <input type="text" id="fullName" class="verification-input" placeholder="Juan Carlos Pérez">
+    </div>
+
+    <div class="verification-actions">
+     <button class="verification-btn-cancel" onclick="closeVerification()">Cancelar</button>
+     <button class="verification-btn-submit" onclick="verificationNext1()">Continuar →</button>
+    </div>
+   </div>
+
+   <!-- Paso 2: Upload de documento -->
+   <div id="verificationStep2" class="verification-step-container" style="display:none">
+    <div class="verification-steps" style="margin-bottom:32px">
+     <div class="verification-step completed">
+      <div class="verification-step-num">✓</div>
+      <div class="verification-step-label">Documento</div>
+     </div>
+     <div class="verification-step active">
+      <div class="verification-step-num">2</div>
+      <div class="verification-step-label">Upload</div>
+     </div>
+     <div class="verification-step">
+      <div class="verification-step-num">3</div>
+      <div class="verification-step-label">Rostro</div>
+     </div>
+    </div>
+
+    <div class="verification-warning">
+     ⚠️ <strong>Importante:</strong> Carga una foto clara del documento (ambos lados si es cédula). Asegúrate que todo sea legible.
+    </div>
+
+    <div class="verification-form-group">
+     <label class="verification-label">📸 Foto del documento</label>
+     <div class="file-upload" id="docUploadArea" onclick="document.getElementById('docUploadInput').click()">
+      <div class="file-upload-icon">📄</div>
+      <p class="file-upload-text">Haz clic para seleccionar o arrastra un archivo</p>
+      <input type="file" id="docUploadInput" class="verification-input" style="display:none" accept="image/*" onchange="handleDocUpload(this)">
+      <p class="file-upload-file" id="docUploadName"></p>
+     </div>
+    </div>
+
+    <div class="verification-info-box">
+     ℹ️ <strong>Formatos aceptados:</strong> JPG, PNG (máximo 10MB). La foto debe estar bien iluminada y ser legible.
+    </div>
+
+    <div class="verification-actions">
+     <button class="verification-btn-cancel" onclick="verificationBack()">← Atrás</button>
+     <button class="verification-btn-submit" id="docUploadBtn" onclick="verificationNext2()" disabled>Continuar →</button>
+    </div>
+   </div>
+
+   <!-- Paso 3: Verificación facial -->
+   <div id="verificationStep3" class="verification-step-container" style="display:none">
+    <div class="verification-steps" style="margin-bottom:32px">
+     <div class="verification-step completed">
+      <div class="verification-step-num">✓</div>
+      <div class="verification-step-label">Documento</div>
+     </div>
+     <div class="verification-step completed">
+      <div class="verification-step-num">✓</div>
+      <div class="verification-step-label">Upload</div>
+     </div>
+     <div class="verification-step active">
+      <div class="verification-step-num">3</div>
+      <div class="verification-step-label">Rostro</div>
+     </div>
+    </div>
+
+    <div class="verification-instructions">
+     📸 Detectar rostro automáticamente
+    </div>
+
+    <div class="camera-instructions">
+     <strong>Instrucciones:</strong><br>
+     1. Asegúrate de estar en un lugar bien iluminado<br>
+     2. Mira directamente a la cámara<br>
+     3. Mantén tu rostro dentro del marco verde<br>
+     4. Presiona "Capturar foto" cuando estés listo
+    </div>
+
+    <div class="camera-container">
+     <video id="cameraFeed" autoplay playsinline></video>
+     <div class="camera-overlay"></div>
+    </div>
+
+    <div class="camera-controls">
+     <button class="camera-button secondary" id="cameraBtnToggle" onclick="toggleCamera()">📹 Iniciar cámara</button>
+     <button class="camera-button" id="cameraBtnCapture" onclick="capturePhoto()" disabled>📸 Capturar foto</button>
+    </div>
+
+    <div id="capturedPhotoArea" style="display:none;text-align:center;margin-bottom:16px">
+     <p style="font-size:13px;color:#666;margin-bottom:8px">Foto capturada:</p>
+     <canvas id="capturedCanvas" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid #ddd"></canvas>
+     <button class="camera-button secondary" onclick="retakePhoto()" style="margin-top:10px">↻ Tomar otra</button>
+    </div>
+
+    <div class="verification-info-box">
+     ✅ <strong>Privacidad:</strong> Tu foto facial se analiza localmente y se cifra antes de enviarse. Cumplimos Ley 172-13 de Protección de Datos.
+    </div>
+
+    <div class="verification-actions">
+     <button class="verification-btn-cancel" onclick="verificationBack()">← Atrás</button>
+     <button class="verification-btn-submit" id="submitVerification" onclick="submitVerification()" disabled>Completar verificación</button>
+    </div>
+   </div>
+
+   <!-- Estado: Verificación completada -->
+   <div id="verificationSuccess" class="verification-step-container" style="display:none">
+    <div class="verification-success">
+     <div class="verification-success-icon">✅</div>
+     <div class="verification-success-title">¡Verificación en proceso!</div>
+     <div class="verification-success-msg">
+      Hemos recibido tu información. Nuestro equipo verificará tu identidad en las próximas 2-4 horas. Recibirás un email cuando se complete.
+     </div>
+     <button class="verification-btn-submit" onclick="closeVerification()">Cerrar</button>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SUBSECCIONES DEL FOOTER
+════════════════════════════════════════════════════ -->
+
+<!-- 🛒 COMPRADORES -->
+<div class="subsection-overlay" id="buyersSection">
+ <div class="subsection-panel">
+  <div class="subsection-header">
+   <h2>🛒 Sitio de Compradores</h2>
+   <button class="subsection-close" onclick="closeSubsection()">✕</button>
+  </div>
+  <div class="subsection-content">
+   <div class="subsection-grid">
+    <div class="subsection-card" onclick="showToast('Mi cuenta — próximamente ⏳')">
+     <div class="subsection-card-icon">👤</div>
+     <div class="subsection-card-title">Mi Cuenta</div>
+     <div class="subsection-card-desc">Accede a tu perfil, configuración de privacidad y datos personales.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Mis compras — próximamente ⏳')">
+     <div class="subsection-card-icon">📦</div>
+     <div class="subsection-card-title">Mis Compras</div>
+     <div class="subsection-card-desc">Historial de compras, pedidos activos y seguimiento de envíos.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Mis favoritos — próximamente ⏳')">
+     <div class="subsection-card-icon">❤️</div>
+     <div class="subsection-card-title">Mis Favoritos</div>
+     <div class="subsection-card-desc">Accede a tu lista de productos guardados y alertas de precio.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showView('auctions')">
+     <div class="subsection-card-icon">🔥</div>
+     <div class="subsection-card-title">Subastas Activas</div>
+     <div class="subsection-card-desc">Participa en subastas en vivo y obtén grandes descuentos.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Protección al comprador — próximamente ⏳')">
+     <div class="subsection-card-icon">🛡️</div>
+     <div class="subsection-card-title">Protección al Comprador</div>
+     <div class="subsection-card-desc">Garantía MercadoRD: reembolso seguro en compras protegidas.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Métodos de pago — próximamente ⏳')">
+     <div class="subsection-card-icon">💳</div>
+     <div class="subsection-card-title">Métodos de Pago</div>
+     <div class="subsection-card-desc">Tarjetas, transferencias bancarias, efectivo y billeteras digitales.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('¿Cómo comprar? — próximamente ⏳')">
+     <div class="subsection-card-icon">❓</div>
+     <div class="subsection-card-title">¿Cómo Comprar?</div>
+     <div class="subsection-card-desc">Guía paso a paso para realizar compras seguras en MercadoRD.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Seguimiento de envío — próximamente ⏳')">
+     <div class="subsection-card-icon">🚚</div>
+     <div class="subsection-card-title">Seguimiento de Envío</div>
+     <div class="subsection-card-desc">Rastrea tu paquete en tiempo real hasta tu puerta.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- 🏷️ VENDEDORES -->
+<div class="subsection-overlay" id="sellersSection">
+ <div class="subsection-panel">
+  <div class="subsection-header">
+   <h2>🏷️ Sitio de Vendedores</h2>
+   <button class="subsection-close" onclick="closeSubsection()">✕</button>
+  </div>
+  <div class="subsection-content">
+   <div class="subsection-grid">
+    <div class="subsection-card" onclick="requireAuth('sell')">
+     <div class="subsection-card-icon">➕</div>
+     <div class="subsection-card-title">Publicar Anuncio</div>
+     <div class="subsection-card-desc">Crea tu primer anuncio en minutos. Incluye fotos, precio y descripción.</div>
+     <a class="subsection-card-link">Empezar ahora →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Seller Center — próximamente ⏳')">
+     <div class="subsection-card-icon">📊</div>
+     <div class="subsection-card-title">Seller Center</div>
+     <div class="subsection-card-desc">Panel completo de gestión, métricas y campañas publicitarias.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Panel de ventas — próximamente ⏳')">
+     <div class="subsection-card-icon">📈</div>
+     <div class="subsection-card-title">Panel de Ventas</div>
+     <div class="subsection-card-desc">Monitorea ventas, ingresos y desempeño de tus anuncios.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('¿Cómo vender? — próximamente ⏳')">
+     <div class="subsection-card-icon">❓</div>
+     <div class="subsection-card-title">¿Cómo Vender?</div>
+     <div class="subsection-card-desc">Guía completa: fotos, precios, comunicación y envíos.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Tarifas y comisiones — próximamente ⏳')">
+     <div class="subsection-card-icon">💰</div>
+     <div class="subsection-card-title">Tarifas y Comisiones</div>
+     <div class="subsection-card-desc">Transparencia total en comisiones, envíos y costos administrativos.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Vendedor Premium — próximamente ⏳')">
+     <div class="subsection-card-icon">⭐</div>
+     <div class="subsection-card-title">Vendedor Premium</div>
+     <div class="subsection-card-desc">Destácate con una insignia Premium, envío gratis y soporte prioritario.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Publicidad en MercadoRD — próximamente ⏳')">
+     <div class="subsection-card-icon">📣</div>
+     <div class="subsection-card-title">Publicidad</div>
+     <div class="subsection-card-desc">Campañas pagadas para impulsar tus productos a miles de compradores.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Reglas del vendedor — próximamente ⏳')">
+     <div class="subsection-card-icon">📋</div>
+     <div class="subsection-card-title">Reglas del Vendedor</div>
+     <div class="subsection-card-desc">Prohibiciones, tipos de productos y políticas de conducta.</div>
+     <a class="subsection-card-link">Ver detalles →</a>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- 🏪 MERCADORD -->
+<div class="subsection-overlay" id="aboutSection">
+ <div class="subsection-panel">
+  <div class="subsection-header">
+   <h2>🏪 Acerca de MercadoRD</h2>
+   <button class="subsection-close" onclick="closeSubsection()">✕</button>
+  </div>
+  <div class="subsection-content">
+   <div class="subsection-grid">
+    <div class="subsection-card" onclick="showToast('Quiénes somos — próximamente ⏳')">
+     <div class="subsection-card-icon">🇩🇴</div>
+     <div class="subsection-card-title">Quiénes Somos</div>
+     <div class="subsection-card-desc">Nuestra historia, misión y visión como el marketplace #1 de RD.</div>
+     <a class="subsection-card-link">Leer más →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Sala de prensa — próximamente ⏳')">
+     <div class="subsection-card-icon">📰</div>
+     <div class="subsection-card-title">Sala de Prensa</div>
+     <div class="subsection-card-desc">Notas de prensa, comunicados y cobertura mediática de MercadoRD.</div>
+     <a class="subsection-card-link">Leer más →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Trabaja con nosotros — próximamente ⏳')">
+     <div class="subsection-card-icon">💼</div>
+     <div class="subsection-card-title">Trabaja con Nosotros</div>
+     <div class="subsection-card-desc">Empleos, oportunidades de carrera e internados en MercadoRD.</div>
+     <a class="subsection-card-link">Ver empleos →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Comunidad — próximamente ⏳')">
+     <div class="subsection-card-icon">👥</div>
+     <div class="subsection-card-title">Comunidad</div>
+     <div class="subsection-card-desc">Foros, grupos de compra colectiva y comunidades especializadas.</div>
+     <a class="subsection-card-link">Ver más →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Blog y consejos — próximamente ⏳')">
+     <div class="subsection-card-icon">✍️</div>
+     <div class="subsection-card-title">Blog y Consejos</div>
+     <div class="subsection-card-desc">Tutoriales, tips de compra/venta y noticias del e-commerce.</div>
+     <a class="subsection-card-link">Leer artículos →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Programa de afiliados — próximamente ⏳')">
+     <div class="subsection-card-icon">🤝</div>
+     <div class="subsection-card-title">Programa de Afiliados</div>
+     <div class="subsection-card-desc">Gana comisiones promoviendo productos en MercadoRD.</div>
+     <a class="subsection-card-link">Más información →</a>
+    </div>
+    <div class="subsection-card" onclick="showToast('Inversionistas — próximamente ⏳')">
+     <div class="subsection-card-icon">📊</div>
+     <div class="subsection-card-title">Para Inversionistas</div>
+     <div class="subsection-card-desc">Información financiera, reportes y oportunidades de inversión.</div>
+     <a class="subsection-card-link">Contactar →</a>
+    </div>
+    <div class="subsection-card" onclick="openLegal('returns')">
+     <div class="subsection-card-icon">🔄</div>
+     <div class="subsection-card-title">MercadoRD Retorno</div>
+     <div class="subsection-card-desc">Política de devoluciones: hasta 15 días sin preguntas.</div>
+     <a class="subsection-card-link">Leer política →</a>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- 📞 CONTACTO -->
+<div class="subsection-overlay" id="contactSection">
+ <div class="subsection-panel">
+  <div class="subsection-header">
+   <h2>📞 Contacto y Soporte</h2>
+   <button class="subsection-close" onclick="closeSubsection()">✕</button>
+  </div>
+  <div class="subsection-content">
+   <div class="subsection-section">
+    <div class="subsection-section-title">Canales de Contacto</div>
+    <ul class="subsection-list">
+     <li class="subsection-list-item" onclick="showToast('Centro de ayuda — próximamente ⏳')">
+      <div class="subsection-list-icon">❓</div>
+      <div class="subsection-list-content">
+       <div class="subsection-list-title">Centro de Ayuda</div>
+       <div class="subsection-list-desc">Preguntas frecuentes, tutoriales y solución de problemas.</div>
+      </div>
+     </li>
+     <li class="subsection-list-item" onclick="showToast('Chat en vivo — próximamente ⏳')">
+      <div class="subsection-list-icon">💬</div>
+      <div class="subsection-list-content">
+       <div class="subsection-list-title">Chat en Vivo</div>
+       <div class="subsection-list-desc">Habla con nuestro equipo de soporte en tiempo real.</div>
+      </div>
+     </li>
+     <li class="subsection-list-item" onclick="showToast('Llamando +1(809) 555-1234...')">
+      <div class="subsection-list-icon">📞</div>
+      <div class="subsection-list-content">
+       <div class="subsection-list-title">Teléfono</div>
+       <div class="subsection-list-desc">+1 (809) 555-1234 · Lunes a domingo 8am - 8pm</div>
+      </div>
+     </li>
+     <li class="subsection-list-item" onclick="showToast('Email: soporte@mercadord.do')">
+      <div class="subsection-list-icon">📧</div>
+      <div class="subsection-list-content">
+       <div class="subsection-list-title">Email</div>
+       <div class="subsection-list-desc">soporte@mercadord.do · Respuesta en 24 horas</div>
+      </div>
+     </li>
+     <li class="subsection-list-item" onclick="showToast('WhatsApp soporte — próximamente ⏳')">
+      <div class="subsection-list-icon">📱</div>
+      <div class="subsection-list-content">
+       <div class="subsection-list-title">WhatsApp</div>
+       <div class="subsection-list-desc">+1 (809) 555-1234 · Mensajes rápidos y eficientes.</div>
+      </div>
+     </li>
+     <li class="subsection-list-item" onclick="showToast('Reportar fraude — próximamente ⏳')">
+      <div class="subsection-list-icon">🚨</div>
+      <div class="subsection-list-content">
+       <div class="subsection-list-title">Reportar Fraude</div>
+       <div class="subsection-list-desc">¿Viste actividad sospechosa? Cuéntanos.</div>
+      </div>
+     </li>
+    </ul>
+   </div>
+
+   <div class="subsection-info-box">
+    🇩🇴 <strong>Ubicación:</strong> Santo Domingo, República Dominicana<br>
+    📍 <strong>Provincia:</strong> Santo Domingo<br>
+    🕒 <strong>Horario:</strong> Atención 24/7 · Soporte 8am - 8pm
+   </div>
+
+   <div class="subsection-section">
+    <div class="subsection-section-title">Redes Sociales</div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+     <a class="subsection-button" onclick="showToast('Facebook — @MercadoRD')">🔵 Facebook</a>
+     <a class="subsection-button" onclick="showToast('Instagram — @mercadord.do')">📸 Instagram</a>
+     <a class="subsection-button" onclick="showToast('Twitter/X — @MercadoRD')">𝕏 Twitter</a>
+     <a class="subsection-button" onclick="showToast('YouTube — MercadoRD Oficial')">▶️ YouTube</a>
+     <a class="subsection-button" onclick="showToast('TikTok — @mercadord.do')">🎵 TikTok</a>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════ -->
+<div class="header">
+ <div class="header-top">
+  <div class="logo" onclick="goHome()">Mercado<span>RD</span></div>
+  <div class="search-bar">
+   <input type="text" placeholder="Buscar productos, marcas o vendedores..." id="searchInput" oninput="filterProducts()">
+   <button onclick="filterProducts()">Buscar</button>
+  </div>
+  <div class="header-icons">
+   <button class="hbtn" onclick="requireAuth('sell')">+ Vender</button>
+   <button class="hbtn" onclick="toggleCart()">🛒 Carrito <span class="cart-badge" id="cartCount">0</span></button>
+   <button class="hbtn" id="authBtn" onclick="openAuth()">👤 Ingresar</button>
+  </div>
+ </div>
+ <div class="nav">
+  <div class="nav-item active" onclick="setNav(this,'all')">🏪 Inicio</div>
+  <div class="nav-item" onclick="setNav(this,'electronics')">📱 Electrónica</div>
+  <div class="nav-item" onclick="setNav(this,'vehicles')">🚗 Vehículos</div>
+  <div class="nav-item" onclick="setNav(this,'fashion')">👗 Moda</div>
+  <div class="nav-item" onclick="setNav(this,'home2')">🏠 Hogar</div>
+  <div class="nav-item" onclick="setNav(this,'sports')">⚽ Deportes</div>
+  <div class="nav-item" onclick="setNav(this,'services')">🔧 Servicios</div>
+  <div class="nav-item" onclick="setNav(this,'agro')">🌿 Agropecuario</div>
+  <div class="nav-item" onclick="showView('auctions')" style="color:var(--accent2);font-weight:600">🔥 Subastas</div>
+ </div>
+</div>
+
+<!-- BANNER -->
+<div class="banner" id="heroBanner">
+ <div style="font-size:28px;margin-bottom:8px">🇩🇴</div>
+ <h1>Compra y vende en República Dominicana</h1>
+ <p>Millones de productos · Vendedores verificados · Envíos a todo el país</p>
+ <div class="banner-btns">
+  <button class="bbtn bbtn-main" onclick="requireAuth('sell')">Comenzar a vender gratis</button>
+  <button class="bbtn bbtn-sec" onclick="showView('auctions')">Ver subastas activas 🔥</button>
+ </div>
+ <div class="banner-stats">
+  <div class="bstat"><div class="bstat-num">+120K</div><div class="bstat-label">Productos activos</div></div>
+  <div class="bstat"><div class="bstat-num">+45K</div><div class="bstat-label">Vendedores verificados</div></div>
+  <div class="bstat"><div class="bstat-num">+800K</div><div class="bstat-label">Compradores</div></div>
+  <div class="bstat"><div class="bstat-num">32</div><div class="bstat-label">Provincias cubiertas</div></div>
+ </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     CARRUSEL INTERACTIVO
+════════════════════════════════════════════════════ -->
+<div class="carousel-section">
+ <div class="carousel-header">
+  <h2>✨ Descubre ahora</h2>
+  <div class="carousel-tabs">
+   <button class="carousel-tab active" onclick="switchCarouselTab(this, 'deals')">🔥 Ofertas</button>
+   <button class="carousel-tab" onclick="switchCarouselTab(this, 'auctions')">⏰ Subastas</button>
+   <button class="carousel-tab" onclick="switchCarouselTab(this, 'trending')">📈 Trending</button>
+  </div>
+ </div>
+
+ <div class="carousel-container">
+  <div class="carousel-wrapper">
+   <div class="carousel-content" id="carouselContent"></div>
+   <div class="carousel-controls">
+    <button class="carousel-btn" onclick="carouselPrev()">❮</button>
+    <button class="carousel-btn" onclick="carouselNext()">❯</button>
+   </div>
+  </div>
+  <div class="carousel-indicators" id="carouselIndicators"></div>
+ </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainContent">
+ <div class="sidebar">
+  <div class="scard">
+   <div class="scard-title">Categorías</div>
+   <div class="scard-body">
+    <div class="scat active" onclick="filterCat('all',this)"><span class="scat-icon">🏪</span>Todas</div>
+    <div class="scat" onclick="filterCat('electronics',this)"><span class="scat-icon">📱</span>Electrónica</div>
+    <div class="scat" onclick="filterCat('vehicles',this)"><span class="scat-icon">🚗</span>Vehículos</div>
+    <div class="scat" onclick="filterCat('fashion',this)"><span class="scat-icon">👗</span>Moda</div>
+    <div class="scat" onclick="filterCat('home2',this)"><span class="scat-icon">🏠</span>Hogar</div>
+    <div class="scat" onclick="filterCat('sports',this)"><span class="scat-icon">⚽</span>Deportes</div>
+    <div class="scat" onclick="filterCat('services',this)"><span class="scat-icon">🔧</span>Servicios</div>
+    <div class="scat" onclick="filterCat('agro',this)"><span class="scat-icon">🌿</span>Agropecuario</div>
+   </div>
+  </div>
+  <div class="scard">
+   <div class="scard-title">Precio máximo (DOP)</div>
+   <div class="scard-body">
+    <div class="filter-row">
+     <label>Máximo: <strong id="priceOut">RD$200,000</strong></label>
+     <input type="range" min="500" max="200000" value="200000" step="500" oninput="filterPrice(this.value)">
+     <div class="fprice"><span>RD$500</span><span>RD$200K+</span></div>
+    </div>
+   </div>
+  </div>
+  <div class="scard">
+   <div class="scard-title">Condición</div>
+   <div class="scard-body">
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">✨</span>Nuevo</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">♻️</span>Usado</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">🔧</span>Reacondicionado</div>
+   </div>
+  </div>
+  <div class="scard">
+   <div class="scard-title">Ubicación</div>
+   <div class="scard-body">
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Santo Domingo</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Santiago</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Puerto Plata</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>La Romana</div>
+    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Punta Cana</div>
+   </div>
+  </div>
+ </div>
+ <div class="content" id="contentArea">
+  <div class="tabs" id="mainTabs">
+   <button class="tab active" onclick="setTab(this)">⭐ Destacados</button>
+   <button class="tab" onclick="setTab(this)">🆕 Más nuevos</button>
+   <button class="tab" onclick="setTab(this)">🔥 Ofertas del día</button>
+   <button class="tab" onclick="setTab(this)">📍 Cerca de mí</button>
+  </div>
+  <div id="productArea"></div>
+ </div>
+</div>
+
+<!-- CART -->
+<div class="modal-overlay" id="cartOverlay" style="display:none" onclick="closeCartOut(event)">
+ <div class="cart-panel">
+  <div class="cart-header"><h3>🛒 Mi Carrito</h3><button class="close-btn" onclick="toggleCart()">✕</button></div>
+  <div id="cartItems"></div>
+  <div id="cartTotal"></div>
+ </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════ -->
+<footer class="footer" id="siteFooter">
+ <div class="footer-newsletter">
+  <div class="footer-newsletter-text">
+   <h3>📬 Suscríbete y ahorra más</h3>
+   <p>Recibe ofertas exclusivas, subastas nuevas y novedades de MercadoRD en tu correo.</p>
+  </div>
+  <div class="newsletter-form">
+   <input type="email" placeholder="tu@correo.com">
+   <button onclick="showToast('¡Suscrito! 🎉 Bienvenido/a a la comunidad MercadoRD')">Suscribirse</button>
+  </div>
+ </div>
+
+ <div class="footer-main">
+  <div class="footer-brand">
+   <div class="footer-logo">Mercado<span>RD</span></div>
+   <p>El marketplace #1 de República Dominicana. Compra, vende y subasta de forma segura con vendedores verificados en las 32 provincias del país.</p>
+   <div class="footer-trust">
+    <div class="ftrust-item"><span>🔒</span><span>Compras protegidas con cifrado SSL 256-bit</span></div>
+    <div class="ftrust-item"><span>🛡️</span><span>Garantía MercadoRD en todas las compras</span></div>
+    <div class="ftrust-item"><span>✅</span><span>Vendedores verificados con cédula RD</span></div>
+    <div class="ftrust-item"><span>📦</span><span>Envíos a las 32 provincias del país</span></div>
+   </div>
+   <div class="footer-apps">
+    <a class="app-btn" onclick="showToast('App iOS — próximamente 🍎')"><span class="app-icon">🍎</span><div><div style="font-size:9px;opacity:.7">Descargar en</div><div style="font-weight:600">App Store</div></div></a>
+    <a class="app-btn" onclick="showToast('App Android — próximamente 🤖')"><span class="app-icon">🤖</span><div><div style="font-size:9px;opacity:.7">Descargar en</div><div style="font-weight:600">Google Play</div></div></a>
+   </div>
+  </div>
+
+  <div class="footer-col">
+   <h4 onclick="openBuyers()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🛒 Compradores</h4>
+   <ul>
+    <li><a onclick="openBuyers()"><span class="flink-icon">👤</span>Mi cuenta</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">📦</span>Mis compras</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">❤️</span>Mis favoritos</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">🔥</span>Subastas activas</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">🛡️</span>Protección al comprador</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">❓</span>¿Cómo comprar?</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">💳</span>Métodos de pago</a></li>
+    <li><a onclick="openBuyers()"><span class="flink-icon">🚚</span>Seguimiento de envío</a></li>
+   </ul>
+  </div>
+
+  <div class="footer-col">
+   <h4 onclick="openSellers()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏷️ Vendedores</h4>
+   <ul>
+    <li><a onclick="openSellers()"><span class="flink-icon">➕</span>Publicar anuncio</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">📊</span>Seller Center</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">📈</span>Panel de ventas</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">❓</span>¿Cómo vender?</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">💰</span>Tarifas y comisiones</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">⭐</span>Vendedor Premium</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">📣</span>Publicidad en MercadoRD</a></li>
+    <li><a onclick="openSellers()"><span class="flink-icon">📋</span>Reglas del vendedor</a></li>
+   </ul>
+  </div>
+
+  <div class="footer-col">
+   <h4 onclick="openAbout()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏪 MercadoRD</h4>
+   <ul>
+    <li><a onclick="openAbout()"><span class="flink-icon">🇩🇴</span>Quiénes somos</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">📰</span>Sala de prensa</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">💼</span>Trabaja con nosotros</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">🔄</span>MercadoRD Retorno</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">👥</span>Comunidad</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">✍️</span>Blog y consejos</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">🤝</span>Programa de afiliados</a></li>
+    <li><a onclick="openAbout()"><span class="flink-icon">📊</span>Inversionistas</a></li>
+   </ul>
+  </div>
+
+  <div class="footer-col">
+   <h4 onclick="openContact()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">📞 Contacto</h4>
+   <ul>
+    <li><a onclick="openContact()"><span class="flink-icon">❓</span>Centro de ayuda</a></li>
+    <li><a onclick="openContact()"><span class="flink-icon">💬</span>Chat en vivo</a></li>
+    <li><a onclick="openContact()"><span class="flink-icon">📞</span>+1 (809) 555-1234</a></li>
+    <li><a onclick="openContact()"><span class="flink-icon">📧</span>soporte@mercadord.do</a></li>
+    <li><a onclick="openContact()"><span class="flink-icon">📱</span>WhatsApp soporte</a></li>
+    <li><a onclick="openContact()"><span class="flink-icon">🚨</span>Reportar fraude</a></li>
+   </ul>
+   <div class="footer-socials" style="margin-top:18px">
+    <h4>Síguenos</h4>
+    <div class="social-row">
+     <a class="social-btn sb-fb" onclick="showToast('Facebook — @MercadoRD')" title="Facebook">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+     </a>
+     <a class="social-btn sb-ig" onclick="showToast('Instagram — @mercadord.do')" title="Instagram">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="#fff" stroke="none"/></svg>
+     </a>
+     <a class="social-btn sb-tw" onclick="showToast('Twitter/X — @MercadoRD')" title="X">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+     </a>
+     <a class="social-btn sb-yt" onclick="showToast('YouTube — MercadoRD Oficial')" title="YouTube">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#FF0000"/></svg>
+     </a>
+     <a class="social-btn sb-wa" onclick="showToast('WhatsApp — +1(809) 555-1234')" title="WhatsApp">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+     </a>
+     <a class="social-btn sb-tk" onclick="showToast('TikTok — @mercadord.do')" title="TikTok">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.74a4.85 4.85 0 0 1-1.01-.05z"/></svg>
+     </a>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div style="background:rgba(0,0,0,.2);padding:20px 32px;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+  <a class="footer-badge-link" onclick="requireAuth('sell')"><span class="fbl-icon">🏷️</span><div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Vendedor</div><div style="font-size:11px;opacity:.7">Gestiona tus anuncios y ventas</div></div></a>
+  <a class="footer-badge-link" onclick="requireAuth('account')"><span class="fbl-icon">🛒</span><div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Comprador</div><div style="font-size:11px;opacity:.7">Historial, favoritos y pedidos</div></div></a>
+  <a class="footer-badge-link" onclick="showToast('Seller Center — próximamente 📊')"><span class="fbl-icon">📊</span><div><div style="font-weight:700;font-size:13px;color:#fff">Seller Center</div><div style="font-size:11px;opacity:.7">Panel de métricas y campañas</div></div></a>
+  <a class="footer-badge-link" onclick="openLegal('returns')"><span class="fbl-icon">🔄</span><div><div style="font-weight:700;font-size:13px;color:#fff">MercadoRD Retorno</div><div style="font-size:11px;opacity:.7">Devoluciones fáciles en 15 días</div></div></a>
+  <a class="footer-badge-link" onclick="showToast('Comunidad — próximamente 👥')"><span class="fbl-icon">👥</span><div><div style="font-weight:700;font-size:13px;color:#fff">Comunidad</div><div style="font-size:11px;opacity:.7">Foros, tips y grupos de compras</div></div></a>
+  <a class="footer-badge-link" onclick="showToast('Publicidad — próximamente 📣')"><span class="fbl-icon">📣</span><div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Llega a +800K compradores</div></div></a>
+ </div>
+
+ <div class="footer-divider"></div>
+
+ <div class="footer-bottom">
+  <div>
+   <div class="footer-bottom-left">
+    © 2025 <strong>MercadoRD S.R.L.</strong> · RNC: 1-30-12345-6 · Santo Domingo, República Dominicana 🇩🇴<br>
+    Todos los derechos reservados. MercadoRD es una marca registrada en la República Dominicana.
+   </div>
+   <div class="footer-country">
+    <span>🌐 Español (RD)</span>
+    <span style="opacity:.3">|</span>
+    <span>💵 Peso Dominicano (DOP)</span>
+    <span style="opacity:.3">|</span>
+    <span>🏛️ Regulado por PROCONSUMIDOR</span>
+   </div>
+  </div>
+  <div>
+   <div class="footer-legal">
+    <a onclick="openLegal('terms')">Términos de uso</a>
+    <a onclick="openLegal('privacy')">Privacidad</a>
+    <a onclick="openLegal('cookies')">Cookies</a>
+    <a onclick="openLegal('fraud')">Anti-fraude</a>
+    <a onclick="openLegal('returns')">Devoluciones</a>
+    <a onclick="openLegal('accessibility')">Accesibilidad</a>
+   </div>
+  </div>
+ </div>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+ <button class="bnav-item active" id="bnH" onclick="goHome();setBNav('bnH')"><span class="bnav-icon">🏠</span>Inicio</button>
+ <button class="bnav-item" id="bnS" onclick="document.getElementById('searchInput').focus();setBNav('bnS')"><span class="bnav-icon">🔍</span>Buscar</button>
+ <button class="bnav-item" id="bnV" onclick="requireAuth('sell');setBNav('bnV')"><span class="bnav-icon">➕</span>Vender</button>
+ <button class="bnav-item" id="bnA" onclick="showView('auctions');setBNav('bnA')"><span class="bnav-icon">🔥</span>Subastas</button>
+ <button class="bnav-item" id="bnAc" onclick="requireAuth('account');setBNav('bnAc')"><span class="bnav-icon">👤</span>Cuenta</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCRIPTS (orden importante)
+════════════════════════════════════════════════════ -->
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
