@@ -1,4 +1,4 @@
 {
-  "framework": "html",
-  "public": "."
+  "buildCommand": "echo 'Static site'",
+  "outputDirectory": "."
 }
