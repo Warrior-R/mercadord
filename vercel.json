@@ -1,17 +1,4 @@
 {
-  "buildCommand": "echo 'Static HTML project - no build needed'",
   "framework": "html",
-  "public": ".",
-  "env": [
-    {
-      "key": "VITE_SUPABASE_URL",
-      "value": "",
-      "type": "secret"
-    },
-    {
-      "key": "VITE_SUPABASE_ANON_KEY",
-      "value": "",
-      "type": "secret"
-    }
-  ]
+  "public": "."
 }
