@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MercadoRD — Compra y Vende en República Dominicana</title>
 <meta name="description" content="El marketplace #1 de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#003087">
+<meta property="og:title" content="MercadoRD — Compra y Vende en República Dominicana">
+<meta property="og:description" content="El marketplace de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
+<meta property="og:url" content="https://mercadord.net">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_DO">
+<meta name="twitter:card" content="summary">
 
 <!-- Estilos -->
 <link rel="stylesheet" href="css/styles.css">
@@ -14,8 +23,8 @@
 <link rel="stylesheet" href="css/carousel.css">
 <link rel="stylesheet" href="css/verification.css">
 
-<!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase SDK (defer: no bloquea el renderizado; en modo demo no se usa) -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -388,19 +397,19 @@
   </div>
   <div class="subsection-content">
    <div class="subsection-grid">
-    <div class="subsection-card" onclick="showToast('Mi cuenta — próximamente ⏳')">
+    <div class="subsection-card" onclick="closeSubsection();requireAuth('account')">
      <div class="subsection-card-icon">👤</div>
      <div class="subsection-card-title">Mi Cuenta</div>
      <div class="subsection-card-desc">Accede a tu perfil, configuración de privacidad y datos personales.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Mis compras — próximamente ⏳')">
+    <div class="subsection-card" onclick="closeSubsection();requireAuth('orders')">
      <div class="subsection-card-icon">📦</div>
      <div class="subsection-card-title">Mis Compras</div>
      <div class="subsection-card-desc">Historial de compras, pedidos activos y seguimiento de envíos.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Mis favoritos — próximamente ⏳')">
+    <div class="subsection-card" onclick="closeSubsection();showView('favs')">
      <div class="subsection-card-icon">❤️</div>
      <div class="subsection-card-title">Mis Favoritos</div>
      <div class="subsection-card-desc">Accede a tu lista de productos guardados y alertas de precio.</div>
@@ -412,25 +421,25 @@
      <div class="subsection-card-desc">Participa en subastas en vivo y obtén grandes descuentos.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Protección al comprador — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('protection')">
      <div class="subsection-card-icon">🛡️</div>
      <div class="subsection-card-title">Protección al Comprador</div>
      <div class="subsection-card-desc">Garantía MercadoRD: reembolso seguro en compras protegidas.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Métodos de pago — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('payments')">
      <div class="subsection-card-icon">💳</div>
      <div class="subsection-card-title">Métodos de Pago</div>
      <div class="subsection-card-desc">Tarjetas, transferencias bancarias, efectivo y billeteras digitales.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('¿Cómo comprar? — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('howbuy')">
      <div class="subsection-card-icon">❓</div>
      <div class="subsection-card-title">¿Cómo Comprar?</div>
      <div class="subsection-card-desc">Guía paso a paso para realizar compras seguras en MercadoRD.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Seguimiento de envío — próximamente ⏳')">
+    <div class="subsection-card" onclick="closeSubsection();requireAuth('orders')">
      <div class="subsection-card-icon">🚚</div>
      <div class="subsection-card-title">Seguimiento de Envío</div>
      <div class="subsection-card-desc">Rastrea tu paquete en tiempo real hasta tu puerta.</div>
@@ -450,49 +459,49 @@
   </div>
   <div class="subsection-content">
    <div class="subsection-grid">
-    <div class="subsection-card" onclick="requireAuth('sell')">
+    <div class="subsection-card" onclick="closeSubsection();requireAuth('sell')">
      <div class="subsection-card-icon">➕</div>
      <div class="subsection-card-title">Publicar Anuncio</div>
      <div class="subsection-card-desc">Crea tu primer anuncio en minutos. Incluye fotos, precio y descripción.</div>
      <a class="subsection-card-link">Empezar ahora →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Seller Center — próximamente ⏳')">
+    <div class="subsection-card" onclick="closeSubsection();requireAuth('seller')">
      <div class="subsection-card-icon">📊</div>
      <div class="subsection-card-title">Seller Center</div>
      <div class="subsection-card-desc">Panel completo de gestión, métricas y campañas publicitarias.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Panel de ventas — próximamente ⏳')">
+    <div class="subsection-card" onclick="closeSubsection();requireAuth('seller')">
      <div class="subsection-card-icon">📈</div>
      <div class="subsection-card-title">Panel de Ventas</div>
      <div class="subsection-card-desc">Monitorea ventas, ingresos y desempeño de tus anuncios.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('¿Cómo vender? — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('howsell')">
      <div class="subsection-card-icon">❓</div>
      <div class="subsection-card-title">¿Cómo Vender?</div>
      <div class="subsection-card-desc">Guía completa: fotos, precios, comunicación y envíos.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Tarifas y comisiones — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('fees')">
      <div class="subsection-card-icon">💰</div>
      <div class="subsection-card-title">Tarifas y Comisiones</div>
      <div class="subsection-card-desc">Transparencia total en comisiones, envíos y costos administrativos.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Vendedor Premium — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('premium')">
      <div class="subsection-card-icon">⭐</div>
      <div class="subsection-card-title">Vendedor Premium</div>
      <div class="subsection-card-desc">Destácate con una insignia Premium, envío gratis y soporte prioritario.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Publicidad en MercadoRD — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('ads')">
      <div class="subsection-card-icon">📣</div>
      <div class="subsection-card-title">Publicidad</div>
      <div class="subsection-card-desc">Campañas pagadas para impulsar tus productos a miles de compradores.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Reglas del vendedor — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('rules')">
      <div class="subsection-card-icon">📋</div>
      <div class="subsection-card-title">Reglas del Vendedor</div>
      <div class="subsection-card-desc">Prohibiciones, tipos de productos y políticas de conducta.</div>
@@ -512,43 +521,43 @@
   </div>
   <div class="subsection-content">
    <div class="subsection-grid">
-    <div class="subsection-card" onclick="showToast('Quiénes somos — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('about')">
      <div class="subsection-card-icon">🇩🇴</div>
      <div class="subsection-card-title">Quiénes Somos</div>
      <div class="subsection-card-desc">Nuestra historia, misión y visión como el marketplace #1 de RD.</div>
      <a class="subsection-card-link">Leer más →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Sala de prensa — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('press')">
      <div class="subsection-card-icon">📰</div>
      <div class="subsection-card-title">Sala de Prensa</div>
      <div class="subsection-card-desc">Notas de prensa, comunicados y cobertura mediática de MercadoRD.</div>
      <a class="subsection-card-link">Leer más →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Trabaja con nosotros — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('jobs')">
      <div class="subsection-card-icon">💼</div>
      <div class="subsection-card-title">Trabaja con Nosotros</div>
      <div class="subsection-card-desc">Empleos, oportunidades de carrera e internados en MercadoRD.</div>
      <a class="subsection-card-link">Ver empleos →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Comunidad — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('community')">
      <div class="subsection-card-icon">👥</div>
      <div class="subsection-card-title">Comunidad</div>
      <div class="subsection-card-desc">Foros, grupos de compra colectiva y comunidades especializadas.</div>
      <a class="subsection-card-link">Ver más →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Blog y consejos — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('blog')">
      <div class="subsection-card-icon">✍️</div>
      <div class="subsection-card-title">Blog y Consejos</div>
      <div class="subsection-card-desc">Tutoriales, tips de compra/venta y noticias del e-commerce.</div>
      <a class="subsection-card-link">Leer artículos →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Programa de afiliados — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('affiliates')">
      <div class="subsection-card-icon">🤝</div>
      <div class="subsection-card-title">Programa de Afiliados</div>
      <div class="subsection-card-desc">Gana comisiones promoviendo productos en MercadoRD.</div>
      <a class="subsection-card-link">Más información →</a>
     </div>
-    <div class="subsection-card" onclick="showToast('Inversionistas — próximamente ⏳')">
+    <div class="subsection-card" onclick="openInfo('investors')">
      <div class="subsection-card-icon">📊</div>
      <div class="subsection-card-title">Para Inversionistas</div>
      <div class="subsection-card-desc">Información financiera, reportes y oportunidades de inversión.</div>
@@ -576,14 +585,14 @@
    <div class="subsection-section">
     <div class="subsection-section-title">Canales de Contacto</div>
     <ul class="subsection-list">
-     <li class="subsection-list-item" onclick="showToast('Centro de ayuda — próximamente ⏳')">
+     <li class="subsection-list-item" onclick="openInfo('help')">
       <div class="subsection-list-icon">❓</div>
       <div class="subsection-list-content">
        <div class="subsection-list-title">Centro de Ayuda</div>
        <div class="subsection-list-desc">Preguntas frecuentes, tutoriales y solución de problemas.</div>
       </div>
      </li>
-     <li class="subsection-list-item" onclick="showToast('Chat en vivo — próximamente ⏳')">
+     <li class="subsection-list-item" onclick="openInfo('help')">
       <div class="subsection-list-icon">💬</div>
       <div class="subsection-list-content">
        <div class="subsection-list-title">Chat en Vivo</div>
@@ -611,7 +620,7 @@
        <div class="subsection-list-desc">+1 (809) 555-1234 · Mensajes rápidos y eficientes.</div>
       </div>
      </li>
-     <li class="subsection-list-item" onclick="showToast('Reportar fraude — próximamente ⏳')">
+     <li class="subsection-list-item" onclick="openLegal('fraud')">
       <div class="subsection-list-icon">🚨</div>
       <div class="subsection-list-content">
        <div class="subsection-list-title">Reportar Fraude</div>
@@ -741,19 +750,19 @@
   <div class="scard">
    <div class="scard-title">Condición</div>
    <div class="scard-body">
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">✨</span>Nuevo</div>
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">♻️</span>Usado</div>
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">🔧</span>Reacondicionado</div>
+    <div class="scat" onclick="filterCond('new',this)"><span class="scat-icon">✨</span>Nuevo</div>
+    <div class="scat" onclick="filterCond('used',this)"><span class="scat-icon">♻️</span>Usado</div>
+    <div class="scat" onclick="filterCond('refurb',this)"><span class="scat-icon">🔧</span>Reacondicionado</div>
    </div>
   </div>
   <div class="scard">
    <div class="scard-title">Ubicación</div>
    <div class="scard-body">
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Santo Domingo</div>
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Santiago</div>
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Puerto Plata</div>
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>La Romana</div>
-    <div class="scat" onclick="this.classList.toggle('active')"><span class="scat-icon">📍</span>Punta Cana</div>
+    <div class="scat" onclick="filterLoc('SD',this)"><span class="scat-icon">📍</span>Santo Domingo</div>
+    <div class="scat" onclick="filterLoc('STI',this)"><span class="scat-icon">📍</span>Santiago</div>
+    <div class="scat" onclick="filterLoc('PP',this)"><span class="scat-icon">📍</span>Puerto Plata</div>
+    <div class="scat" onclick="filterLoc('LR',this)"><span class="scat-icon">📍</span>La Romana</div>
+    <div class="scat" onclick="filterLoc('PC',this)"><span class="scat-icon">📍</span>Punta Cana</div>
    </div>
   </div>
  </div>
@@ -889,10 +898,10 @@
  <div style="background:rgba(0,0,0,.2);padding:20px 32px;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
   <a class="footer-badge-link" onclick="requireAuth('sell')"><span class="fbl-icon">🏷️</span><div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Vendedor</div><div style="font-size:11px;opacity:.7">Gestiona tus anuncios y ventas</div></div></a>
   <a class="footer-badge-link" onclick="requireAuth('account')"><span class="fbl-icon">🛒</span><div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Comprador</div><div style="font-size:11px;opacity:.7">Historial, favoritos y pedidos</div></div></a>
-  <a class="footer-badge-link" onclick="showToast('Seller Center — próximamente 📊')"><span class="fbl-icon">📊</span><div><div style="font-weight:700;font-size:13px;color:#fff">Seller Center</div><div style="font-size:11px;opacity:.7">Panel de métricas y campañas</div></div></a>
+  <a class="footer-badge-link" onclick="requireAuth('seller')"><span class="fbl-icon">📊</span><div><div style="font-weight:700;font-size:13px;color:#fff">Seller Center</div><div style="font-size:11px;opacity:.7">Panel de métricas y campañas</div></div></a>
   <a class="footer-badge-link" onclick="openLegal('returns')"><span class="fbl-icon">🔄</span><div><div style="font-weight:700;font-size:13px;color:#fff">MercadoRD Retorno</div><div style="font-size:11px;opacity:.7">Devoluciones fáciles en 15 días</div></div></a>
-  <a class="footer-badge-link" onclick="showToast('Comunidad — próximamente 👥')"><span class="fbl-icon">👥</span><div><div style="font-weight:700;font-size:13px;color:#fff">Comunidad</div><div style="font-size:11px;opacity:.7">Foros, tips y grupos de compras</div></div></a>
-  <a class="footer-badge-link" onclick="showToast('Publicidad — próximamente 📣')"><span class="fbl-icon">📣</span><div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Llega a +800K compradores</div></div></a>
+  <a class="footer-badge-link" onclick="openInfo('community')"><span class="fbl-icon">👥</span><div><div style="font-weight:700;font-size:13px;color:#fff">Comunidad</div><div style="font-size:11px;opacity:.7">Foros, tips y grupos de compras</div></div></a>
+  <a class="footer-badge-link" onclick="openInfo('ads')"><span class="fbl-icon">📣</span><div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Llega a +800K compradores</div></div></a>
  </div>
 
  <div class="footer-divider"></div>
@@ -924,6 +933,44 @@
  </div>
 </footer>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL DE PUJA (subastas estilo eBay)
+════════════════════════════════════════════════════ -->
+<div class="auth-overlay" id="bidOverlay" style="display:none">
+ <div class="auth-box" style="max-width:420px">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="closeBid()">✕</button>
+   <div class="auth-logo" style="font-size:18px">🔨 Hacer una puja</div>
+   <div class="auth-subtitle" id="bidItemTitle"></div>
+  </div>
+  <div class="auth-body">
+   <div style="background:#f8f9fc;border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px">
+    <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Puja actual</span><strong id="bidCur"></strong></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Pujas realizadas</span><strong id="bidCount"></strong></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Tiempo restante</span><strong id="bidEnds" style="color:var(--accent2)"></strong></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);margin-top:6px;padding-top:8px"><span>Puja mínima</span><strong id="bidMin" style="color:var(--primary)"></strong></div>
+   </div>
+   <div class="fg"><label>Tu puja (RD$)</label><input type="number" id="bidAmount" placeholder="0" min="1" step="100"><div class="ferr" id="bidErr"></div></div>
+   <button class="auth-btn btn-pri" onclick="placeBid()">Confirmar puja 🔨</button>
+   <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:10px">Al pujar te comprometes a comprar el artículo si ganas. Las pujas son vinculantes.</p>
+  </div>
+ </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL MEJOR OFERTA (estilo eBay "Best Offer")
+════════════════════════════════════════════════════ -->
+<div class="auth-overlay" id="offerOverlay" style="display:none">
+ <div class="auth-box" style="max-width:420px">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="closeOffer()">✕</button>
+   <div class="auth-logo" style="font-size:18px">💰 Hacer una oferta</div>
+   <div class="auth-subtitle" id="offerItemTitle"></div>
+  </div>
+  <div class="auth-body" id="offerBody"></div>
+ </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -939,6 +986,7 @@
 <!-- ══════════════════════════════════════════════════
      SCRIPTS (orden importante)
 ════════════════════════════════════════════════════ -->
+<script src="js/storage.js"></script>
 <script src="js/data.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/app.js"></script>

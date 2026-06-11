@@ -1,0 +1,13 @@
+{
+  "name": "MercadoRD — Marketplace de República Dominicana",
+  "short_name": "MercadoRD",
+  "description": "Compra y vende de forma segura en República Dominicana",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#003087",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

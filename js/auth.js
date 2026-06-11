@@ -1,23 +1,28 @@
 // ═══════════════════════════════════════════════════
 //  MercadoRD — Módulo de Autenticación (Supabase)
-//  Archivo: js/auth.js
+//  Archivo: js/auth.js  (v2 — sesión persistente + demo robusto)
 // ═══════════════════════════════════════════════════
 
-// ⚠️ REEMPLAZA con tus credenciales reales de Supabase
-// Panel: https://app.supabase.com → Settings → API
-const SB_URL = 'https://flsixfuzvbapwnfepmwr.supabase.co';
-const SB_KEY = 'sb_publishable_zf5bkvNdhlr1AJQNrd8vcA_aCIe2NDH';
+// ⚠️ PASO 1: crea un proyecto NUEVO en https://app.supabase.com
+//    (el anterior flsixfuzvbapwnfepmwr ya no resuelve por DNS).
+// ⚠️ PASO 2: pega aquí Project URL y anon public key.
+// ⚠️ PASO 3: cambia SUPABASE_ENABLED a true.
+const SUPABASE_ENABLED = false;
+const SB_URL = 'https://TU_PROYECTO.supabase.co';
+const SB_KEY = 'TU_ANON_PUBLIC_KEY';
 
-const DEMO = SB_URL.includes('TU_PROYECTO');
+const DEMO = !SUPABASE_ENABLED || SB_URL.includes('TU_PROYECTO') || !SB_KEY;
 let sb = null;
-try { if (!DEMO) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e) {}
+try { if (!DEMO && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch (e) { console.warn('Supabase init falló, usando modo demo:', e); }
 
 // ─── Estado global de auth ───
-let user     = null;
-let pending  = null;   // vista a abrir tras login
+let user     = MRD.get(K.USER, null);   // restaura sesión demo al recargar
+let pending  = null;                    // vista a abrir tras login
 let attempts = 0;
 let lockTs   = 0;
 let demoOTP  = null;
+
+function persistUser() { user ? MRD.set(K.USER, user) : MRD.del(K.USER); }
 
 // ─── Listener de sesión (Supabase real) ───
 if (sb) {
@@ -29,9 +34,7 @@ if (sb) {
       closeAuth();
       if (pending) { showView(pending); pending = null; }
     }
-    if (ev === 'SIGNED_OUT') {
-      showToast('Sesión cerrada. ¡Hasta pronto!');
-    }
+    if (ev === 'SIGNED_OUT') showToast('Sesión cerrada. ¡Hasta pronto!');
   });
 }
 
@@ -43,10 +46,10 @@ function refreshHeader() {
     const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
     const ini  = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
     btn.outerHTML = `
-      <div class="user-pill" id="authBtn" onclick="requireAuth('account')">
+      <div class="user-pill" id="authBtn" onclick="requireAuth('account')" role="button" tabindex="0">
         <div class="uav">${ini}</div>
         ${name.split(' ')[0]}
-        <span class="vtick">✓</span>
+        <span class="vtick">${userState?.verified ? '✓' : ''}</span>
       </div>`;
   } else {
     const el = document.getElementById('authBtn');
@@ -65,39 +68,26 @@ function openAuth(tab) {
 function closeAuth() {
   document.getElementById('authOverlay').style.display = 'none';
 }
-
-// Click fuera del modal = cerrar
 document.getElementById('authOverlay').addEventListener('click', e => {
   if (e.target.id === 'authOverlay') closeAuth();
 });
 
-// Requerir auth antes de acción
+// ─── Gates: qué requiere cada acción ───
+//  · navegar / carrito / favoritos → libre
+//  · checkout                      → sesión iniciada
+//  · vender / pujar                → sesión + identidad verificada
 function requireAuth(v) {
-  if (!user) { 
-    pending = v; 
-    openAuth('login'); 
-    showAlert('info', 'Inicia sesión o crea una cuenta para continuar.'); 
+  if (!user) {
+    pending = v;
+    openAuth('login');
+    showAlert('info', 'Inicia sesión o crea una cuenta para continuar.');
     return;
   }
-
-  // Para vender, requerir verificación
-  if (v === 'sell') {
-    if (!userState.verified) {
-      showAlert('warning', '⚠️ Debes verificar tu identidad para vender en MercadoRD.');
-      setTimeout(() => openVerification('sell'), 500);
-      return;
-    }
+  if ((v === 'sell' || v === 'bid') && !userState.verified) {
+    showToast('🪪 Verifica tu identidad para ' + (v === 'sell' ? 'vender' : 'pujar'));
+    openVerification(v);
+    return;
   }
-
-  // Para comprar, requerir verificación
-  if (v === 'buy') {
-    if (!userState.verified) {
-      showAlert('warning', '✅ Verifica tu identidad para comprar en MercadoRD.');
-      setTimeout(() => openVerification('buy'), 500);
-      return;
-    }
-  }
-
   showView(v);
 }
 
@@ -112,10 +102,9 @@ function switchTab(t) {
   gotoStep(isL ? 'l' : 'r', 1);
 }
 
-// ─── Ir a paso específico ───
 function gotoStep(flow, n) {
   const pfx = flow === 'l' ? 'ls' : 'rs';
-  const max  = flow === 'l' ? 3 : 4;
+  const max = flow === 'l' ? 3 : 4;
   for (let i = 1; i <= max; i++) {
     document.getElementById(pfx + i)?.classList.toggle('active', i === n);
   }
@@ -158,10 +147,10 @@ function toggleEye(id, el) {
 // ─── Fortaleza de contraseña ───
 function pwdStrength(v) {
   let s = 0;
-  if (v.length >= 8)            s++;
-  if (/[A-Z]/.test(v))          s++;
-  if (/[0-9]/.test(v))          s++;
-  if (/[^A-Za-z0-9]/.test(v))   s++;
+  if (v.length >= 8)          s++;
+  if (/[A-Z]/.test(v))        s++;
+  if (/[0-9]/.test(v))        s++;
+  if (/[^A-Za-z0-9]/.test(v)) s++;
   const cfg = [
     ['0%',   '#eee',    ''],
     ['25%',  '#e43e2b', 'Muy débil 🔴'],
@@ -185,9 +174,7 @@ function fmtCed(el) {
 
 // ─── OTP helpers ───
 function onext(el, ni, p) {
-  if (el.value && ni >= 0) {
-    document.getElementById((p === 's' ? 'so' : 'lo') + ni)?.focus();
-  }
+  if (el.value && ni >= 0) document.getElementById((p === 's' ? 'so' : 'lo') + ni)?.focus();
 }
 function oback(e, el, pi, p) {
   if (e.key === 'Backspace' && !el.value && pi !== null) {
@@ -220,15 +207,15 @@ async function doLogin() {
   clearAlert(); cfe('lEmailE','lPwdE');
 
   if (Date.now() < lockTs) {
-    showAlert('fail', `Cuenta bloqueada. Espera ${Math.ceil((lockTs-Date.now())/1000)}s.`);
+    showAlert('fail', `Cuenta bloqueada. Espera ${Math.ceil((lockTs - Date.now()) / 1000)}s.`);
     return;
   }
 
   const email = document.getElementById('lEmail').value.trim();
   const pwd   = document.getElementById('lPwd').value;
   let ok = true;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fe('lEmailE','Correo no válido.'); ok=false; }
-  if (pwd.length < 6) { fe('lPwdE','Contraseña incorrecta.'); ok=false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fe('lEmailE','Correo no válido.'); ok = false; }
+  if (pwd.length < 6) { fe('lPwdE','Contraseña incorrecta.'); ok = false; }
   if (!ok) return;
 
   const btn = document.getElementById('loginBtn');
@@ -241,15 +228,16 @@ async function doLogin() {
       if (error) throw error;
       attempts = 0;
     } else {
-      // DEMO
-      await new Promise(r => setTimeout(r, 800));
-      user = { email, user_metadata: { full_name: 'Usuario Demo' } };
+      await new Promise(r => setTimeout(r, 600));
+      user = { email, user_metadata: { full_name: email.split('@')[0] } };
+      persistUser();
+      userState.loggedIn = true; saveUserState();
       refreshHeader();
       showToast('Sesión iniciada (modo demo) ✓');
       closeAuth();
-      if (pending) { showView(pending); pending = null; }
+      if (pending) { requireAuth(pending); pending = null; }
     }
-  } catch(err) {
+  } catch (err) {
     attempts++;
     if (attempts >= 5) {
       lockTs = Date.now() + 60000; attempts = 0;
@@ -268,17 +256,19 @@ async function loginGoogle() {
   clearAlert();
   try {
     if (sb) {
-      const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.href } });
+      const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } });
       if (error) throw error;
     } else {
-      await new Promise(r => setTimeout(r, 600));
-      user = { email:'demo@gmail.com', user_metadata:{ full_name:'Usuario Google' } };
+      await new Promise(r => setTimeout(r, 500));
+      user = { email: 'demo@gmail.com', user_metadata: { full_name: 'Usuario Google' } };
+      persistUser();
+      userState.loggedIn = true; saveUserState();
       refreshHeader();
       showToast('Sesión con Google (modo demo) ✓');
       closeAuth();
-      if (pending) { showView(pending); pending = null; }
+      if (pending) { requireAuth(pending); pending = null; }
     }
-  } catch(e) { showAlert('fail','Error con Google. Intenta de nuevo.'); }
+  } catch (e) { showAlert('fail', 'Error con Google. Intenta de nuevo.'); }
 }
 
 // ─── 2FA ───
@@ -299,7 +289,7 @@ async function doReset() {
       if (error) throw error;
     }
     showAlert('ok', `✅ Enlace enviado a ${email}. Revisa tu bandeja.`);
-  } catch(e) { showAlert('fail','Error al enviar. Verifica la dirección.'); }
+  } catch (e) { showAlert('fail','Error al enviar. Verifica la dirección.'); }
 }
 
 // ══════════════════════════════════════════════════
@@ -313,13 +303,13 @@ function rs1next() {
   const pw  = document.getElementById('rPwd').value;
   const pw2 = document.getElementById('rPwd2').value;
   let ok = true;
-  if (nom.length < 2)  { fe('rNomE','Ingresa tu nombre.'); ok=false; }
-  if (ape.length < 2)  { fe('rApeE','Ingresa tu apellido.'); ok=false; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { fe('rEmailE','Correo no válido.'); ok=false; }
-  if (pw.length < 8)   { fe('rPwdE','Mínimo 8 caracteres.'); ok=false; }
-  else if (!/[A-Z]/.test(pw)) { fe('rPwdE','Debe tener al menos una mayúscula.'); ok=false; }
-  else if (!/[0-9]/.test(pw)) { fe('rPwdE','Debe tener al menos un número.'); ok=false; }
-  if (pw !== pw2) { fe('rPwd2E','Las contraseñas no coinciden.'); ok=false; }
+  if (nom.length < 2) { fe('rNomE','Ingresa tu nombre.'); ok = false; }
+  if (ape.length < 2) { fe('rApeE','Ingresa tu apellido.'); ok = false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { fe('rEmailE','Correo no válido.'); ok = false; }
+  if (pw.length < 8)          { fe('rPwdE','Mínimo 8 caracteres.'); ok = false; }
+  else if (!/[A-Z]/.test(pw)) { fe('rPwdE','Debe tener al menos una mayúscula.'); ok = false; }
+  else if (!/[0-9]/.test(pw)) { fe('rPwdE','Debe tener al menos un número.'); ok = false; }
+  if (pw !== pw2) { fe('rPwd2E','Las contraseñas no coinciden.'); ok = false; }
   if (!ok) return;
   document.getElementById('emailTo').textContent = em;
   gotoStep('r', 2);
@@ -328,7 +318,7 @@ function rs1next() {
 async function sendSMS() {
   clearAlert(); cfe('rPhoneE');
   const pfx = document.getElementById('phPfx').value;
-  const ph  = document.getElementById('rPhone').value.replace(/\D/g,'');
+  const ph  = document.getElementById('rPhone').value.replace(/\D/g, '');
   if (ph.length < 7) { fe('rPhoneE','Número no válido.'); return; }
   const full = pfx + ph;
   document.getElementById('phoneTo').textContent = full;
@@ -347,7 +337,7 @@ async function sendSMS() {
     document.getElementById('smsSection').style.display = '';
     btn.style.display = 'none';
     countdown('smsC', 60);
-  } catch(e) {
+  } catch (e) {
     showAlert('fail','Error enviando SMS. Verifica el número.');
     btn.disabled = false;
     btn.innerHTML = 'Enviar código SMS';
@@ -364,16 +354,19 @@ function verifySMS() {
 
 function rs3next() {
   cfe('rCedE','rDobE'); clearAlert();
-  const ced   = document.getElementById('rCed').value.replace(/\D/g,'');
+  const ced   = document.getElementById('rCed').value.replace(/\D/g, '');
   const dob   = document.getElementById('rDob').value;
   const prov  = document.getElementById('rProv').value;
   const terms = document.getElementById('rTerms').checked;
   let ok = true;
-  if (ced.length !== 11) { fe('rCedE','La cédula debe tener 11 dígitos.'); ok=false; }
-  if (!dob) { fe('rDobE','Ingresa tu fecha de nacimiento.'); ok=false; }
-  else { const age=(Date.now()-new Date(dob))/(365.25*24*3600*1000); if(age<18){fe('rDobE','Debes ser mayor de 18 años.');ok=false;} }
-  if (!prov)  { showAlert('fail','Selecciona tu provincia.'); ok=false; }
-  if (!terms) { showAlert('fail','Debes aceptar los términos.'); ok=false; }
+  if (ced.length !== 11) { fe('rCedE','La cédula debe tener 11 dígitos.'); ok = false; }
+  if (!dob) { fe('rDobE','Ingresa tu fecha de nacimiento.'); ok = false; }
+  else {
+    const age = (Date.now() - new Date(dob)) / (365.25 * 24 * 3600 * 1000);
+    if (age < 18) { fe('rDobE','Debes ser mayor de 18 años.'); ok = false; }
+  }
+  if (!prov)  { showAlert('fail','Selecciona tu provincia.'); ok = false; }
+  if (!terms) { showAlert('fail','Debes aceptar los términos.'); ok = false; }
   if (!ok) return;
   gotoStep('r', 4);
 }
@@ -385,36 +378,44 @@ async function doCreateAccount() {
   const em  = document.getElementById('rEmail')?.value.trim();
   const pw  = document.getElementById('rPwd')?.value;
   const btn = document.querySelector('#rs4 .btn-pri');
-  if (btn) { btn.disabled=true; btn.innerHTML='<span class="spin"></span> Creando cuenta...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Creando cuenta...'; }
   try {
     if (sb && !DEMO) {
       const { error } = await sb.auth.signUp({
         email: em, password: pw,
-        options: { data:{ full_name:`${nom} ${ape}`.trim() }, emailRedirectTo: location.href }
+        options: { data: { full_name: `${nom} ${ape}`.trim() }, emailRedirectTo: location.href }
       });
       if (error) throw error;
       showAlert('ok', `✅ Cuenta creada. Revisa ${em} para verificar tu correo.`);
     } else {
-      await new Promise(r => setTimeout(r, 900));
-      user = { email: em, user_metadata: { full_name:`${nom} ${ape}`.trim() } };
+      await new Promise(r => setTimeout(r, 700));
+      user = { email: em, user_metadata: { full_name: `${nom} ${ape}`.trim() } };
+      persistUser();
+      userState.loggedIn = true; saveUserState();
       refreshHeader();
       showToast(`¡Cuenta creada! Bienvenido/a ${nom} 🎉`);
       closeAuth();
+      if (pending) { requireAuth(pending); pending = null; }
     }
-  } catch(e) { showAlert('fail', e.message || 'Error al crear la cuenta.'); }
-  finally { if (btn) { btn.disabled=false; btn.innerHTML='Crear cuenta y verificar email'; } }
+  } catch (e) { showAlert('fail', e.message || 'Error al crear la cuenta.'); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = 'Crear cuenta y verificar email'; } }
 }
 
 async function resendEmail() {
   const em = document.getElementById('rEmail')?.value.trim();
   if (!em) return;
   try {
-    if (sb && !DEMO) await sb.auth.resend({ type:'signup', email: em });
+    if (sb && !DEMO) await sb.auth.resend({ type: 'signup', email: em });
     showAlert('ok', `Reenviado a ${em}.`);
-  } catch(e) { showAlert('fail','Error al reenviar.'); }
+  } catch (e) { showAlert('fail','Error al reenviar.'); }
 }
 
 async function doLogout() {
   if (sb && !DEMO) await sb.auth.signOut();
-  else { user=null; refreshHeader(); showToast('Sesión cerrada ✓'); goHome(); }
+  user = null;
+  persistUser();
+  userState.loggedIn = false; saveUserState();
+  refreshHeader();
+  showToast('Sesión cerrada ✓');
+  goHome();
 }
