@@ -34,7 +34,7 @@
 <div class="auth-overlay" id="authOverlay" style="display:none">
  <div class="auth-box">
   <div class="auth-header" style="position:relative">
-   <button class="auth-close" onclick="closeAuth()">✕</button>
+   <button class="auth-close" onclick="cancelAuth()">✕</button>
    <div class="auth-logo">Mercado<span>RD</span></div>
    <div class="auth-subtitle">Marketplace seguro de República Dominicana 🇩🇴</div>
   </div>
@@ -85,6 +85,14 @@
      <div class="fg"><label>Correo electrónico</label><input type="email" id="resetE" placeholder="tu@email.com"></div>
      <button class="auth-btn btn-pri" onclick="doReset()">Enviar enlace de recuperación</button>
      <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('l',1)">← Volver</span></div>
+    </div>
+    <div class="auth-step" id="ls4">
+     <div class="vc"><div class="vc-icon">🔑</div><div class="vc-title">Nueva contraseña</div><div class="vc-desc">Define tu nueva contraseña para completar la recuperación.</div></div>
+     <div class="fg"><label>Nueva contraseña</label>
+      <div class="iicon"><input type="password" id="npPwd" placeholder="Mínimo 8 caracteres, mayúscula y número"><span class="eye" onclick="toggleEye('npPwd',this)">👁</span></div>
+      <div class="ferr" id="npPwdE"></div>
+     </div>
+     <button class="auth-btn btn-pri" onclick="doSetNewPassword()">Guardar contraseña</button>
     </div>
    </div>
 
@@ -152,7 +160,7 @@
        <input class="otp-d" maxlength="1" id="so4" oninput="onext(this,5,'s')" onkeydown="oback(event,this,3,'s')">
        <input class="otp-d" maxlength="1" id="so5" oninput="onext(this,-1,'s')" onkeydown="oback(event,this,4,'s')">
       </div>
-      <div class="resend-t">Reenviar en <span id="smsC">60</span>s</div>
+      <div class="resend-t" id="smsResend">Reenviar en <span id="smsC">60</span>s</div>
       <button class="auth-btn btn-pri" style="margin-top:10px" onclick="verifySMS()">Verificar código</button>
      </div>
      <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('r',1)">← Atrás</span></div>

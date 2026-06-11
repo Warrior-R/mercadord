@@ -1,41 +1,130 @@
 // ═══════════════════════════════════════════════════
 //  MercadoRD — Módulo de Autenticación (Supabase)
-//  Archivo: js/auth.js  (v2 — sesión persistente + demo robusto)
+//  Archivo: js/auth.js  (v3 — Google OAuth + cuentas reales + validación)
 // ═══════════════════════════════════════════════════
 
-// ⚠️ PASO 1: crea un proyecto NUEVO en https://app.supabase.com
-//    (el anterior flsixfuzvbapwnfepmwr ya no resuelve por DNS).
-// ⚠️ PASO 2: pega aquí Project URL y anon public key.
+// ⚠️ PASO 1: crea un proyecto en https://app.supabase.com
+// ⚠️ PASO 2: pega aquí Project URL y anon public key (Settings → API).
 // ⚠️ PASO 3: cambia SUPABASE_ENABLED a true.
+// ⚠️ PASO 4: para Google, habilita el provider en Supabase → Authentication
+//            → Providers → Google (ver SUPABASE_SETUP.md).
 const SUPABASE_ENABLED = false;
 const SB_URL = 'https://TU_PROYECTO.supabase.co';
 const SB_KEY = 'TU_ANON_PUBLIC_KEY';
 
 const DEMO = !SUPABASE_ENABLED || SB_URL.includes('TU_PROYECTO') || !SB_KEY;
 let sb = null;
-try { if (!DEMO && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch (e) { console.warn('Supabase init falló, usando modo demo:', e); }
 
 // ─── Estado global de auth ───
-let user     = MRD.get(K.USER, null);   // restaura sesión demo al recargar
-let pending  = null;                    // vista a abrir tras login
+let user = MRD.get(K.USER, null);     // restaura sesión al recargar
+const hadUserAtLoad = !!user;          // ¿había sesión persistida al abrir la página?
+let greeted  = false;                  // evita doble bienvenida (INITIAL_SESSION + SIGNED_IN)
+let pending  = null;                   // vista a abrir tras login
 let attempts = 0;
 let lockTs   = 0;
 let demoOTP  = null;
 
 function persistUser() { user ? MRD.set(K.USER, user) : MRD.del(K.USER); }
 
-// ─── Listener de sesión (Supabase real) ───
-if (sb) {
+function displayName(u) {
+  u = u || user;
+  return u?.user_metadata?.full_name || u?.email?.split('@')[0] || 'Usuario';
+}
+
+// ─── Inicialización perezosa del SDK ───
+// supabase-js se carga con `defer`, así que este archivo puede ejecutarse
+// antes de que window.supabase exista. Se reintenta en DOMContentLoaded
+// (los scripts defer ya corrieron) y en load, y también al usar cualquier
+// función de auth vía requireSb().
+function initSupabase() {
+  if (DEMO || sb || !window.supabase) return;
+  try {
+    sb = window.supabase.createClient(SB_URL, SB_KEY);
+  } catch (e) {
+    console.warn('Supabase init falló:', e);
+    return;
+  }
+  // No usar await dentro del callback: las llamadas a la librería ahí dentro
+  // deadlockean (getSession espera el lock que mantiene el propio callback).
   sb.auth.onAuthStateChange((ev, session) => {
-    user = session?.user ?? null;
-    refreshHeader();
-    if (ev === 'SIGNED_IN') {
-      showToast(`¡Bienvenido/a! ${user?.user_metadata?.full_name || user?.email} 👋`);
-      closeAuth();
-      if (pending) { showView(pending); pending = null; }
-    }
-    if (ev === 'SIGNED_OUT') showToast('Sesión cerrada. ¡Hasta pronto!');
+    setTimeout(() => handleAuthEvent(ev, session), 0);
   });
+}
+initSupabase();
+document.addEventListener('DOMContentLoaded', initSupabase);
+window.addEventListener('load', initSupabase);
+
+// Conexión real obligatoria: si el SDK aún no cargó, lo intenta; si no se
+// puede (CDN caído/bloqueado), devuelve null y el caller muestra error en
+// lugar de simular un login falso.
+function requireSb() {
+  if (DEMO) return null;
+  if (!sb) initSupabase();
+  return sb;
+}
+
+async function handleAuthEvent(ev, session) {
+  if (ev === 'PASSWORD_RECOVERY') { startPasswordRecovery(); return; }
+
+  user = session?.user ?? null;
+  persistUser();
+  userState.loggedIn = !!user;
+
+  if (user) {
+    await loadProfile();
+  } else if (ev === 'SIGNED_OUT' || ev === 'INITIAL_SESSION') {
+    userState.verified = false;
+    userState.verificationStatus = 'none';
+  }
+  saveUserState();
+  refreshHeader();
+
+  // Sesión persistida localmente que ya no existe en Supabase (p.ej. la
+  // dejó el modo demo, o expiró): avisar en vez de desloguear en silencio.
+  if (ev === 'INITIAL_SESSION' && !user && hadUserAtLoad) {
+    showToast('Tu sesión expiró — inicia sesión de nuevo');
+  }
+
+  // Bienvenida + vista pendiente. Tras el redirect de Google la sesión llega
+  // en INITIAL_SESSION; en login con contraseña (sin recarga) llega SIGNED_IN.
+  const modalOpen   = document.getElementById('authOverlay').style.display === 'flex';
+  const oauthReturn = sessionStorage.getItem('mrd_oauth') === '1';
+  const fresh = !!user && !greeted && (modalOpen || oauthReturn || !hadUserAtLoad);
+  if ((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION') && fresh) {
+    greeted = true;
+    sessionStorage.removeItem('mrd_oauth');
+    pending = pending || sessionStorage.getItem('mrd_pending') || null;
+    sessionStorage.removeItem('mrd_pending');
+    showToast(`¡Bienvenido/a ${displayName()}! 👋`);
+    closeAuth();
+    if (pending) { const v = pending; pending = null; requireAuth(v); }
+  }
+
+  if (ev === 'SIGNED_OUT') showToast('Sesión cerrada. ¡Hasta pronto!');
+}
+
+// ─── Perfil: el estado de verificación vive en la tabla `profiles` ───
+async function loadProfile() {
+  if (!sb || !user?.id) return;
+  try {
+    const { data, error } = await sb
+      .from('profiles')
+      .select('is_verified, verification_status, full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) {
+      // Mientras la aprobación de identidad sea manual (Table Editor), el
+      // estado 'pending' cuenta como verificado para no bloquear ventas.
+      // Para endurecer en producción: deja solo `!!data.is_verified`.
+      userState.verified = !!data.is_verified || data.verification_status === 'pending';
+      userState.verificationStatus = data.verification_status || 'none';
+      if (data.full_name && !user.user_metadata?.full_name) {
+        user.user_metadata = { ...(user.user_metadata || {}), full_name: data.full_name };
+        persistUser();
+      }
+    }
+  } catch (e) { console.warn('No se pudo cargar el perfil:', e.message || e); }
 }
 
 // ─── Actualizar header según sesión ───
@@ -43,7 +132,7 @@ function refreshHeader() {
   const btn = document.getElementById('authBtn');
   if (!btn) return;
   if (user) {
-    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+    const name = displayName();
     const ini  = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
     btn.outerHTML = `
       <div class="user-pill" id="authBtn" onclick="requireAuth('account')" role="button" tabindex="0">
@@ -68,13 +157,19 @@ function openAuth(tab) {
 function closeAuth() {
   document.getElementById('authOverlay').style.display = 'none';
 }
+// Cierre manual (✕ u overlay): además descarta la vista pendiente para que
+// un login posterior no navegue a donde el usuario ya no quería ir.
+function cancelAuth() {
+  pending = null;
+  closeAuth();
+}
 document.getElementById('authOverlay').addEventListener('click', e => {
-  if (e.target.id === 'authOverlay') closeAuth();
+  if (e.target.id === 'authOverlay') cancelAuth();
 });
 
 // ─── Gates: qué requiere cada acción ───
 //  · navegar / carrito / favoritos → libre
-//  · checkout                      → sesión iniciada
+//  · checkout / cuenta / pedidos   → sesión iniciada
 //  · vender / pujar                → sesión + identidad verificada
 function requireAuth(v) {
   if (!user) {
@@ -99,12 +194,13 @@ function switchTab(t) {
   document.getElementById('tabReg').classList.toggle('active', !isL);
   document.getElementById('loginFlow').style.display    = isL ? '' : 'none';
   document.getElementById('registerFlow').style.display = isL ? 'none' : '';
+  if (!isL) resetSmsUI();
   gotoStep(isL ? 'l' : 'r', 1);
 }
 
 function gotoStep(flow, n) {
   const pfx = flow === 'l' ? 'ls' : 'rs';
-  const max = flow === 'l' ? 3 : 4;
+  const max = 4;
   for (let i = 1; i <= max; i++) {
     document.getElementById(pfx + i)?.classList.toggle('active', i === n);
   }
@@ -164,12 +260,28 @@ function pwdStrength(v) {
   if (l) l.textContent = cfg[s][2];
 }
 
-// ─── Formato cédula RD ───
+// ─── Formato y validación de cédula RD ───
 function fmtCed(el) {
   let v = el.value.replace(/\D/g, '').slice(0, 11);
   if (v.length > 3)  v = v.slice(0,3)  + '-' + v.slice(3);
   if (v.length > 11) v = v.slice(0,11) + '-' + v.slice(11);
   el.value = v;
+}
+
+// Valida el dígito verificador de la cédula dominicana (algoritmo Luhn,
+// el mismo que usa la JCE). No confirma que la cédula exista, pero
+// descarta números inventados al azar.
+function validCedula(ced) {
+  const d = (ced || '').replace(/\D/g, '');
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false; // 00000000000, 11111111111…
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    let p = parseInt(d[i], 10) * (i % 2 === 0 ? 1 : 2);
+    if (p > 9) p = Math.floor(p / 10) + (p % 10);
+    sum += p;
+  }
+  return (10 - (sum % 10)) % 10 === parseInt(d[10], 10);
 }
 
 // ─── OTP helpers ───
@@ -223,10 +335,19 @@ async function doLogin() {
   btn.innerHTML = '<span class="spin"></span> Verificando...';
 
   try {
-    if (sb) {
-      const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
-      if (error) throw error;
+    if (!DEMO) {
+      const client = requireSb();
+      if (!client) { showAlert('fail','No se pudo conectar con el servidor de autenticación. Recarga la página e intenta de nuevo.'); return; }
+      const { error } = await client.auth.signInWithPassword({ email, password: pwd });
+      if (error) {
+        if (/confirm/i.test(error.message)) {
+          showAlert('info', '📧 Tu correo aún no está confirmado. Revisa tu bandeja (y spam) y haz clic en el enlace de verificación.');
+          return;
+        }
+        throw error;
+      }
       attempts = 0;
+      // handleAuthEvent se encarga del resto (header, toast, pending)
     } else {
       await new Promise(r => setTimeout(r, 600));
       user = { email, user_metadata: { full_name: email.split('@')[0] } };
@@ -235,9 +356,16 @@ async function doLogin() {
       refreshHeader();
       showToast('Sesión iniciada (modo demo) ✓');
       closeAuth();
-      if (pending) { requireAuth(pending); pending = null; }
+      if (pending) { const v = pending; pending = null; requireAuth(v); }
     }
   } catch (err) {
+    // Solo cuentan para el bloqueo las credenciales inválidas; un fallo de
+    // red no debe culpar al usuario ni bloquearlo.
+    const badCreds = err?.status === 400 || /invalid login credentials/i.test(err?.message || '');
+    if (!badCreds) {
+      showAlert('fail', 'Error de conexión. Verifica tu internet e intenta de nuevo.');
+      return;
+    }
     attempts++;
     if (attempts >= 5) {
       lockTs = Date.now() + 60000; attempts = 0;
@@ -255,8 +383,16 @@ async function doLogin() {
 async function loginGoogle() {
   clearAlert();
   try {
-    if (sb) {
-      const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } });
+    if (!DEMO) {
+      const client = requireSb();
+      if (!client) { showAlert('fail','No se pudo conectar con el servidor de autenticación. Recarga la página e intenta de nuevo.'); return; }
+      // El redirect recarga la página: la vista pendiente sobrevive en sessionStorage
+      if (pending) sessionStorage.setItem('mrd_pending', pending);
+      sessionStorage.setItem('mrd_oauth', '1');
+      const { error } = await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: location.origin + location.pathname }
+      });
       if (error) throw error;
     } else {
       await new Promise(r => setTimeout(r, 500));
@@ -266,9 +402,14 @@ async function loginGoogle() {
       refreshHeader();
       showToast('Sesión con Google (modo demo) ✓');
       closeAuth();
-      if (pending) { requireAuth(pending); pending = null; }
+      if (pending) { const v = pending; pending = null; requireAuth(v); }
     }
-  } catch (e) { showAlert('fail', 'Error con Google. Intenta de nuevo.'); }
+  } catch (e) {
+    sessionStorage.removeItem('mrd_oauth');
+    sessionStorage.removeItem('mrd_pending');
+    console.warn('Google OAuth:', e);
+    showAlert('fail', 'Error con Google. Verifica que el provider esté habilitado en Supabase.');
+  }
 }
 
 // ─── 2FA ───
@@ -284,12 +425,43 @@ async function doReset() {
   const email = document.getElementById('resetE').value.trim();
   if (!email) { showAlert('fail','Ingresa tu correo.'); return; }
   try {
-    if (sb) {
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href + '?reset=true' });
+    if (!DEMO) {
+      const client = requireSb();
+      if (!client) { showAlert('fail','Sin conexión con el servidor. Recarga la página.'); return; }
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: location.origin + location.pathname
+      });
       if (error) throw error;
     }
     showAlert('ok', `✅ Enlace enviado a ${email}. Revisa tu bandeja.`);
   } catch (e) { showAlert('fail','Error al enviar. Verifica la dirección.'); }
+}
+
+// ─── Recuperación: definir nueva contraseña tras el enlace del correo ───
+function startPasswordRecovery() {
+  openAuth('login');
+  gotoStep('l', 4);
+  showAlert('info', '🔑 Define tu nueva contraseña para completar la recuperación.');
+}
+
+async function doSetNewPassword() {
+  cfe('npPwdE');
+  const pw = document.getElementById('npPwd').value;
+  if (pw.length < 8)          { fe('npPwdE','Mínimo 8 caracteres.'); return; }
+  if (!/[A-Z]/.test(pw))      { fe('npPwdE','Debe tener al menos una mayúscula.'); return; }
+  if (!/[0-9]/.test(pw))      { fe('npPwdE','Debe tener al menos un número.'); return; }
+  try {
+    if (!DEMO) {
+      const client = requireSb();
+      if (!client) { showAlert('fail','Sin conexión con el servidor. Recarga la página.'); return; }
+      const { error } = await client.auth.updateUser({ password: pw });
+      if (error) throw error;
+    }
+    showToast('Contraseña actualizada ✓');
+    closeAuth();
+  } catch (e) {
+    showAlert('fail', e.message || 'No se pudo actualizar la contraseña.');
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -315,6 +487,22 @@ function rs1next() {
   gotoStep('r', 2);
 }
 
+// Reinicia la UI del paso SMS (al entrar al registro o reintentar)
+function resetSmsUI() {
+  demoOTP = null;
+  const btn = document.getElementById('smsBtnSend');
+  if (btn) { btn.style.display = ''; btn.disabled = false; btn.innerHTML = 'Enviar código SMS'; }
+  const sec = document.getElementById('smsSection');
+  if (sec) sec.style.display = 'none';
+  [0,1,2,3,4,5].forEach(i => { const el = document.getElementById('so' + i); if (el) el.value = ''; });
+  const rs = document.getElementById('smsResend');
+  if (rs) rs.innerHTML = 'Reenviar en <span id="smsC">60</span>s';
+}
+
+// El OTP por SMS es de prueba (consola F12) hasta configurar Twilio.
+// Nota: la verificación REAL de teléfono con Supabase debe hacerse DESPUÉS
+// de crear la cuenta, con updateUser({phone}) + verifyOtp type 'phone_change'
+// — hacerlo antes crearía un usuario fantasma solo-teléfono.
 async function sendSMS() {
   clearAlert(); cfe('rPhoneE');
   const pfx = document.getElementById('phPfx').value;
@@ -325,45 +513,42 @@ async function sendSMS() {
   const btn = document.getElementById('smsBtnSend');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Enviando...';
-  try {
-    if (sb && !DEMO) {
-      const { error } = await sb.auth.signInWithOtp({ phone: full });
-      if (error) throw error;
-    } else {
-      demoOTP = Math.floor(100000 + Math.random() * 900000).toString();
-      console.log('%c🔑 Demo OTP: ' + demoOTP, 'color:#003087;font-size:16px;font-weight:bold');
-      showAlert('info', '📱 Modo demo: código en consola del navegador (F12)');
-    }
-    document.getElementById('smsSection').style.display = '';
-    btn.style.display = 'none';
-    countdown('smsC', 60);
-  } catch (e) {
-    showAlert('fail','Error enviando SMS. Verifica el número.');
-    btn.disabled = false;
-    btn.innerHTML = 'Enviar código SMS';
-  }
+  await new Promise(r => setTimeout(r, 500));
+
+  demoOTP = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log('%c🔑 Código de verificación: ' + demoOTP, 'color:#003087;font-size:16px;font-weight:bold');
+  showAlert('info', '📱 Código de prueba en la consola del navegador (F12). El SMS real se activa al configurar Twilio.');
+
+  [0,1,2,3,4,5].forEach(i => { const el = document.getElementById('so' + i); if (el) el.value = ''; });
+  const rs = document.getElementById('smsResend');
+  if (rs) rs.innerHTML = 'Reenviar en <span id="smsC">60</span>s';
+  document.getElementById('smsSection').style.display = '';
+  btn.style.display = 'none';
+  countdown('smsC', 60);
 }
 
 function verifySMS() {
   const code = getOTP('s');
   if (code.length < 6) { showAlert('fail','Ingresa los 6 dígitos.'); return; }
-  if (DEMO && demoOTP && code !== demoOTP) { showAlert('fail','❌ Código incorrecto. Revisa la consola (F12).'); return; }
+  if (!demoOTP || code !== demoOTP) { showAlert('fail','❌ Código incorrecto. Revisa la consola (F12).'); return; }
+  demoOTP = null;
   showAlert('ok','✅ Teléfono verificado.');
   setTimeout(() => { clearAlert(); gotoStep('r', 3); }, 900);
 }
 
 function rs3next() {
   cfe('rCedE','rDobE'); clearAlert();
-  const ced   = document.getElementById('rCed').value.replace(/\D/g, '');
+  const ced   = document.getElementById('rCed').value;
   const dob   = document.getElementById('rDob').value;
   const prov  = document.getElementById('rProv').value;
   const terms = document.getElementById('rTerms').checked;
   let ok = true;
-  if (ced.length !== 11) { fe('rCedE','La cédula debe tener 11 dígitos.'); ok = false; }
+  if (!validCedula(ced)) { fe('rCedE','Cédula no válida: el dígito verificador no corresponde.'); ok = false; }
   if (!dob) { fe('rDobE','Ingresa tu fecha de nacimiento.'); ok = false; }
   else {
     const age = (Date.now() - new Date(dob)) / (365.25 * 24 * 3600 * 1000);
-    if (age < 18) { fe('rDobE','Debes ser mayor de 18 años.'); ok = false; }
+    if (age < 18)  { fe('rDobE','Debes ser mayor de 18 años.'); ok = false; }
+    if (age > 110) { fe('rDobE','Fecha de nacimiento no válida.'); ok = false; }
   }
   if (!prov)  { showAlert('fail','Selecciona tu provincia.'); ok = false; }
   if (!terms) { showAlert('fail','Debes aceptar los términos.'); ok = false; }
@@ -373,20 +558,58 @@ function rs3next() {
 
 async function doCreateAccount() {
   clearAlert();
-  const nom = document.getElementById('rNom')?.value.trim() || 'Usuario';
-  const ape = document.getElementById('rApe')?.value.trim() || '';
-  const em  = document.getElementById('rEmail')?.value.trim();
-  const pw  = document.getElementById('rPwd')?.value;
+  const nom  = document.getElementById('rNom')?.value.trim() || 'Usuario';
+  const ape  = document.getElementById('rApe')?.value.trim() || '';
+  const em   = document.getElementById('rEmail')?.value.trim() || '';
+  const pw   = document.getElementById('rPwd')?.value || '';
+  const pfx  = document.getElementById('phPfx')?.value || '';
+  const ph   = (document.getElementById('rPhone')?.value || '').replace(/\D/g, '');
+  const ced  = (document.getElementById('rCed')?.value || '').replace(/\D/g, '');
+  const dob  = document.getElementById('rDob')?.value || '';
+  const prov = document.getElementById('rProv')?.value || '';
+
+  // Re-validación: el atajo "Continuar con teléfono" permite llegar aquí
+  // sin haber pasado por el paso 1.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) || pw.length < 8 || !/[A-Z]/.test(pw) || !/[0-9]/.test(pw)) {
+    showAlert('fail', 'Falta completar el paso 1: correo y contraseña válidos.');
+    gotoStep('r', 1);
+    return;
+  }
+
   const btn = document.querySelector('#rs4 .btn-pri');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Creando cuenta...'; }
   try {
-    if (sb && !DEMO) {
-      const { error } = await sb.auth.signUp({
-        email: em, password: pw,
-        options: { data: { full_name: `${nom} ${ape}`.trim() }, emailRedirectTo: location.href }
+    if (!DEMO) {
+      const client = requireSb();
+      if (!client) { showAlert('fail','Sin conexión con el servidor. Recarga la página e intenta de nuevo.'); return; }
+      const { data, error } = await client.auth.signUp({
+        email: em,
+        password: pw,
+        options: {
+          data: {
+            full_name: `${nom} ${ape}`.trim(),
+            phone: ph ? pfx + ph : null,
+            cedula: ced || null,
+            birth_date: dob || null,
+            province: prov || null
+          },
+          emailRedirectTo: location.origin + location.pathname
+        }
       });
-      if (error) throw error;
-      showAlert('ok', `✅ Cuenta creada. Revisa ${em} para verificar tu correo.`);
+      if (error) {
+        if (/already|registered/i.test(error.message)) {
+          showAlert('fail', 'Este correo ya tiene una cuenta. Usa "Iniciar sesión" o recupera tu contraseña.');
+          return;
+        }
+        throw error;
+      }
+      if (data?.session) {
+        // Confirmación de email desactivada en el proyecto: sesión directa
+        showToast(`¡Cuenta creada! Bienvenido/a ${nom} 🎉`);
+        closeAuth();
+      } else {
+        showAlert('ok', `✅ Cuenta creada. Enviamos un enlace de verificación a ${em} — confírmalo para poder iniciar sesión.`);
+      }
     } else {
       await new Promise(r => setTimeout(r, 700));
       user = { email: em, user_metadata: { full_name: `${nom} ${ape}`.trim() } };
@@ -395,7 +618,7 @@ async function doCreateAccount() {
       refreshHeader();
       showToast(`¡Cuenta creada! Bienvenido/a ${nom} 🎉`);
       closeAuth();
-      if (pending) { requireAuth(pending); pending = null; }
+      if (pending) { const v = pending; pending = null; requireAuth(v); }
     }
   } catch (e) { showAlert('fail', e.message || 'Error al crear la cuenta.'); }
   finally { if (btn) { btn.disabled = false; btn.innerHTML = 'Crear cuenta y verificar email'; } }
@@ -405,17 +628,23 @@ async function resendEmail() {
   const em = document.getElementById('rEmail')?.value.trim();
   if (!em) return;
   try {
-    if (sb && !DEMO) await sb.auth.resend({ type: 'signup', email: em });
+    if (!DEMO && requireSb()) await sb.auth.resend({ type: 'signup', email: em });
     showAlert('ok', `Reenviado a ${em}.`);
   } catch (e) { showAlert('fail','Error al reenviar.'); }
 }
 
 async function doLogout() {
-  if (sb && !DEMO) await sb.auth.signOut();
+  if (!DEMO && sb) { try { await sb.auth.signOut(); } catch (e) {} }
   user = null;
   persistUser();
-  userState.loggedIn = false; saveUserState();
+  userState.loggedIn = false;
+  // La verificación de identidad es de la cuenta, no del navegador:
+  // no debe heredarla el siguiente usuario que inicie sesión aquí.
+  userState.verified = false;
+  userState.verificationStatus = 'none';
+  saveUserState();
   refreshHeader();
-  showToast('Sesión cerrada ✓');
+  // En modo real el toast lo emite el handler de SIGNED_OUT
+  if (DEMO || !sb) showToast('Sesión cerrada ✓');
   goHome();
 }

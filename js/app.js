@@ -1172,6 +1172,18 @@ function verificationNext1() {
   const docNumber = document.getElementById('docNumber').value;
   const fullName  = document.getElementById('fullName').value;
   if (!docType || !docNumber || !fullName) { showToast('Por favor completa todos los campos'); return; }
+  if (docType === 'cedula' && !validCedula(docNumber)) {
+    showToast('❌ Cédula no válida: el dígito verificador no corresponde');
+    return;
+  }
+  if (docType === 'passport' && docNumber.replace(/\s/g, '').length < 6) {
+    showToast('❌ Número de pasaporte no válido');
+    return;
+  }
+  if (fullName.trim().split(/\s+/).length < 2) {
+    showToast('Escribe tu nombre completo como aparece en el documento');
+    return;
+  }
   verificationData.docType = docType;
   verificationData.docNumber = docNumber;
   verificationData.fullName = fullName;
@@ -1258,8 +1270,32 @@ function submitVerification() {
   if (!verificationData.faceCapture) { showToast('Por favor captura una foto de tu rostro'); return; }
   verificationData.timestamp = new Date().toISOString();
 
-  // En producción: subir docFile y faceCapture a Supabase Storage
-  // e insertar registro en la tabla `verifications` con estado 'pending'.
+  // Con Supabase activo: registra la solicitud en la tabla `verifications`
+  // y marca el perfil como pendiente. `is_verified` solo lo cambia el admin
+  // (protegido por trigger en la BD). Subir docFile/faceCapture a Storage
+  // queda para cuando se cree el bucket — ver SUPABASE_SETUP.md.
+  if (typeof sb !== 'undefined' && sb && user?.id) {
+    (async () => {
+      try {
+        let r = await sb.from('verifications').insert({
+          user_id:    user.id,
+          doc_type:   verificationData.docType,
+          doc_number: verificationData.docNumber,
+          full_name:  verificationData.fullName,
+          status:     'pending'
+        });
+        if (r.error) throw r.error;
+        r = await sb.from('profiles')
+          .update({ verification_status: 'pending' })
+          .eq('id', user.id);
+        if (r.error) throw r.error;
+      } catch (e) {
+        console.warn('No se pudo registrar la verificación:', e.message || e);
+        showToast('⚠️ No se pudo registrar la verificación en el servidor. Intenta de nuevo.');
+      }
+    })();
+  }
+
   userState.verified = true;            // demo: aprobación inmediata
   userState.verificationStatus = 'pending';
   saveUserState();
