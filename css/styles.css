@@ -5,6 +5,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+img,video,canvas{max-width:100%}
 :root{
   --primary:#003087;
   --primary-light:#0a4ab8;
@@ -20,7 +22,7 @@
   --shadow:0 2px 12px rgba(0,48,135,.10);
   --radius:10px;
 }
-body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;max-width:100%}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 
 /* ── HEADER ── */
@@ -203,6 +205,24 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   .sidebar{display:none}.main{padding:12px;gap:0}.bottom-nav{display:flex}
   .products-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   body{padding-bottom:65px}.cart-panel{width:100vw}.banner h1{font-size:22px}
-  .header-top{padding:8px 12px;gap:8px}.hbtn{padding:6px 10px;font-size:11px}
   .banner-stats{gap:14px}
+
+  /* Header de dos filas: logo + iconos arriba, búsqueda a lo ancho abajo */
+  .header-top{flex-wrap:wrap;padding:8px 12px;gap:8px 10px}
+  .logo{font-size:20px}
+  .search-bar{order:3;flex-basis:100%;max-width:none}
+  .header-icons{margin-left:auto;gap:6px}
+  .header-icons .hbtn:first-child{display:none} /* "+ Vender" ya está en la barra inferior */
+  .hbtn{padding:7px 11px;font-size:12px}
+  .user-pill{padding:6px 10px;font-size:12px}
+}
+
+/* Móviles pequeños */
+@media(max-width:380px){
+  .logo{font-size:18px}
+  .header-icons{gap:5px}
+  .hbtn{padding:6px 9px;font-size:11px}
+  .products-grid{gap:8px}
+  .banner{padding-left:16px;padding-right:16px}
+  .banner h1{font-size:20px}
 }

@@ -37,7 +37,8 @@
 
 /* Phone row */
 .phone-row{display:flex;gap:8px}
-.phone-row select{padding:11px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Sora',sans-serif;background:#fff}
+.phone-row select{flex:0 0 118px;width:118px;padding:11px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Sora',sans-serif;background:#fff}
+.phone-row input{flex:1 1 auto;min-width:0}
 
 /* OTP */
 .otp-row{display:flex;gap:8px;justify-content:center;margin:10px 0}
