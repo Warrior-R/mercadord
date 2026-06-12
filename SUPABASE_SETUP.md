@@ -1,8 +1,10 @@
 # 🔐 Activar cuentas reales + Google en MercadoRD
 
-El código ya está listo. Solo faltan estos pasos (15-20 min la primera vez).
-Mientras no se completen, el sitio funciona en **modo demo** (cualquier
-correo/contraseña entra, sin emails reales).
+> ✅ **YA CONFIGURADO (jun 2026)**: el proyecto `flsixfuzvbapwnfepmwr` está
+> activo con el esquema nuevo (RLS + triggers), las URLs de retorno, la
+> confirmación por email y el provider de Google con sus credenciales.
+> Este documento queda como referencia para recrear la configuración
+> desde cero si algún día hace falta.
 
 ---
 
