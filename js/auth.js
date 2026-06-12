@@ -596,14 +596,6 @@ async function verifySMS() {
   setTimeout(() => { clearAlert(); gotoStep('r', 3); }, 900);
 }
 
-// Continuar sin verificar el teléfono (p.ej. Twilio en trial). El teléfono
-// queda sin verificar; el KYC (Didit) sigue siendo el control fuerte.
-function skipSMS() {
-  phoneVerified = false;
-  clearAlert();
-  gotoStep('r', 3);
-}
-
 function rs3next() {
   cfe('rCedE','rDobE'); clearAlert();
   const ced   = document.getElementById('rCed').value;
