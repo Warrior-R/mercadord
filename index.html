@@ -361,6 +361,18 @@
      <button class="camera-button" id="cameraBtnCapture" onclick="capturePhoto()" disabled>📸 Capturar foto</button>
     </div>
 
+    <div style="text-align:center;margin:6px 0 16px">
+     <div style="display:flex;align-items:center;gap:10px;margin:10px 0;color:#999;font-size:12px">
+      <div style="flex:1;height:1px;background:#e3e6ec"></div>o usa tu celular<div style="flex:1;height:1px;background:#e3e6ec"></div>
+     </div>
+     <button class="camera-button secondary" id="phoneCaptureBtn" onclick="startPhoneCapture()">📱 Escanear QR y usar la cámara del celular</button>
+     <div id="qrArea" style="display:none;margin-top:14px">
+      <div id="qrBox" style="display:inline-block;background:#fff;padding:10px;border-radius:10px;border:1px solid #e3e6ec"></div>
+      <div id="qrStatus" style="font-size:13px;color:#555;margin-top:8px;font-weight:600"></div>
+      <div style="font-size:11px;color:#999;margin-top:6px;word-break:break-all">o abre este enlace en tu celular:<br><span id="qrLink" style="color:#0a4ab8"></span></div>
+     </div>
+    </div>
+
     <div id="capturedPhotoArea" style="display:none;text-align:center;margin-bottom:16px">
      <p style="font-size:13px;color:#666;margin-bottom:8px">Foto capturada:</p>
      <canvas id="capturedCanvas" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid #ddd"></canvas>

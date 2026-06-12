@@ -1153,12 +1153,239 @@ function openVerification(reason) {
   if (userState.verified) { showToast('Tu identidad ya está verificada ✓'); return; }
   document.getElementById('verificationOverlay').classList.add('show');
   verificationData = { docType: null, docNumber: null, fullName: null, docFile: null, faceCapture: null, timestamp: null, reason };
+  resetPhoneCapture();
   showVerificationStep(1);
 }
 
 function closeVerification() {
   document.getElementById('verificationOverlay').classList.remove('show');
   resetCamera();
+  resetPhoneCapture();
+}
+
+// ══════════════════════════════════════════════════
+// CAPTURA REMOTA: escanea un QR y usa la cámara del celular.
+// El celular abre mercadord.net#fv=TOKEN, captura el rostro y lo envía
+// por un canal Realtime de Supabase; la computadora lo recibe y el
+// flujo de verificación continúa solo.
+// ══════════════════════════════════════════════════
+let fvChannel = null;
+let fvChunks  = null;
+let fvTimer   = null;
+
+function resetPhoneCapture() {
+  if (fvChannel && typeof sb !== 'undefined' && sb) { try { sb.removeChannel(fvChannel); } catch (e) {} }
+  fvChannel = null;
+  fvChunks = null;
+  clearTimeout(fvTimer);
+  const area = document.getElementById('qrArea');
+  if (area) area.style.display = 'none';
+}
+
+function ensureQRLib(cb) {
+  if (window.QRCode) return cb(true);
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js';
+  s.onload = () => cb(true);
+  s.onerror = () => cb(false);
+  document.head.appendChild(s);
+}
+
+function startPhoneCapture() {
+  if (typeof sb === 'undefined' || !sb) {
+    showToast('La captura por celular requiere conexión con el servidor (no disponible en modo demo)');
+    return;
+  }
+  const token = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const url = location.origin + location.pathname + '#fv=' + token;
+
+  const area = document.getElementById('qrArea');
+  area.style.display = 'block';
+  document.getElementById('qrLink').textContent = url;
+  document.getElementById('qrStatus').textContent = 'Generando código…';
+
+  ensureQRLib(ok => {
+    const box = document.getElementById('qrBox');
+    box.innerHTML = '';
+    if (ok) {
+      new QRCode(box, { text: url, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.M });
+      document.getElementById('qrStatus').textContent = '📷 Escanea el código con la cámara de tu celular';
+    } else {
+      box.style.display = 'none';
+      document.getElementById('qrStatus').textContent = 'No se pudo generar el QR — usa el enlace de abajo';
+    }
+  });
+
+  resetChannelOnly();
+  fvChunks = {};
+  fvChannel = sb.channel('fv-' + token);
+  fvChannel
+    .on('broadcast', { event: 'hello' }, () => {
+      document.getElementById('qrStatus').textContent = '📱 Celular conectado — captura tu rostro allí';
+    })
+    .on('broadcast', { event: 'face' }, ({ payload }) => {
+      if (!fvChunks) return;
+      fvChunks[payload.seq] = payload.data;
+      const got = Object.keys(fvChunks).length;
+      document.getElementById('qrStatus').textContent = `Recibiendo foto… ${Math.round(got / payload.total * 100)}%`;
+      // si en 15s no llegan todos los pedazos, avisar
+      clearTimeout(fvTimer);
+      fvTimer = setTimeout(() => {
+        if (fvChunks && Object.keys(fvChunks).length < payload.total) {
+          document.getElementById('qrStatus').textContent = '⚠️ La foto no llegó completa — reintenta desde el celular';
+        }
+      }, 15000);
+      if (got === payload.total) {
+        clearTimeout(fvTimer);
+        const img = Array.from({ length: payload.total }, (_, i) => fvChunks[i]).join('');
+        fvChannel.send({ type: 'broadcast', event: 'ack', payload: {} });
+        receivePhoneCapture(img);
+      }
+    })
+    .subscribe();
+}
+
+function resetChannelOnly() {
+  if (fvChannel && sb) { try { sb.removeChannel(fvChannel); } catch (e) {} }
+  fvChannel = null;
+}
+
+function receivePhoneCapture(dataUrl) {
+  verificationData.faceCapture = dataUrl;
+  resetCamera();
+
+  const canvas = document.getElementById('capturedCanvas');
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+  };
+  img.src = dataUrl;
+
+  document.getElementById('capturedPhotoArea').style.display = 'block';
+  document.getElementById('cameraBtnCapture').disabled = true;
+  document.getElementById('cameraBtnToggle').disabled = true;
+  document.getElementById('submitVerification').disabled = false;
+  document.getElementById('qrStatus').textContent = '✅ Foto recibida — completando verificación…';
+  showToast('✅ Foto recibida desde tu celular');
+
+  // Reanuda el flujo en la computadora automáticamente
+  setTimeout(() => {
+    if (verificationData.faceCapture) submitVerification();
+  }, 1500);
+}
+
+// ─── Modo celular: la página se abrió desde el QR (#fv=TOKEN) ───
+function fvMobileMode() {
+  const m = location.hash.match(/^#fv=([A-Za-z0-9-]+)$/);
+  if (!m) return false;
+  const token = m[1];
+
+  document.body.innerHTML = `
+    <div style="max-width:440px;margin:0 auto;padding:24px 18px;font-family:'Sora',sans-serif">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:22px;font-weight:700;color:#003087">Mercado<span style="color:#f5a623">RD</span></div>
+        <div style="font-size:15px;font-weight:600;margin-top:10px">🪪 Verificación facial</div>
+        <div style="font-size:13px;color:#666;margin-top:4px" id="fvMsg">Conectando con tu computadora…</div>
+      </div>
+      <video id="fvVideo" autoplay playsinline style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;background:#111;display:block"></video>
+      <canvas id="fvCanvas" style="width:100%;border-radius:14px;display:none"></canvas>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+        <button id="fvStart" style="flex:1;min-width:130px;padding:13px;border:none;border-radius:10px;background:#003087;color:#fff;font-size:14px;font-weight:600;font-family:inherit">📹 Iniciar cámara</button>
+        <button id="fvShot" disabled style="flex:1;min-width:130px;padding:13px;border:none;border-radius:10px;background:#e84a3f;color:#fff;font-size:14px;font-weight:600;font-family:inherit;opacity:.5">📸 Capturar</button>
+        <button id="fvRetake" style="display:none;flex:1;min-width:130px;padding:13px;border:1.5px solid #ccc;border-radius:10px;background:#fff;font-size:14px;font-weight:600;font-family:inherit">↻ Tomar otra</button>
+        <button id="fvSend" style="display:none;flex:1;min-width:130px;padding:13px;border:none;border-radius:10px;background:#0a8a4a;color:#fff;font-size:14px;font-weight:600;font-family:inherit">✅ Enviar a la computadora</button>
+      </div>
+      <p style="font-size:12px;color:#888;text-align:center;margin-top:14px">Tu foto se envía cifrada a tu sesión de verificación y no se comparte con terceros.</p>
+      <div class="toast" id="toast"></div>
+    </div>`;
+
+  let stream = null, photo = null, channel = null, ready = false;
+  const $ = id => document.getElementById(id);
+  const msg = t => { $('fvMsg').textContent = t; };
+
+  // El SDK de Supabase carga con defer: esperar a que esté listo
+  let tries = 0;
+  (function join() {
+    if (typeof initSupabase === 'function') initSupabase();
+    if (typeof sb === 'undefined' || !sb) {
+      if (++tries > 50) { msg('❌ No se pudo conectar. Recarga la página.'); return; }
+      setTimeout(join, 200);
+      return;
+    }
+    channel = sb.channel('fv-' + token);
+    channel
+      .on('broadcast', { event: 'ack' }, () => { msg('✅ Confirmado — ya puedes volver a tu computadora'); })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          ready = true;
+          channel.send({ type: 'broadcast', event: 'hello', payload: {} });
+          msg('Conectado ✓ — inicia la cámara y captura tu rostro');
+        }
+      });
+  })();
+
+  $('fvStart').onclick = () => {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(s => {
+        stream = s;
+        $('fvVideo').srcObject = s;
+        $('fvShot').disabled = false;
+        $('fvShot').style.opacity = '1';
+        msg('Ubica tu rostro en el centro y captura');
+      })
+      .catch(() => msg('❌ No se pudo acceder a la cámara. Revisa los permisos del navegador.'));
+  };
+
+  $('fvShot').onclick = () => {
+    const v = $('fvVideo'), c = $('fvCanvas');
+    const scale = Math.min(1, 640 / v.videoWidth);
+    c.width  = Math.round(v.videoWidth * scale);
+    c.height = Math.round(v.videoHeight * scale);
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    photo = c.toDataURL('image/jpeg', 0.8);
+    v.style.display = 'none';
+    c.style.display = 'block';
+    $('fvShot').style.display = 'none';
+    $('fvStart').style.display = 'none';
+    $('fvRetake').style.display = 'block';
+    $('fvSend').style.display = 'block';
+    msg('¿Se ve bien? Envíala a tu computadora');
+  };
+
+  $('fvRetake').onclick = () => {
+    photo = null;
+    $('fvCanvas').style.display = 'none';
+    $('fvVideo').style.display = 'block';
+    $('fvShot').style.display = 'block';
+    $('fvStart').style.display = 'block';
+    $('fvRetake').style.display = 'none';
+    $('fvSend').style.display = 'none';
+  };
+
+  $('fvSend').onclick = async () => {
+    if (!photo) return;
+    if (!ready) { msg('Aún conectando… intenta en unos segundos'); return; }
+    $('fvSend').disabled = true;
+    msg('Enviando foto…');
+    const CH = 60000;
+    const total = Math.ceil(photo.length / CH);
+    try {
+      for (let i = 0; i < total; i++) {
+        await channel.send({ type: 'broadcast', event: 'face', payload: { seq: i, total, data: photo.slice(i * CH, (i + 1) * CH) } });
+      }
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      msg('✅ Foto enviada — vuelve a tu computadora para terminar');
+      $('fvRetake').style.display = 'none';
+      $('fvSend').style.display = 'none';
+    } catch (e) {
+      $('fvSend').disabled = false;
+      msg('❌ Error al enviar. Intenta de nuevo.');
+    }
+  };
+
+  return true;
 }
 
 function showVerificationStep(step) {
@@ -1342,9 +1569,13 @@ function openInfo(key) {
 });
 
 // ─── Init ───
-cview = 'home';
-updateCartBadge();
-refreshHeader();
-doRender();
-renderCarousel();
-resetCarouselAutoScroll();
+// Si la URL trae #fv=TOKEN, la página fue abierta escaneando el QR de
+// verificación: solo se muestra la pantalla de captura para el celular.
+if (!fvMobileMode()) {
+  cview = 'home';
+  updateCartBadge();
+  refreshHeader();
+  doRender();
+  renderCarousel();
+  resetCarouselAutoScroll();
+}
