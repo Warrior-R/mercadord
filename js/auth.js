@@ -507,41 +507,101 @@ function resetSmsUI() {
   if (rs) rs.innerHTML = 'Reenviar en <span id="smsC">60</span>s';
 }
 
-// El OTP por SMS es de prueba (consola F12) hasta configurar Twilio.
-// Nota: la verificación REAL de teléfono con Supabase debe hacerse DESPUÉS
-// de crear la cuenta, con updateUser({phone}) + verifyOtp type 'phone_change'
-// — hacerlo antes crearía un usuario fantasma solo-teléfono.
+// Verificación de teléfono REAL por SMS vía Twilio Verify (Edge Function
+// `phone-verify`; las credenciales de Twilio viven en el servidor). En modo
+// demo cae al OTP de consola. Es desacoplada de la auth (no crea usuario
+// fantasma): la Edge Function registra el teléfono y el trigger
+// handle_new_user marca profiles.phone_verified al crear la cuenta.
+let smsPhone = null;
+let phoneVerified = false;
+
 async function sendSMS() {
   clearAlert(); cfe('rPhoneE');
   const pfx = document.getElementById('phPfx').value;
   const ph  = document.getElementById('rPhone').value.replace(/\D/g, '');
   if (ph.length < 7) { fe('rPhoneE','Número no válido.'); return; }
   const full = pfx + ph;
+  smsPhone = full;
   document.getElementById('phoneTo').textContent = full;
   const btn = document.getElementById('smsBtnSend');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Enviando...';
-  await new Promise(r => setTimeout(r, 500));
 
+  // ── Modo real: SMS por Twilio Verify ──
+  if (!DEMO && typeof sb !== 'undefined' && sb) {
+    try {
+      const { data, error } = await sb.functions.invoke('phone-verify', { body: { action: 'send', phone: full } });
+      if (error) throw error;
+      if (!data || !data.ok) {
+        btn.disabled = false; btn.innerHTML = 'Enviar código SMS';
+        showAlert('fail', '📵 ' + ((data && data.error) || 'No se pudo enviar el SMS. Revisa el número.'));
+        return;
+      }
+      showSmsInputs();
+      showAlert('ok', '📲 Código enviado por SMS a ' + full);
+    } catch (e) {
+      btn.disabled = false; btn.innerHTML = 'Enviar código SMS';
+      showAlert('fail', 'No se pudo enviar el SMS. Intenta otra vez o usa "Omitir por ahora".');
+    }
+    return;
+  }
+
+  // ── Modo demo (local) ──
+  await new Promise(r => setTimeout(r, 500));
   demoOTP = Math.floor(100000 + Math.random() * 900000).toString();
   console.log('%c🔑 Código de verificación: ' + demoOTP, 'color:#003087;font-size:16px;font-weight:bold');
-  showAlert('info', '📱 Código de prueba en la consola del navegador (F12). El SMS real se activa al configurar Twilio.');
+  showAlert('info', '📱 Código de prueba en la consola (F12). El SMS real se activa con Twilio.');
+  showSmsInputs();
+}
 
+// Muestra la caja de OTP + arranca el contador (común a real y demo)
+function showSmsInputs() {
   [0,1,2,3,4,5].forEach(i => { const el = document.getElementById('so' + i); if (el) el.value = ''; });
   const rs = document.getElementById('smsResend');
   if (rs) rs.innerHTML = 'Reenviar en <span id="smsC">60</span>s';
   document.getElementById('smsSection').style.display = '';
-  btn.style.display = 'none';
+  const b = document.getElementById('smsBtnSend');
+  if (b) b.style.display = 'none';
   countdown('smsC', 60);
 }
 
-function verifySMS() {
+async function verifySMS() {
   const code = getOTP('s');
   if (code.length < 6) { showAlert('fail','Ingresa los 6 dígitos.'); return; }
+
+  // ── Modo real: validar el OTP con Twilio Verify ──
+  if (!DEMO && typeof sb !== 'undefined' && sb) {
+    showAlert('info','Verificando código…');
+    try {
+      const { data, error } = await sb.functions.invoke('phone-verify', { body: { action: 'check', phone: smsPhone, code } });
+      if (error) throw error;
+      if (data && data.ok && data.approved) {
+        phoneVerified = true;
+        showAlert('ok','✅ Teléfono verificado.');
+        setTimeout(() => { clearAlert(); gotoStep('r', 3); }, 900);
+      } else {
+        showAlert('fail','❌ Código incorrecto o expirado. Revisa el SMS o reenvía.');
+      }
+    } catch (e) {
+      showAlert('fail','No se pudo verificar el código. Intenta de nuevo.');
+    }
+    return;
+  }
+
+  // ── Modo demo ──
   if (!demoOTP || code !== demoOTP) { showAlert('fail','❌ Código incorrecto. Revisa la consola (F12).'); return; }
   demoOTP = null;
+  phoneVerified = true;
   showAlert('ok','✅ Teléfono verificado.');
   setTimeout(() => { clearAlert(); gotoStep('r', 3); }, 900);
+}
+
+// Continuar sin verificar el teléfono (p.ej. Twilio en trial). El teléfono
+// queda sin verificar; el KYC (Didit) sigue siendo el control fuerte.
+function skipSMS() {
+  phoneVerified = false;
+  clearAlert();
+  gotoStep('r', 3);
 }
 
 function rs3next() {
