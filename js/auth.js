@@ -114,10 +114,9 @@ async function loadProfile() {
       .maybeSingle();
     if (error) throw error;
     if (data) {
-      // Mientras la aprobación de identidad sea manual (Table Editor), el
-      // estado 'pending' cuenta como verificado para no bloquear ventas.
-      // Para endurecer en producción: deja solo `!!data.is_verified`.
-      userState.verified = !!data.is_verified || data.verification_status === 'pending';
+      // Solo cuenta la aprobación real (proveedor KYC o admin): el estado
+      // 'pending' NO desbloquea vender/pujar.
+      userState.verified = !!data.is_verified;
       userState.verificationStatus = data.verification_status || 'none';
       if (data.full_name && !user.user_metadata?.full_name) {
         user.user_metadata = { ...(user.user_metadata || {}), full_name: data.full_name };
@@ -179,6 +178,10 @@ function requireAuth(v) {
     return;
   }
   if ((v === 'sell' || v === 'bid') && !userState.verified) {
+    if (userState.verificationStatus === 'pending') {
+      showToast('⏳ Tu verificación está en revisión — te avisaremos al aprobarse');
+      return;
+    }
     showToast('🪪 Verifica tu identidad para ' + (v === 'sell' ? 'vender' : 'pujar'));
     openVerification(v);
     return;

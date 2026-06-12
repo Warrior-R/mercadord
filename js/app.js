@@ -700,6 +700,10 @@ function handleSellPhoto(input) {
 }
 
 function publishProduct() {
+  if (!userState.verified) {
+    showToast('🪪 Necesitas identidad verificada para publicar');
+    return;
+  }
   const title = document.getElementById('sellTitle').value.trim();
   const price = parseFloat(document.getElementById('sellPrice').value);
   const cat   = document.getElementById('sellCat').value;
@@ -1151,6 +1155,10 @@ function resetCarouselAutoScroll() {
 // ─── Verificación de Identidad ───
 function openVerification(reason) {
   if (userState.verified) { showToast('Tu identidad ya está verificada ✓'); return; }
+  if (userState.verificationStatus === 'pending') {
+    showToast('⏳ Tu verificación está en revisión — te avisaremos al aprobarse');
+    return;
+  }
   document.getElementById('verificationOverlay').classList.add('show');
   verificationData = { docType: null, docNumber: null, fullName: null, docFile: null, faceCapture: null, timestamp: null, reason };
   resetPhoneCapture();
@@ -1523,8 +1531,16 @@ function submitVerification() {
     })();
   }
 
-  userState.verified = true;            // demo: aprobación inmediata
-  userState.verificationStatus = 'pending';
+  if (typeof sb !== 'undefined' && sb) {
+    // Modo real: queda EN REVISIÓN. La aprobación la da el proveedor KYC
+    // automático (o el admin en Table Editor) escribiendo profiles.is_verified
+    // — protegido por trigger, el cliente no puede auto-aprobarse.
+    userState.verified = false;
+    userState.verificationStatus = 'pending';
+  } else {
+    userState.verified = true;          // solo en modo demo local
+    userState.verificationStatus = 'pending';
+  }
   saveUserState();
   refreshHeader();
 
@@ -1534,7 +1550,7 @@ function submitVerification() {
   showToast('✅ Verificación enviada correctamente');
 
   const reason = verificationData.reason;
-  if (reason === 'sell' || reason === 'bid') {
+  if (userState.verified && (reason === 'sell' || reason === 'bid')) {
     setTimeout(() => { closeVerification(); showView(reason === 'bid' ? 'auctions' : 'sell'); }, 1200);
   }
 }
