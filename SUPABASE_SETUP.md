@@ -2,9 +2,29 @@
 
 > ✅ **YA CONFIGURADO (jun 2026)**: el proyecto `flsixfuzvbapwnfepmwr` está
 > activo con el esquema nuevo (RLS + triggers), las URLs de retorno, la
-> confirmación por email y el provider de Google con sus credenciales.
-> Este documento queda como referencia para recrear la configuración
-> desde cero si algún día hace falta.
+> confirmación por email, el provider de Google y la **verificación de
+> identidad real con Didit** (Edge Function `kyc` + secrets configurados,
+> workflow Custom KYC = documento + liveness + face match). Probado de
+> punta a punta. Este documento queda como referencia para recrear la
+> configuración desde cero si algún día hace falta.
+
+## Verificación de identidad (KYC con Didit) — YA ACTIVO
+
+- **Workflow**: "Custom KYC" (`878325bc-...`) = Verificación de ID +
+  Prueba de vida (liveness) + Coincidencia facial + Dispositivo/IP.
+  Detecta documentos falsos/editados y rostros no vivos. $0.33/verificación,
+  500 gratis al mes.
+- **Edge Function** `supabase/functions/kyc/index.ts`: crea sesiones y
+  recibe el webhook firmado (HMAC-SHA256, header `X-Signature`). Solo ella
+  (service_role) aprueba; el trigger `protect_profiles_verification` impide
+  que el cliente se auto-verifique.
+- **Secrets** (en Supabase, ya puestos): `DIDIT_API_KEY`,
+  `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET`. Para rotarlos:
+  `supabase secrets set --project-ref flsixfuzvbapwnfepmwr NOMBRE=valor`.
+- **Webhook** registrado en Didit → `https://flsixfuzvbapwnfepmwr.supabase.co/functions/v1/kyc`
+- Consola Didit: https://business.didit.me · cuenta del usuario, 500 KYC/mes gratis + $10 crédito.
+- Re-desplegar la función tras editarla:
+  `supabase functions deploy kyc --project-ref flsixfuzvbapwnfepmwr --use-api`
 
 ---
 
