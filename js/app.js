@@ -375,7 +375,7 @@ function renderAuctions() {
         <div class="auction-info">
           <div class="auction-title">${a.title} ${a.myBid && !over ? '<span style="font-size:11px;background:#e6f4ea;color:var(--green,#0a8a4a);padding:2px 8px;border-radius:10px;font-weight:600">🏆 Vas ganando</span>' : ''}${a.sold ? ' <span style="font-size:11px;background:#fdecea;color:#c0392b;padding:2px 8px;border-radius:10px;font-weight:600">VENDIDO</span>' : ''}</div>
           <div class="auction-meta">📍 ${a.loc} · <strong>${a.seller}</strong></div>
-          <div class="auction-bids">👥 <span class="auc-bids" data-id="${a.id}">${a.bids}</span> pujas · ⏰ <strong style="color:var(--accent)" class="auc-count" data-id="${a.id}">${over ? (a.sold ? 'Comprado ya ⚡' : 'Finalizada') : left}</strong></div>
+          <div class="auction-bids">👥 <span class="auc-bids" data-id="${a.id}">${a.bids}</span> pujas · ⏰ <strong style="color:var(--accent)" class="auc-count" data-id="${a.id}">${over ? (a.sold ? 'Comprado ya ⚡' : 'Finalizada') : left}</strong><span class="auc-leader" data-id="${a.id}">${a.leader && !over && !a.mine && !a.myBid ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${a.leader}</b> va ganando` : ''}</span></div>
           <div class="auction-price-row">
             <div>
               <div style="font-size:11px;color:var(--text2)">Puja actual</div>
@@ -385,8 +385,8 @@ function renderAuctions() {
               ? '<span style="font-size:12px;color:var(--text2);font-weight:600">🏷️ Tu subasta</span>'
               : `
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-              <button class="bid-btn" style="background:var(--primary)" onclick="tryBuyNow(${a.id})">⚡ ¡Cómpralo ya! ${fmt(a.buy)}</button>
-              <button class="bid-btn" onclick="tryBid(${a.id})">Pujar →</button>
+              ${a.buy ? `<button class="bid-btn" style="background:var(--primary)" onclick="tryBuyNow('${a.id}')">⚡ ¡Cómpralo ya! ${fmt(a.buy)}</button>` : ''}
+              <button class="bid-btn" onclick="tryBid('${a.id}')">Pujar →</button>
             </div>`}
           </div>
         </div>
@@ -427,32 +427,90 @@ function tryBid(id) {
 }
 
 function openBid(id) {
-  const a = auctions.find(x => x.id === id);
+  const a = auctions.find(x => x.id == id);
   if (!a) return;
   if (!aucLeft(a)) { showToast('Esta subasta ya finalizó'); renderAuctions(); return; }
-  bidAucId = id;
+  bidAucId = a.id;
   const min = a.cur + bidStep(a);
   document.getElementById('bidItemTitle').textContent = `${a.icon} ${a.title}`;
   document.getElementById('bidCur').textContent   = fmt(a.cur);
   document.getElementById('bidCount').textContent = a.bids;
-  document.getElementById('bidEnds').textContent  = aucLeft(a);
+  document.getElementById('bidEnds').textContent  = aucLeft(a) || 'Finalizada';
   document.getElementById('bidMin').textContent   = fmt(min);
   const inp = document.getElementById('bidAmount');
   inp.value = min;
   inp.min = min;
+  inp.step = bidStep(a);
   fe('bidErr', '');
   document.getElementById('bidOverlay').style.display = 'flex';
+  loadBidFeed(a.id);
+  startBidModalTimer();
 }
 
-function closeBid() { document.getElementById('bidOverlay').style.display = 'none'; }
+let bidModalTimer = null;
+function startBidModalTimer() {
+  stopBidModalTimer();
+  bidModalTimer = setInterval(() => {
+    const ov = document.getElementById('bidOverlay');
+    const a  = auctions.find(x => x.id == bidAucId);
+    if (!ov || ov.style.display !== 'flex' || !a) { stopBidModalTimer(); return; }
+    const left = aucLeft(a);
+    const el = document.getElementById('bidEnds');
+    if (el) { el.textContent = left || 'Finalizada'; el.style.color = (left && a.endAt - Date.now() < 120000) ? 'var(--red)' : 'var(--accent2)'; }
+  }, 1000);
+}
+function stopBidModalTimer() { if (bidModalTimer) { clearInterval(bidModalTimer); bidModalTimer = null; } }
 
-function placeBid() {
-  const a = auctions.find(x => x.id === bidAucId);
+function closeBid() { document.getElementById('bidOverlay').style.display = 'none'; stopBidModalTimer(); bidAucId = null; }
+
+async function placeBid() {
+  const a = auctions.find(x => x.id == bidAucId);
   if (!a) return;
   if (!aucLeft(a)) { closeBid(); showToast('La subasta finalizó'); renderAuctions(); return; }
   const amt = parseFloat(document.getElementById('bidAmount').value);
   const min = a.cur + bidStep(a);
   if (!amt || amt < min) { fe('bidErr', 'Tu puja debe ser de al menos ' + fmt(min)); return; }
+
+  // ── Modo real (multi-usuario): la puja se valida en el servidor (atómica) ──
+  if (a.db && typeof sb !== 'undefined' && sb) {
+    const btn = document.querySelector('#bidOverlay .btn-pri');
+    const prevHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Pujando…'; }
+    try {
+      const { data, error } = await sb.rpc('place_bid', { p_auction: a.id, p_amount: Math.round(amt) });
+      if (error) throw error;
+      a.cur = Number(data.current_bid); a.bids = data.bid_count; a.myBid = true;
+      a.endAt = new Date(data.ends_at).getTime();
+      closeBid();
+      renderAuctions();
+      showToast(`🏆 ¡Eres el mejor postor con ${fmt(a.cur)}!`);
+    } catch (e) {
+      const m = String((e && e.message) || e || '');
+      if (m.includes('BID_TOO_LOW')) {
+        const v = parseFloat(m.split('BID_TOO_LOW:')[1]);
+        await refreshAuction(a.id);
+        const nm = a.cur + bidStep(a);
+        document.getElementById('bidCur').textContent   = fmt(a.cur);
+        document.getElementById('bidCount').textContent = a.bids;
+        document.getElementById('bidMin').textContent   = fmt(nm);
+        loadBidFeed(a.id);
+        fe('bidErr', 'Otra persona pujó primero. Mínimo ahora: ' + fmt(isNaN(v) ? nm : v));
+      } else if (m.includes('AUCTION_CLOSED')) {
+        closeBid(); showToast('La subasta ya cerró'); await loadAuctionsDB();
+      } else if (m.includes('OWN_AUCTION')) {
+        fe('bidErr', 'No puedes pujar en tu propia subasta.');
+      } else if (m.includes('AUTH_REQUIRED')) {
+        closeBid(); showToast('Inicia sesión de nuevo para pujar'); openAuth('login');
+      } else {
+        fe('bidErr', 'No se pudo registrar la puja. Intenta otra vez.');
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = prevHtml || 'Confirmar puja 🔨'; }
+    }
+    return;
+  }
+
+  // ── Modo demo (local) ──
   a.cur  = Math.round(amt);
   a.bids++;
   a.myBid = true;
@@ -465,8 +523,8 @@ function placeBid() {
 }
 
 // ─── ¡Cómpralo ya! (cierra la subasta y va al checkout) ───
-function tryBuyNow(id) {
-  const a = auctions.find(x => x.id === id);
+async function tryBuyNow(id) {
+  const a = auctions.find(x => x.id == id);
   if (!a) return;
   if (!user) {
     pending = 'auctions';
@@ -475,10 +533,31 @@ function tryBuyNow(id) {
     return;
   }
   if (!aucLeft(a)) { showToast('Esta subasta ya finalizó'); renderAuctions(); return; }
+
+  // ── Modo real: cierra la subasta en el servidor y notifica a los demás ──
+  if (a.db && typeof sb !== 'undefined' && sb) {
+    try {
+      const { data, error } = await sb.rpc('buy_now', { p_auction: a.id });
+      if (error) throw error;
+      a.sold = true; a.status = 'sold'; a.endAt = Date.now();
+      cart.push({ id: 'auc-' + a.id, title: a.title + ' (¡Cómpralo ya!)', price: Number(data.price), icon: a.icon, img: null, qty: 1 });
+      saveCart(); updateCartBadge();
+      showToast('⚡ ¡Cómpralo ya! La subasta se cerró para ti');
+      showView('checkout');
+    } catch (e) {
+      const m = String((e && e.message) || e || '');
+      if (m.includes('AUCTION_CLOSED')) { showToast('Esta subasta ya cerró'); await loadAuctionsDB(); }
+      else if (m.includes('AUTH_REQUIRED')) { openAuth('login'); }
+      else showToast('No se pudo completar la compra');
+    }
+    return;
+  }
+
+  // ── Modo demo (local) ──
   a.sold = true;
   a.endAt = Date.now();
   saveAuctions();
-  cart.push({ id: 90000 + a.id, title: a.title + ' (¡Cómpralo ya!)', price: a.buy, icon: a.icon, img: null, qty: 1 });
+  cart.push({ id: 90000 + (typeof a.id === 'number' ? a.id : 0), title: a.title + ' (¡Cómpralo ya!)', price: a.buy, icon: a.icon, img: null, qty: 1 });
   saveCart();
   updateCartBadge();
   showToast('⚡ ¡Cómpralo ya! La subasta se cerró para ti');
@@ -720,17 +799,31 @@ function publishProduct() {
 
   // Tipo "Subasta": crea una subasta real de 3 días (estilo eBay)
   if (adType === 'Subasta') {
+    // Modo real: la subasta vive en la BD y es visible para todos
+    if (typeof sb !== 'undefined' && sb && user?.id) {
+      (async () => {
+        try {
+          const { error } = await sb.from('auctions').insert({
+            seller_id: user.id, seller_name: sellerName, title,
+            icon: catIcons[cat] || '📦', location: loc,
+            start_price: Math.round(price), current_bid: Math.round(price), bid_count: 0,
+            buy_now_price: Math.round(price * 1.35),
+            min_increment: Math.max(500, Math.round(price * 0.02 / 100) * 100),
+            ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+          });
+          if (error) throw error;
+          await loadAuctionsDB();
+          showToast('¡Subasta publicada! 🔨 Precio inicial ' + fmt(price) + ' · 3 días');
+          showView('auctions');
+        } catch (e) { showToast('No se pudo publicar la subasta: ' + (e.message || e)); }
+      })();
+      return;
+    }
+    // Modo demo (local)
     auctions.push({
-      id: Date.now(),
-      title,
-      icon: catIcons[cat] || '📦',
-      cur: Math.round(price),
-      bids: 0,
-      buy: Math.round(price * 1.35),
-      seller: sellerName,
-      loc,
-      endAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
-      mine: true
+      id: Date.now(), title, icon: catIcons[cat] || '📦',
+      cur: Math.round(price), bids: 0, buy: Math.round(price * 1.35),
+      seller: sellerName, loc, endAt: Date.now() + 3 * 24 * 60 * 60 * 1000, mine: true
     });
     saveAuctions();
     showToast('¡Subasta publicada! 🔨 Precio inicial ' + fmt(price) + ' · 3 días');
@@ -1696,3 +1789,205 @@ if (!fvMobileMode()) {
   renderCarousel();
   resetCarouselAutoScroll();
 }
+
+// ══════════════════════════════════════════════════
+// SUBASTAS EN TIEMPO REAL (multi-usuario, Supabase)
+// Carga desde la BD, pujas vía RPC, feed enmascarado,
+// notificaciones y Realtime. En modo demo todo sigue local.
+// ══════════════════════════════════════════════════
+let aucChannel = null;
+
+// Cargar todas las subastas desde la BD y reemplazar el arreglo local
+async function loadAuctionsDB() {
+  if (typeof sb === 'undefined' || !sb) return;
+  try {
+    const { data, error } = await sb.from('auctions').select('*').order('ends_at', { ascending: true });
+    if (error || !data) return;
+    const uid = (typeof user !== 'undefined' && user) ? user.id : null;
+    const mapped = data.map(r => ({
+      id: r.id, title: r.title, icon: r.icon || '📦', loc: r.location || 'RD',
+      seller: r.seller_name || 'MercadoRD',
+      cur: Number(r.current_bid), bids: r.bid_count || 0,
+      buy: r.buy_now_price != null ? Number(r.buy_now_price) : null,
+      endAt: new Date(r.ends_at).getTime(),
+      mine: !!(r.seller_id && uid && r.seller_id === uid),
+      myBid: !!(r.high_bidder && uid && r.high_bidder === uid),
+      sold: r.status === 'sold', status: r.status,
+      leader: r.leader_masked || null, db: true
+    }));
+    auctions.splice(0, auctions.length, ...mapped);
+    if (typeof cview !== 'undefined') {
+      if (cview === 'auctions') renderAuctions();
+      else if (cview === 'home' && typeof renderCarousel === 'function') renderCarousel();
+    }
+  } catch (e) { console.warn('loadAuctionsDB', e); }
+}
+
+// Refrescar una sola subasta (tras un rechazo por puja baja, etc.)
+async function refreshAuction(id) {
+  if (typeof sb === 'undefined' || !sb) return;
+  try {
+    const { data } = await sb.from('auctions').select('*').eq('id', id).maybeSingle();
+    if (!data) return;
+    const a = auctions.find(x => x.id == id); if (!a) return;
+    const uid = (typeof user !== 'undefined' && user) ? user.id : null;
+    a.cur = Number(data.current_bid); a.bids = data.bid_count; a.endAt = new Date(data.ends_at).getTime();
+    a.status = data.status; a.sold = data.status === 'sold'; a.leader = data.leader_masked || a.leader;
+    a.myBid = !!(data.high_bidder && uid && data.high_bidder === uid);
+  } catch (e) {}
+}
+
+// Realtime: cambios en cualquier subasta (pujas de otros usuarios en vivo)
+function subscribeAuctions() {
+  if (typeof sb === 'undefined' || !sb || aucChannel) return;
+  aucChannel = sb.channel('auctions-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'auctions' }, payload => {
+      const r = payload.new || payload.old; if (!r) return;
+      const a = auctions.find(x => x.id == r.id);
+      if (payload.eventType === 'INSERT') { if (!a) loadAuctionsDB(); return; }
+      if (!a || !payload.new) return;
+      const uid = (typeof user !== 'undefined' && user) ? user.id : null;
+      a.cur = Number(r.current_bid); a.bids = r.bid_count; a.endAt = new Date(r.ends_at).getTime();
+      a.status = r.status; a.sold = r.status === 'sold'; a.leader = r.leader_masked || a.leader;
+      a.myBid = !!(r.high_bidder && uid && r.high_bidder === uid);
+      patchAuctionDOM(a);
+      if (bidAucId != null && bidAucId == a.id) {
+        const c = document.getElementById('bidCur'); if (c) c.textContent = fmt(a.cur);
+        const n = document.getElementById('bidCount'); if (n) n.textContent = a.bids;
+        loadBidFeed(a.id);
+      }
+    })
+    .subscribe();
+}
+
+// Actualizar en vivo las tarjetas sin re-render completo (salvo cambio de estado)
+function patchAuctionDOM(a) {
+  document.querySelectorAll(`.auc-cur[data-id="${a.id}"]`).forEach(el => el.textContent = fmt(a.cur));
+  document.querySelectorAll(`.auc-bids[data-id="${a.id}"]`).forEach(el => el.textContent = a.bids);
+  document.querySelectorAll(`.auc-leader[data-id="${a.id}"]`).forEach(el => {
+    el.innerHTML = (a.leader && a.status === 'active' && !a.mine && !a.myBid)
+      ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${a.leader}</b> va ganando` : '';
+  });
+  if (typeof cview !== 'undefined' && cview === 'auctions' && a.status !== 'active') renderAuctions();
+}
+
+// Feed de pujadores con nombres ENMASCARADOS (servidos así por el servidor)
+async function loadBidFeed(id) {
+  const box = document.getElementById('bidFeed'); if (!box) return;
+  if (typeof sb === 'undefined' || !sb) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="bf-empty">Cargando pujas…</div>';
+  try {
+    const { data, error } = await sb.rpc('get_auction_bids', { p_auction: id, p_limit: 10 });
+    if (error) throw error;
+    if (!data || !data.length) { box.innerHTML = '<div class="bf-empty">Sé el primero en pujar 🔨</div>'; return; }
+    box.innerHTML = data.map((b, i) => `
+      <div class="bf-row${i === 0 ? ' bf-top' : ''}">
+        <span class="bf-name">${i === 0 ? '🏆 ' : ''}${b.masked}</span>
+        <span class="bf-amt">${fmt(b.amount)}</span>
+        <span class="bf-time">${relTime(b.created_at)}</span>
+      </div>`).join('');
+  } catch (e) { box.innerHTML = ''; }
+}
+
+function relTime(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 1000));
+  if (s < 60) return 'hace ' + s + 's';
+  const m = Math.floor(s / 60); if (m < 60) return 'hace ' + m + 'min';
+  const h = Math.floor(m / 60); if (h < 24) return 'hace ' + h + 'h';
+  return 'hace ' + Math.floor(h / 24) + 'd';
+}
+
+// ─── Notificaciones (campana en el header) ───
+let notifItems = [];
+let notifChannel = null;
+
+async function loadNotifications() {
+  if (typeof sb === 'undefined' || !sb || !(typeof user !== 'undefined' && user && user.id)) {
+    notifItems = []; renderNotifBadge(); renderNotifList(); return;
+  }
+  try {
+    const { data } = await sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(30);
+    notifItems = data || []; renderNotifList();
+  } catch (e) {}
+}
+function unreadCount() { return notifItems.filter(n => !n.read).length; }
+function renderNotifBadge() {
+  const b = document.getElementById('notifBadge'); if (!b) return;
+  const c = unreadCount(); b.textContent = c > 9 ? '9+' : String(c); b.style.display = c ? 'flex' : 'none';
+}
+function renderNotifList() {
+  renderNotifBadge();
+  const box = document.getElementById('notifList'); if (!box) return;
+  if (!notifItems.length) { box.innerHTML = '<div class="nt-empty">Sin notificaciones aún 🔔</div>'; return; }
+  box.innerHTML = notifItems.map(n => `
+    <div class="nt-row${n.read ? '' : ' nt-unread'}">
+      <div class="nt-title">${n.title || ''}</div>
+      <div class="nt-body">${n.body || ''}</div>
+      <div class="nt-time">${relTime(n.created_at)}</div>
+    </div>`).join('');
+}
+function toggleNotif() {
+  if (!(typeof user !== 'undefined' && user)) { openAuth('login'); return; }
+  const p = document.getElementById('notifPanel'); if (!p) return;
+  const open = p.style.display !== 'block';
+  p.style.display = open ? 'block' : 'none';
+  if (open) { renderNotifList(); markNotifRead(); }
+}
+async function markNotifRead() {
+  if (typeof sb === 'undefined' || !sb || !(typeof user !== 'undefined' && user && user.id)) return;
+  if (!unreadCount()) return;
+  notifItems.forEach(n => n.read = true); renderNotifBadge();
+  try { await sb.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false); } catch (e) {}
+}
+function subscribeNotifications() {
+  if (typeof sb === 'undefined' || !sb || !(typeof user !== 'undefined' && user && user.id)) return;
+  if (notifChannel) { try { sb.removeChannel(notifChannel); } catch (e) {} notifChannel = null; }
+  const uid = user.id;
+  notifChannel = sb.channel('notif-' + uid)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + uid }, payload => {
+      const n = payload.new; if (!n) return;
+      notifItems.unshift(n); renderNotifList();
+      showToast(n.title || 'Notificación');
+      dingNotif();
+    })
+    .subscribe();
+}
+function unsubscribeNotifications() {
+  if (notifChannel) { try { sb.removeChannel(notifChannel); } catch (e) {} notifChannel = null; }
+  notifItems = []; renderNotifBadge(); renderNotifList();
+}
+function dingNotif() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+    const ctx = dingNotif._c || (dingNotif._c = new Ctx());
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.05;
+    o.connect(g); g.connect(ctx.destination); o.start();
+    o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+    o.stop(ctx.currentTime + 0.26);
+  } catch (e) {}
+}
+
+// Cerrar el panel de notificaciones al hacer clic fuera
+document.addEventListener('click', e => {
+  const wrap = e.target.closest && e.target.closest('.notif-wrap');
+  const p = document.getElementById('notifPanel');
+  if (!wrap && p && p.style.display === 'block') p.style.display = 'none';
+});
+
+// Punto de entrada llamado por auth.js cuando cambia la sesión (login/logout/carga)
+function onUserChanged() {
+  if (typeof sb === 'undefined' || !sb) return;
+  loadAuctionsDB();
+  subscribeAuctions();
+  if (typeof user !== 'undefined' && user && user.id) {
+    loadNotifications();
+    subscribeNotifications();
+  } else {
+    unsubscribeNotifications();
+  }
+}
+
+// Respaldo: si ningún evento de auth disparó la carga, intentarlo igual (subastas son públicas)
+setTimeout(() => { if (typeof sb !== 'undefined' && sb && !aucChannel) onUserChanged(); }, 1800);

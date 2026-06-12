@@ -212,7 +212,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   .logo{font-size:20px}
   .search-bar{order:3;flex-basis:100%;max-width:none}
   .header-icons{margin-left:auto;gap:6px}
-  .header-icons .hbtn:first-child{display:none} /* "+ Vender" ya está en la barra inferior */
+  .header-icons > .hbtn:first-child{display:none} /* "+ Vender" ya está en la barra inferior (hijo directo, no la campana anidada) */
   .hbtn{padding:7px 11px;font-size:12px}
   .user-pill{padding:6px 10px;font-size:12px}
 }

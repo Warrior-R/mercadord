@@ -79,6 +79,9 @@ async function handleAuthEvent(ev, session) {
   saveUserState();
   refreshHeader();
 
+  // Avisar a app.js: (re)cargar subastas de la BD, notificaciones y Realtime
+  if (typeof onUserChanged === 'function') onUserChanged();
+
   // Sesión persistida localmente que ya no existe en Supabase (p.ej. la
   // dejó el modo demo, o expiró): avisar en vez de desloguear en silencio.
   if (ev === 'INITIAL_SESSION' && !user && hadUserAtLoad) {

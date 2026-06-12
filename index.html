@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="css/subsections.css">
 <link rel="stylesheet" href="css/carousel.css">
 <link rel="stylesheet" href="css/verification.css">
+<link rel="stylesheet" href="css/auctions.css">
 
 <!-- Supabase SDK (defer: no bloquea el renderizado; en modo demo no se usa) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -711,6 +712,13 @@
   </div>
   <div class="header-icons">
    <button class="hbtn" onclick="requireAuth('sell')">+ Vender</button>
+   <div class="notif-wrap">
+    <button class="hbtn notif-btn" onclick="toggleNotif()" aria-label="Notificaciones">🔔<span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
+    <div class="notif-panel" id="notifPanel" style="display:none">
+     <div class="notif-head">🔔 Notificaciones</div>
+     <div class="notif-list" id="notifList"><div class="nt-empty">Sin notificaciones aún 🔔</div></div>
+    </div>
+   </div>
    <button class="hbtn" onclick="toggleCart()">🛒 Carrito <span class="cart-badge" id="cartCount">0</span></button>
    <button class="hbtn" id="authBtn" onclick="openAuth()">👤 Ingresar</button>
   </div>
@@ -998,6 +1006,10 @@
     <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Pujas realizadas</span><strong id="bidCount"></strong></div>
     <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Tiempo restante</span><strong id="bidEnds" style="color:var(--accent2)"></strong></div>
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);margin-top:6px;padding-top:8px"><span>Puja mínima</span><strong id="bidMin" style="color:var(--primary)"></strong></div>
+   </div>
+   <div class="bid-feed-wrap">
+    <div class="bid-feed-head">👥 Pujas recientes <span>· nombres parciales por seguridad</span></div>
+    <div id="bidFeed" class="bid-feed"></div>
    </div>
    <div class="fg"><label>Tu puja (RD$)</label><input type="number" id="bidAmount" placeholder="0" min="1" step="100"><div class="ferr" id="bidErr"></div></div>
    <button class="auth-btn btn-pri" onclick="placeBid()">Confirmar puja 🔨</button>

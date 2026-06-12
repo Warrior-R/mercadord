@@ -1,0 +1,67 @@
+/* ═══════════════════════════════════════════════════
+   MercadoRD — Subastas en tiempo real + Notificaciones
+   Archivo: css/auctions.css
+═══════════════════════════════════════════════════ */
+
+/* ─── Campana de notificaciones ─── */
+.notif-wrap { position: relative; display: inline-flex; }
+.notif-btn { position: relative; }
+.notif-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  background: var(--red, #e53935); color: #fff;
+  border-radius: 9px; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1; box-shadow: 0 0 0 2px var(--bg, #fff);
+}
+
+.notif-panel {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  width: 340px; max-width: 92vw; max-height: 460px;
+  background: #fff; border: 1px solid var(--border, #e3e6ee);
+  border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.18);
+  z-index: 250; overflow: hidden; display: flex; flex-direction: column;
+}
+.notif-head {
+  padding: 12px 16px; font-weight: 700; font-size: 14px;
+  border-bottom: 1px solid var(--border, #e3e6ee); color: var(--text, #1a1a2e);
+}
+.notif-list { overflow-y: auto; }
+.nt-empty { padding: 28px 16px; text-align: center; color: var(--text2, #7a7f99); font-size: 13px; }
+.nt-row {
+  padding: 11px 16px; border-bottom: 1px solid var(--border, #eef0f6);
+  position: relative; transition: background .15s;
+}
+.nt-row:hover { background: #f8f9fc; }
+.nt-row.nt-unread { background: #eef4ff; }
+.nt-row.nt-unread::before {
+  content: ''; position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: var(--primary, #2b50d6);
+}
+.nt-title { font-size: 13px; font-weight: 600; color: var(--text, #1a1a2e); margin-bottom: 2px; }
+.nt-body  { font-size: 12px; color: var(--text2, #6a6f88); line-height: 1.45; }
+.nt-time  { font-size: 10px; color: var(--text2, #9aa0b8); margin-top: 4px; }
+
+/* ─── Feed de pujadores en el modal de puja ─── */
+.bid-feed-wrap { margin-bottom: 14px; }
+.bid-feed-head { font-size: 12px; font-weight: 600; color: var(--text, #1a1a2e); margin-bottom: 6px; }
+.bid-feed-head span { font-weight: 400; color: var(--text2, #9aa0b8); }
+.bid-feed {
+  background: #f8f9fc; border: 1px solid var(--border, #eef0f6);
+  border-radius: 8px; max-height: 168px; overflow-y: auto;
+}
+.bf-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+  padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border, #eef0f6);
+}
+.bf-row:last-child { border-bottom: none; }
+.bf-top { background: #e6f4ea; }
+.bf-name { font-weight: 600; color: var(--text, #1a1a2e); }
+.bf-amt  { font-weight: 700; color: var(--primary, #2b50d6); white-space: nowrap; }
+.bf-time { font-size: 11px; color: var(--text2, #9aa0b8); white-space: nowrap; }
+.bf-empty { padding: 18px 12px; text-align: center; color: var(--text2, #9aa0b8); font-size: 12px; }
+
+/* En pantallas chicas el panel se ancla al borde derecho del viewport */
+@media (max-width: 480px) {
+  .notif-panel { position: fixed; top: 60px; right: 8px; left: 8px; width: auto; max-width: none; }
+}
