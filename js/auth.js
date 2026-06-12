@@ -178,7 +178,9 @@ function requireAuth(v) {
     return;
   }
   if ((v === 'sell' || v === 'bid') && !userState.verified) {
-    if (userState.verificationStatus === 'pending') {
+    // En modo demo el estado pendiente solo informa; con Didit (sb activo)
+    // el panel de verificación muestra el estado y permite reintentar.
+    if (userState.verificationStatus === 'pending' && !sb) {
       showToast('⏳ Tu verificación está en revisión — te avisaremos al aprobarse');
       return;
     }

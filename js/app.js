@@ -1155,20 +1155,121 @@ function resetCarouselAutoScroll() {
 // ─── Verificación de Identidad ───
 function openVerification(reason) {
   if (userState.verified) { showToast('Tu identidad ya está verificada ✓'); return; }
-  if (userState.verificationStatus === 'pending') {
+  const real = typeof sb !== 'undefined' && !!sb;
+  // En modo demo (sin servidor) el estado pendiente bloquea; con Didit el
+  // panel permite ver el estado y reintentar.
+  if (!real && userState.verificationStatus === 'pending') {
     showToast('⏳ Tu verificación está en revisión — te avisaremos al aprobarse');
     return;
   }
   document.getElementById('verificationOverlay').classList.add('show');
   verificationData = { docType: null, docNumber: null, fullName: null, docFile: null, faceCapture: null, timestamp: null, reason };
   resetPhoneCapture();
-  showVerificationStep(1);
+  if (real) showDiditPanel();
+  else showVerificationStep(1);
 }
 
 function closeVerification() {
   document.getElementById('verificationOverlay').classList.remove('show');
   resetCamera();
   resetPhoneCapture();
+  clearInterval(diditPoll);
+}
+
+// ══════════════════════════════════════════════════
+// VERIFICACIÓN AUTOMÁTICA CON DIDIT (modo real)
+// El navegador solo pide la sesión; la decisión (detección de documentos
+// falsos/editados, liveness, face match) ocurre en Didit y llega por
+// webhook firmado a la Edge Function, que es la única que puede aprobar.
+// ══════════════════════════════════════════════════
+let diditPoll = null;
+
+function showDiditPanel() {
+  document.querySelectorAll('.verification-step-container').forEach(s => s.style.display = 'none');
+  document.getElementById('verificationDidit').style.display = 'block';
+  document.getElementById('diditLaunch').style.display = 'none';
+  const btn = document.getElementById('diditStartBtn');
+  btn.style.display = '';
+  btn.disabled = false;
+  const pending = userState.verificationStatus === 'pending';
+  btn.textContent = pending ? '↻ Continuar / crear nueva sesión' : '🚀 Iniciar verificación';
+  document.getElementById('diditStatus').textContent = pending
+    ? '⏳ Tienes una verificación en proceso. Si no la terminaste, crea una nueva sesión.'
+    : '';
+  if (pending) startDiditPolling();
+  window.scrollTo(0, 0);
+}
+
+async function diditStart() {
+  const btn = document.getElementById('diditStartBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creando sesión segura…';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { showToast('Inicia sesión de nuevo para verificarte'); closeVerification(); openAuth('login'); return; }
+    const res = await fetch(SB_URL + '/functions/v1/kyc', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': SB_KEY
+      },
+      body: JSON.stringify({ action: 'create-session', callback: location.origin + location.pathname })
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || !out.url) throw new Error(out.error || 'No se pudo crear la sesión');
+
+    document.getElementById('diditLaunch').style.display = 'block';
+    document.getElementById('diditOpenBtn').onclick = () => window.open(out.url, '_blank', 'noopener');
+    document.getElementById('diditLink').textContent = out.url;
+    ensureQRLib(ok => {
+      const box = document.getElementById('diditQrBox');
+      box.innerHTML = '';
+      if (ok) new QRCode(box, { text: out.url, width: 170, height: 170, correctLevel: QRCode.CorrectLevel.M });
+      else box.style.display = 'none';
+    });
+    document.getElementById('diditStatus').textContent =
+      'Completa la verificación en la ventana segura o desde tu celular — esta pantalla se actualizará sola.';
+    btn.style.display = 'none';
+    userState.verificationStatus = 'pending';
+    saveUserState();
+    startDiditPolling();
+  } catch (e) {
+    showToast('⚠️ ' + (e.message || 'No se pudo iniciar la verificación'));
+    btn.disabled = false;
+    btn.textContent = '🚀 Iniciar verificación';
+  }
+}
+
+function startDiditPolling() {
+  clearInterval(diditPoll);
+  diditPoll = setInterval(async () => {
+    await loadProfile();
+    saveUserState();
+    if (userState.verified) {
+      clearInterval(diditPoll);
+      refreshHeader();
+      document.querySelectorAll('.verification-step-container').forEach(s => s.style.display = 'none');
+      const ok = document.getElementById('verificationSuccess');
+      ok.querySelector('.verification-success-title').textContent = '¡Identidad verificada! ✅';
+      ok.querySelector('.verification-success-msg').textContent =
+        'El sistema validó tu documento y tu rostro automáticamente. Ya puedes vender y pujar en MercadoRD.';
+      ok.style.display = 'block';
+      showToast('✅ ¡Identidad verificada!');
+      const reason = verificationData.reason;
+      if (reason === 'sell' || reason === 'bid') {
+        setTimeout(() => { closeVerification(); showView(reason === 'bid' ? 'auctions' : 'sell'); }, 1800);
+      }
+    } else if (userState.verificationStatus === 'rejected') {
+      clearInterval(diditPoll);
+      document.getElementById('diditStatus').textContent =
+        '❌ La verificación fue rechazada: el documento o el rostro no pasaron los controles. Puedes intentarlo de nuevo con el documento original y buena iluminación.';
+      const btn = document.getElementById('diditStartBtn');
+      btn.style.display = '';
+      btn.disabled = false;
+      btn.textContent = '↻ Intentar de nuevo';
+    }
+  }, 5000);
 }
 
 // ══════════════════════════════════════════════════

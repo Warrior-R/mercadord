@@ -235,6 +235,35 @@
   </div>
 
   <div class="verification-content">
+   <!-- Verificación automática con Didit (modo real) -->
+   <div id="verificationDidit" class="verification-step-container" style="display:none">
+    <div class="verification-info-box" style="margin-bottom:16px">
+     🤖 <strong>Verificación automática:</strong> documento + selfie con detección de
+     imágenes falsas o editadas, prueba de vida facial y comparación rostro-documento.
+     Resultado en ~1 minuto.
+    </div>
+    <div style="font-size:13px;color:#555;line-height:1.9;margin-bottom:16px">
+     1. Pulsa <strong>Iniciar verificación</strong><br>
+     2. Continúa en la ventana segura, o escanea el QR para hacerlo desde tu celular<br>
+     3. Esta pantalla se actualiza sola cuando el sistema apruebe tu identidad
+    </div>
+    <div style="text-align:center">
+     <button class="verification-btn-submit" id="diditStartBtn" onclick="diditStart()">🚀 Iniciar verificación</button>
+     <div id="diditLaunch" style="display:none;margin-top:16px">
+      <button class="verification-btn-submit" id="diditOpenBtn" style="background:#0a8a4a">🪪 Abrir verificación en esta ventana</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:#999;font-size:12px">
+       <div style="flex:1;height:1px;background:#e3e6ec"></div>o desde tu celular<div style="flex:1;height:1px;background:#e3e6ec"></div>
+      </div>
+      <div id="diditQrBox" style="display:inline-block;background:#fff;padding:10px;border-radius:10px;border:1px solid #e3e6ec"></div>
+      <div style="font-size:11px;color:#999;margin-top:6px;word-break:break-all" id="diditLink"></div>
+     </div>
+     <div id="diditStatus" style="font-size:13px;color:#555;margin-top:14px;font-weight:600"></div>
+    </div>
+    <div class="verification-actions" style="margin-top:18px">
+     <button class="verification-btn-cancel" onclick="closeVerification()">Cerrar</button>
+    </div>
+   </div>
+
    <!-- Paso 1: Documento -->
    <div id="verificationStep1" class="verification-step-container">
     <div class="verification-steps" style="margin-bottom:32px">
