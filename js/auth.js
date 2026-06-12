@@ -8,9 +8,9 @@
 // ⚠️ PASO 3: cambia SUPABASE_ENABLED a true.
 // ⚠️ PASO 4: para Google, habilita el provider en Supabase → Authentication
 //            → Providers → Google (ver SUPABASE_SETUP.md).
-const SUPABASE_ENABLED = false;
-const SB_URL = 'https://TU_PROYECTO.supabase.co';
-const SB_KEY = 'TU_ANON_PUBLIC_KEY';
+const SUPABASE_ENABLED = true;
+const SB_URL = 'https://flsixfuzvbapwnfepmwr.supabase.co';
+const SB_KEY = 'sb_publishable_zf5bkvNdhlr1AJQNrd8vcA_aCIe2NDH';
 
 const DEMO = !SUPABASE_ENABLED || SB_URL.includes('TU_PROYECTO') || !SB_KEY;
 let sb = null;
