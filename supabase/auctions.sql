@@ -27,9 +27,20 @@ create table if not exists public.auctions (
 );
 alter table public.auctions enable row level security;
 
-drop policy if exists "subastas: ver todas"      on public.auctions;
-drop policy if exists "subastas: crear propias"   on public.auctions;
-create policy "subastas: ver todas"     on public.auctions for select using (true);
+drop policy if exists "subastas: ver todas"                       on public.auctions;
+drop policy if exists "subastas: ver activas o de participantes"  on public.auctions;
+drop policy if exists "subastas: crear propias"                   on public.auctions;
+-- Las subastas ACTIVAS son públicas (cualquiera las ve en el listado/búsqueda).
+-- Las FINALIZADAS (ended/sold, o ya vencidas) dejan de ser públicas: solo las
+-- puede ver el vendedor, el ganador y quienes pujaron. Así siguen accesibles por
+-- enlace directo (#subasta=ID) para los participantes, pero NO por el listado.
+create policy "subastas: ver activas o de participantes" on public.auctions for select using (
+  (status = 'active' and ends_at > now())
+  or auth.uid() = seller_id
+  or auth.uid() = high_bidder
+  or auth.uid() = winner_id
+  or exists (select 1 from public.bids b where b.auction_id = auctions.id and b.bidder_id = auth.uid())
+);
 create policy "subastas: crear propias" on public.auctions for insert with check (auth.uid() = seller_id);
 -- Sin policy de UPDATE/DELETE a propósito: el cliente NO puede tocar current_bid
 -- ni status. Solo las funciones SECURITY DEFINER (place_bid / buy_now / close_*).
@@ -235,7 +246,9 @@ select * from (values
   ('Colección Relojes Vintage Suizos',  '⌚', 'SD',  'LujoRD',    18000,  22000, 14,  36000,  500, now()+interval '230 minutes'),
   ('iPhone 15 Pro Max 1TB',             '📱', 'STI', 'AppleRD',   70000,  85000, 42, 108000, 2500, now()+interval '45 minutes')
 ) v(title,icon,location,seller_name,start_price,current_bid,bid_count,buy_now_price,min_increment,ends_at)
-where not exists (select 1 from public.auctions);
+-- Re-siembra subastas activas cuando NO hay ninguna activa (p. ej. todas vencieron):
+-- así el listado público nunca queda vacío al ejecutar este script.
+where not exists (select 1 from public.auctions where status='active' and ends_at > now());
 
 -- Pujas históricas de relleno para que el feed enmascarado no salga vacío
 insert into public.bids(auction_id, bidder_id, bidder_name, amount, created_at)

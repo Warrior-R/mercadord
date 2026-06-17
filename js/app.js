@@ -486,8 +486,38 @@ function bidStep(a) {
 
 let aucTimer = null;
 
+function isLiveAuction(a) {
+  return a.status !== 'ended' && a.status !== 'sold' && !!aucLeft(a);
+}
+
 function renderAuctions() {
   clearInterval(aucTimer);
+  const live = auctions.filter(isLiveAuction);
+  const cards = live.map(a => {
+    const left = aucLeft(a);
+    return `
+      <div class="auction-card" onclick="openAuctionById('${a.id}')" style="cursor:pointer">
+        <div class="auction-img">${a.icon}</div>
+        <div class="auction-info">
+          <div class="auction-title">${esc(a.title)} ${a.myBid ? '<span style="font-size:11px;background:#e6f4ea;color:var(--green,#0a8a4a);padding:2px 8px;border-radius:10px;font-weight:600">🏆 Vas ganando</span>' : ''}</div>
+          <div class="auction-meta">📍 ${esc(a.loc)} · <strong>${esc(a.seller)}</strong></div>
+          <div class="auction-bids">👥 <span class="auc-bids" data-id="${a.id}">${a.bids}</span> pujas · ⏰ <strong style="color:var(--accent)" class="auc-count" data-id="${a.id}">${left}</strong><span class="auc-leader" data-id="${a.id}">${a.leader && !a.mine && !a.myBid ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${esc(a.leader)}</b> va ganando` : ''}</span></div>
+          <div class="auction-price-row">
+            <div>
+              <div style="font-size:11px;color:var(--text2)">Puja actual</div>
+              <div class="auction-price auc-cur" data-id="${a.id}">${fmt(a.cur)}</div>
+            </div>
+            ${a.mine
+              ? '<span style="font-size:12px;color:var(--text2);font-weight:600">🏷️ Tu subasta</span>'
+              : `
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">
+              ${a.buy ? `<button class="bid-btn" style="background:var(--primary)" onclick="tryBuyNow('${a.id}')">⚡ ¡Cómpralo ya! ${fmt(a.buy)}</button>` : ''}
+              <button class="bid-btn" onclick="tryBid('${a.id}')">Pujar →</button>
+            </div>`}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
   document.getElementById('contentArea').innerHTML = `
     <div class="section-header" style="margin-bottom:18px">
       <div class="section-title">🔥 Subastas Activas en RD</div>
@@ -496,32 +526,7 @@ function renderAuctions() {
         + Subastar producto
       </button>
     </div>
-    ${auctions.map(a => {
-      const left = aucLeft(a);
-      const over = !left;
-      return `
-      <div class="auction-card"${over ? ' style="opacity:.6"' : ''}>
-        <div class="auction-img">${a.icon}</div>
-        <div class="auction-info">
-          <div class="auction-title">${a.title} ${a.myBid && !over ? '<span style="font-size:11px;background:#e6f4ea;color:var(--green,#0a8a4a);padding:2px 8px;border-radius:10px;font-weight:600">🏆 Vas ganando</span>' : ''}${a.sold ? ' <span style="font-size:11px;background:#fdecea;color:#c0392b;padding:2px 8px;border-radius:10px;font-weight:600">VENDIDO</span>' : ''}</div>
-          <div class="auction-meta">📍 ${a.loc} · <strong>${a.seller}</strong></div>
-          <div class="auction-bids">👥 <span class="auc-bids" data-id="${a.id}">${a.bids}</span> pujas · ⏰ <strong style="color:var(--accent)" class="auc-count" data-id="${a.id}">${over ? (a.sold ? 'Comprado ya ⚡' : 'Finalizada') : left}</strong><span class="auc-leader" data-id="${a.id}">${a.leader && !over && !a.mine && !a.myBid ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${a.leader}</b> va ganando` : ''}</span></div>
-          <div class="auction-price-row">
-            <div>
-              <div style="font-size:11px;color:var(--text2)">Puja actual</div>
-              <div class="auction-price auc-cur" data-id="${a.id}">${fmt(a.cur)}</div>
-            </div>
-            ${over ? '' : a.mine
-              ? '<span style="font-size:12px;color:var(--text2);font-weight:600">🏷️ Tu subasta</span>'
-              : `
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-              ${a.buy ? `<button class="bid-btn" style="background:var(--primary)" onclick="tryBuyNow('${a.id}')">⚡ ¡Cómpralo ya! ${fmt(a.buy)}</button>` : ''}
-              <button class="bid-btn" onclick="tryBid('${a.id}')">Pujar →</button>
-            </div>`}
-          </div>
-        </div>
-      </div>`;
-    }).join('')}`;
+    ${live.length ? cards : '<div class="no-results"><div>🔥</div><p>No hay subastas activas en este momento. Las subastas finalizadas ya no son públicas. ¡Vuelve pronto o publica la tuya!</p></div>'}`;
   aucTimer = setInterval(tickAuctions, 1000);
 }
 
@@ -1395,7 +1400,7 @@ let carouselState = { tab: 'deals', index: 0, autoScrollTimer: null };
 
 function getCarouselData() {
   if (carouselState.tab === 'deals')    return products.filter(p => p.badge === 'deal' || p.old).slice(0, 12);
-  if (carouselState.tab === 'auctions') return auctions.slice(0, 12);
+  if (carouselState.tab === 'auctions') return auctions.filter(isLiveAuction).slice(0, 12);
   return products.filter(p => p.badge === 'hot' || p.reviews > 200).slice(0, 12);
 }
 
@@ -2043,7 +2048,11 @@ let aucChannel = null;
 async function loadAuctionsDB() {
   if (typeof sb === 'undefined' || !sb) return;
   try {
-    const { data, error } = await sb.from('auctions').select('*').order('ends_at', { ascending: true });
+    // Solo subastas ACTIVAS y no vencidas: las finalizadas dejan de ser públicas
+    // (siguen accesibles por enlace directo para los participantes, vía openAuctionById)
+    const { data, error } = await sb.from('auctions').select('*')
+      .eq('status', 'active').gt('ends_at', new Date().toISOString())
+      .order('ends_at', { ascending: true });
     if (error || !data) return;
     const uid = (typeof user !== 'undefined' && user) ? user.id : null;
     const mapped = data.map(r => ({
@@ -2085,9 +2094,25 @@ function subscribeAuctions() {
   aucChannel = sb.channel('auctions-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'auctions' }, payload => {
       const r = payload.new || payload.old; if (!r) return;
-      const a = auctions.find(x => x.id == r.id);
-      if (payload.eventType === 'INSERT') { if (!a) loadAuctionsDB(); return; }
-      if (!a || !payload.new) return;
+      const idx = auctions.findIndex(x => x.id == r.id);
+
+      if (payload.eventType === 'INSERT') {
+        // Nueva subasta activa publicada → recargar el listado público
+        if (idx < 0 && r.status === 'active') loadAuctionsDB();
+        return;
+      }
+      if (payload.eventType === 'DELETE' || !payload.new) {
+        if (idx >= 0) { auctions.splice(idx, 1); if (cview === 'auctions') renderAuctions(); }
+        return;
+      }
+      // UPDATE: si la subasta dejó de estar activa, quitarla del listado público
+      if (r.status !== 'active' || new Date(r.ends_at).getTime() <= Date.now()) {
+        if (idx >= 0) { auctions.splice(idx, 1); if (cview === 'auctions') renderAuctions(); }
+        // Si estoy viendo su detalle (por enlace), refrescarlo con el estado final
+        if (cview === 'auctiondetail' && currentAuctionDetailId == r.id) openAuctionById(r.id);
+        return;
+      }
+      const a = auctions[idx]; if (!a) return;
       const uid = (typeof user !== 'undefined' && user) ? user.id : null;
       a.cur = Number(r.current_bid); a.bids = r.bid_count; a.endAt = new Date(r.ends_at).getTime();
       a.status = r.status; a.sold = r.status === 'sold'; a.leader = r.leader_masked || a.leader;
@@ -2139,6 +2164,154 @@ function relTime(ts) {
   return 'hace ' + Math.floor(h / 24) + 'd';
 }
 
+// ══════════════════════════════════════════════════
+// DETALLE DE SUBASTA POR ENLACE (#subasta=ID)
+// Las subastas finalizadas NO salen en el listado público, pero siguen
+// accesibles aquí para el vendedor, el ganador y quienes pujaron. La
+// privacidad la decide la RLS de Supabase (devuelve null a los demás).
+// ══════════════════════════════════════════════════
+let currentAuctionDetailId = null;
+let auctionDetailData = null;
+
+async function openAuctionById(id) {
+  // Modo demo (sin servidor): buscar en el arreglo local
+  if (typeof sb === 'undefined' || !sb) {
+    const a = auctions.find(x => x.id == id);
+    if (!a) { showToast('Subasta no disponible'); return; }
+    renderAuctionDetail(a);
+    return;
+  }
+  try {
+    const { data } = await sb.from('auctions').select('*').eq('id', id).maybeSingle();
+    if (!data) {
+      // La RLS la ocultó (finalizada y no soy participante) o no existe
+      cview = 'auctiondetail';
+      currentAuctionDetailId = id;
+      document.getElementById('heroBanner').style.display = 'none';
+      closeSubsection();
+      document.getElementById('contentArea').innerHTML = `
+        <button class="back-btn" onclick="leaveAuctionDetail()">← Subastas</button>
+        <div class="no-results">
+          <div>🔒</div>
+          <p>Esta subasta finalizó y ya no es pública. Solo el vendedor, el ganador y quienes pujaron pueden verla.${user ? '' : '<br>Si participaste en ella, inicia sesión para verla.'}</p>
+          ${user ? '' : '<button class="submit-btn" style="width:auto;padding:11px 22px;margin-top:14px" onclick="openAuth(\'login\')">Iniciar sesión</button>'}
+        </div>`;
+      window.scrollTo(0, 0);
+      return;
+    }
+    const uid = (typeof user !== 'undefined' && user) ? user.id : null;
+    const a = {
+      id: data.id, title: data.title, icon: data.icon || '📦', loc: data.location || 'RD',
+      seller: data.seller_name || 'MercadoRD', cur: Number(data.current_bid), bids: data.bid_count || 0,
+      buy: data.buy_now_price != null ? Number(data.buy_now_price) : null,
+      endAt: new Date(data.ends_at).getTime(),
+      mine: !!(data.seller_id && uid && data.seller_id === uid),
+      myBid: !!(data.high_bidder && uid && data.high_bidder === uid),
+      sold: data.status === 'sold', status: data.status, leader: data.leader_masked || null,
+      winner_id: data.winner_id, high_bidder: data.high_bidder, db: true
+    };
+    // Si está activa y no está en el listado cargado, agregarla para que tryBid/tryBuyNow la encuentren
+    if (isLiveAuction(a) && !auctions.find(x => x.id == a.id)) auctions.push(a);
+    renderAuctionDetail(a);
+  } catch (e) { showToast('No se pudo abrir la subasta'); }
+}
+
+function renderAuctionDetail(a) {
+  cview = 'auctiondetail';
+  currentAuctionDetailId = a.id;
+  auctionDetailData = a;
+  document.getElementById('heroBanner').style.display = 'none';
+  closeSubsection();
+  const left = aucLeft(a);
+  const over = !left || a.status === 'ended' || a.status === 'sold';
+  const uid = (typeof user !== 'undefined' && user) ? user.id : null;
+  const iWon = over && uid && ((a.winner_id && a.winner_id === uid) || (a.high_bidder && a.high_bidder === uid));
+  const link = location.origin + location.pathname + '#subasta=' + a.id;
+  const badge = a.status === 'sold' ? '<span class="adt-badge sold">VENDIDA</span>'
+              : over ? '<span class="adt-badge ended">FINALIZADA</span>'
+              : '<span class="adt-badge live">EN VIVO</span>';
+
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="leaveAuctionDetail()">← Subastas</button>
+    <div class="detail-panel">
+      <div class="detail-img-area" style="font-size:84px;display:flex;align-items:center;justify-content:center">${a.icon}</div>
+      <div class="detail-title">${esc(a.title)} ${badge}</div>
+      <div class="detail-meta">
+        <span>📍 ${esc(a.loc)}</span>
+        <span>🏪 ${esc(a.seller)}</span>
+        <span>👥 ${a.bids} pujas</span>
+        <span>⏰ ${over ? (a.status === 'sold' ? 'Comprada con ¡Cómpralo ya!' : 'Finalizada') : left}</span>
+      </div>
+      <div style="margin:10px 0">
+        <div style="font-size:11px;color:var(--text2)">${over ? 'Puja final' : 'Puja actual'}</div>
+        <div class="detail-price auc-cur" data-id="${a.id}">${fmt(a.cur)}</div>
+      </div>
+      ${iWon ? `
+        <div class="verification-info-box" style="margin:6px 0 14px">🏆 <strong>¡Ganaste esta subasta!</strong> Completa el pago para coordinar la entrega.</div>
+        <button class="btn-buy" style="width:100%;margin-bottom:6px" onclick="payAuction('${a.id}')">Pagar ${fmt(a.cur)} y coordinar entrega</button>` : ''}
+      ${!over && !a.mine ? `
+        <div class="detail-actions">
+          ${a.buy ? `<button class="btn-buy" onclick="tryBuyNow('${a.id}')">⚡ ¡Cómpralo ya! ${fmt(a.buy)}</button>` : ''}
+          <button class="btn-cart2" onclick="tryBid('${a.id}')" style="border-color:var(--primary);color:var(--primary)">🔨 Pujar</button>
+        </div>` : ''}
+      ${a.mine ? '<div style="font-size:13px;color:var(--text2);font-weight:600;margin:8px 0">🏷️ Esta es tu subasta</div>' : ''}
+      <div class="bid-feed-wrap" style="margin-top:16px">
+        <div class="bid-feed-head">👥 Pujas ${over ? '(historial)' : 'recientes'} <span>· nombres parciales por seguridad</span></div>
+        <div id="bidFeed" class="bid-feed"></div>
+      </div>
+      <div class="adt-share">
+        <span>🔗 Enlace de esta subasta</span>
+        <div class="adt-share-row">
+          <input id="adtLink" value="${link}" readonly onclick="this.select()">
+          <button class="mrd-btn-ghost" onclick="copyAuctionLink()">Copiar</button>
+        </div>
+      </div>
+      ${over ? '<p style="font-size:12px;color:var(--text2);margin-top:10px">Esta subasta ya finalizó: no aparece en el listado público. Solo el vendedor, el ganador y quienes pujaron pueden verla con este enlace.</p>' : ''}
+    </div>`;
+  loadBidFeed(a.id);
+  window.scrollTo(0, 0);
+}
+
+function payAuction(id) {
+  const a = auctionDetailData;
+  if (!a || a.id != id) return;
+  cart.push({ id: 'auc-' + a.id, title: a.title + ' (subasta ganada)', price: a.cur, icon: a.icon, img: null, qty: 1 });
+  saveCart(); updateCartBadge();
+  showToast('🏆 Artículo ganado añadido al carrito');
+  requireAuth('checkout');
+}
+
+function copyAuctionLink() {
+  const el = document.getElementById('adtLink');
+  if (!el) return;
+  el.select();
+  const done = () => showToast('🔗 Enlace copiado');
+  if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done).catch(() => { try { document.execCommand('copy'); done(); } catch (e) {} });
+  else { try { document.execCommand('copy'); done(); } catch (e) {} }
+}
+
+function leaveAuctionDetail() {
+  // Limpiar el hash para que un evento de auth posterior no reabra el detalle
+  if (location.hash.indexOf('#subasta=') === 0) history.replaceState(null, '', location.pathname + location.search);
+  currentAuctionDetailId = null;
+  showView('auctions');
+}
+
+function openAuctionFromNotif(id) {
+  const p = document.getElementById('notifPanel'); if (p) p.style.display = 'none';
+  openAuctionById(id);
+}
+
+function checkAuctionHash() {
+  const m = location.hash.match(/^#subasta=([\w-]+)$/);
+  if (m) { openAuctionById(m[1]); return true; }
+  return false;
+}
+window.addEventListener('hashchange', () => {
+  const m = location.hash.match(/^#subasta=([\w-]+)$/);
+  if (m) openAuctionById(m[1]);
+});
+
 // ─── Notificaciones (campana en el header) ───
 let notifItems = [];
 let notifChannel = null;
@@ -2162,9 +2335,9 @@ function renderNotifList() {
   const box = document.getElementById('notifList'); if (!box) return;
   if (!notifItems.length) { box.innerHTML = '<div class="nt-empty">Sin notificaciones aún 🔔</div>'; return; }
   box.innerHTML = notifItems.map(n => `
-    <div class="nt-row${n.read ? '' : ' nt-unread'}">
-      <div class="nt-title">${n.title || ''}</div>
-      <div class="nt-body">${n.body || ''}</div>
+    <div class="nt-row${n.read ? '' : ' nt-unread'}${n.auction_id ? ' nt-click' : ''}"${n.auction_id ? ` onclick="openAuctionFromNotif('${n.auction_id}')"` : ''}>
+      <div class="nt-title">${esc(n.title || '')}</div>
+      <div class="nt-body">${esc(n.body || '')}</div>
       <div class="nt-time">${relTime(n.created_at)}</div>
     </div>`).join('');
 }
@@ -2229,6 +2402,8 @@ function onUserChanged() {
   } else {
     unsubscribeNotifications();
   }
+  // Si la URL trae #subasta=ID, abrir el detalle (al cargar y tras iniciar sesión)
+  if (location.hash.indexOf('#subasta=') === 0 && cview !== 'auctiondetail') checkAuctionHash();
 }
 
 // Respaldo: si ningún evento de auth disparó la carga, intentarlo igual (subastas son públicas)

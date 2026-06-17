@@ -61,6 +61,32 @@
 .bf-time { font-size: 11px; color: var(--text2, #9aa0b8); white-space: nowrap; }
 .bf-empty { padding: 18px 12px; text-align: center; color: var(--text2, #9aa0b8); font-size: 12px; }
 
+/* Notificación clicable (lleva a la subasta) */
+.nt-row.nt-click { cursor: pointer; }
+.nt-row.nt-click:hover { background: #eef4ff; }
+
+/* ─── Detalle de subasta (accesible por enlace) ─── */
+.adt-badge {
+  display: inline-block; vertical-align: middle;
+  font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; margin-left: 6px;
+}
+.adt-badge.live  { background: #e6f4ea; color: var(--green, #0a8a4a); }
+.adt-badge.ended { background: #f0f1f5; color: var(--text2, #6a6f88); }
+.adt-badge.sold  { background: #fdecea; color: #c0392b; }
+
+.adt-share {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border, #e3e6ee);
+  font-size: 13px; font-weight: 600; color: var(--text, #1a1a2e);
+}
+.adt-share-row { display: flex; gap: 8px; margin-top: 8px; }
+.adt-share-row input {
+  flex: 1; min-width: 0;
+  border: 1.5px solid var(--border, #e3e6ee); border-radius: 8px;
+  padding: 9px 12px; font-size: 12px; font-family: inherit; color: var(--text2, #555);
+  background: #f8f9fc;
+}
+
 /* En pantallas chicas el panel se ancla al borde derecho del viewport */
 @media (max-width: 480px) {
   .notif-panel { position: fixed; top: 60px; right: 8px; left: 8px; width: auto; max-width: none; }
