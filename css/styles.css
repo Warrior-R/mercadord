@@ -31,6 +31,20 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 :focus-visible{outline:2px solid var(--primary-light);outline-offset:2px;border-radius:3px}
 .header :focus-visible,.banner :focus-visible,.footer :focus-visible{outline-color:var(--accent2)}
 
+/* ── Páginas de contenido del footer (Compradores, legal, etc.) renderizadas como sección, no modal ── */
+.static-page{max-width:860px}
+.static-page-title{font-size:24px;font-weight:700;color:var(--text);margin:4px 0 18px;line-height:1.25}
+.static-page-title:focus{outline:none}
+.static-page-body{font-size:14px;line-height:1.7;color:var(--text)}
+.static-page-body h2{font-size:18px;font-weight:700;margin:22px 0 8px}
+.static-page-body h3{font-size:15px;font-weight:700;margin:18px 0 6px}
+.static-page-body h4{font-size:14px;font-weight:600;margin:14px 0 4px}
+.static-page-body p{margin:0 0 12px}
+.static-page-body ul,.static-page-body ol{margin:0 0 14px 22px}
+.static-page-body li{margin-bottom:6px}
+.static-page-body a{color:var(--primary);cursor:pointer}
+.static-page-body strong{color:var(--text)}
+
 /* ── HEADER ── */
 .header{background:var(--primary);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .header-top{display:flex;align-items:center;gap:12px;padding:10px 20px}

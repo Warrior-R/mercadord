@@ -114,6 +114,7 @@ function catScats() {
 function goHome() {
   cview = 'home';
   document.getElementById('heroBanner').style.display = '';
+  const cs0 = document.querySelector('.carousel-section'); if (cs0) cs0.style.display = '';
   restoreHome();
   // "Inicio" = listado limpio: reiniciar TODOS los filtros y su UI
   acat = 'all';
@@ -413,6 +414,7 @@ function showView(v) {
   if (v === 'bid') v = 'auctions';
   cview = v;
   document.getElementById('heroBanner').style.display = 'none';
+  const csv = document.querySelector('.carousel-section'); if (csv) csv.style.display = '';
   closeSubsection();
 
   if (v === 'auctions') {
@@ -1377,16 +1379,43 @@ function toggleFav(id, el) {
 }
 
 // ─── Subsecciones del Footer ───
-function openBuyers()  { document.getElementById('buyersSection').classList.add('show'); }
-function openSellers() { document.getElementById('sellersSection').classList.add('show'); }
-function openAbout()   { document.getElementById('aboutSection').classList.add('show'); }
-function openContact() { document.getElementById('contactSection').classList.add('show'); }
+function openBuyers()  { openSubPage('buyersSection'); }
+function openSellers() { openSubPage('sellersSection'); }
+function openAbout()   { openSubPage('aboutSection'); }
+function openContact() { openSubPage('contactSection'); }
+
+// Muestra el contenido de una de las secciones del footer como página propia (no modal)
+function openSubPage(id) {
+  const sec = document.getElementById(id);
+  if (!sec) return;
+  const head = sec.querySelector('.subsection-header h2');
+  const cont = sec.querySelector('.subsection-content');
+  showPage(cont ? cont.innerHTML : '', head ? head.innerHTML : '');
+}
+
 function closeSubsection() {
   document.querySelectorAll('.subsection-overlay').forEach(el => el.classList.remove('show'));
 }
 document.addEventListener('click', e => {
   if (e.target.classList.contains('subsection-overlay')) closeSubsection();
 });
+
+// ─── Páginas de contenido del footer: se muestran como sección dentro del flujo, no como ventana emergente ───
+function showPage(bodyHtml, titleHtml) {
+  cview = 'page';
+  closeSubsection();
+  const lo = document.getElementById('legalOverlay'); if (lo) lo.style.display = 'none';
+  const hb = document.getElementById('heroBanner');   if (hb) hb.style.display = 'none';
+  const cs = document.querySelector('.carousel-section'); if (cs) cs.style.display = 'none';
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="goHome()">← Volver</button>
+    <div class="static-page">
+      <h1 class="static-page-title" id="pageTitle" tabindex="-1">${titleHtml}</h1>
+      <div class="static-page-body">${bodyHtml}</div>
+    </div>`;
+  window.scrollTo(0, 0);
+  const t = document.getElementById('pageTitle'); if (t) t.focus();
+}
 
 // ─── Carrusel ───
 let carouselState = { tab: 'deals', index: 0, autoScrollTimer: null };
@@ -1989,26 +2018,18 @@ function submitVerification() {
   }
 }
 
-// ─── Legal modal ───
+// ─── Contenido legal: se muestra como sección propia (antes era ventana emergente) ───
 function openLegal(key) {
   const c = legalContent[key];
   if (!c) return;
-  document.getElementById('legalTitle').textContent = c.title;
-  document.getElementById('legalBody').innerHTML    = c.body;
-  document.getElementById('legalOverlay').style.display = 'flex';
+  showPage(c.body, c.title);
 }
-document.getElementById('legalOverlay').addEventListener('click', e => {
-  if (e.target.id === 'legalOverlay') document.getElementById('legalOverlay').style.display = 'none';
-});
 
-// ─── Info modal (reutiliza el modal legal para las secciones informativas) ───
+// ─── Contenido informativo: se muestra como sección propia (antes reutilizaba el modal legal) ───
 function openInfo(key) {
   const c = infoContent[key];
   if (!c) return;
-  closeSubsection();
-  document.getElementById('legalTitle').textContent = c.title;
-  document.getElementById('legalBody').innerHTML    = c.body;
-  document.getElementById('legalOverlay').style.display = 'flex';
+  showPage(c.body, c.title);
 }
 
 // Cerrar modales de puja/oferta al hacer clic fuera
@@ -2752,16 +2773,16 @@ document.addEventListener('keydown', e => {
   if (isOpen(np)) { np.style.display = 'none'; }
 });
 
-// Activar con Enter/Espacio los controles no nativos (div/span con rol de botón o enlace)
+// Activar con Enter/Espacio cualquier control no nativo enfocable (div/span/<a> sin href con onclick o rol)
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
   const t = e.target;
   if (!t || !t.matches) return;
-  if (t.matches('.nav-item, .scat, [role="button"], [role="link"]') &&
-      t.tagName !== 'BUTTON' && t.tagName !== 'A' && t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA') {
-    e.preventDefault();
-    t.click();
-  }
+  const native = t.tagName === 'BUTTON' || (t.tagName === 'A' && t.hasAttribute('href')) ||
+                 t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT';
+  if (native) return;
+  const interactive = t.hasAttribute('onclick') || t.getAttribute('role') === 'button' || t.getAttribute('role') === 'link';
+  if (interactive && t.tabIndex >= 0) { e.preventDefault(); t.click(); }
 });
 
 // Marcar diálogos para lectores de pantalla y hacer alcanzables por teclado los controles no nativos
@@ -2778,6 +2799,11 @@ document.addEventListener('keydown', e => {
   document.querySelectorAll('.nav-item, .scat').forEach(el => {
     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
     if (!el.hasAttribute('role'))     el.setAttribute('role', 'button');
+  });
+  // Enlaces del footer (sin href), encabezados de columna y tarjetas: alcanzables por teclado
+  document.querySelectorAll('.footer a[onclick]:not([href]), .footer-col h4[onclick], .footer-badge-link[onclick], .app-btn[onclick], .social-btn[onclick]').forEach(el => {
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    if (!el.hasAttribute('role'))     el.setAttribute('role', 'link');
   });
   const badge = document.getElementById('notifBadge');
   if (badge) { badge.setAttribute('aria-live', 'polite'); badge.setAttribute('role', 'status'); }
