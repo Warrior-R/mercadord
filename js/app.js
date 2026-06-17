@@ -45,8 +45,7 @@ saveAuctions();
 let userState = MRD.get(K.USERSTATE, {
   loggedIn: false,
   verified: false,
-  verificationStatus: 'none', // 'none' | 'pending' | 'verified' | 'rejected'
-  roleType: null
+  verificationStatus: 'none' // 'none' | 'pending' | 'verified' | 'rejected'
 });
 
 function saveCart()      { MRD.set(K.CART, cart); }
@@ -87,7 +86,7 @@ function setBNav(id) {
 }
 
 function prodImg(p, big) {
-  if (p.img) return `<img src="${p.img}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover">`;
+  if (p.img) return `<img src="${p.img}" alt="${esc(p.title)}" style="width:100%;height:100%;object-fit:cover">`;
   return p.icon;
 }
 
@@ -258,8 +257,8 @@ function doRender() {
             ${prodImg(p)}
           </div>
           <div class="product-info">
-            <div class="product-title">${p.title}</div>
-            <div class="product-seller">🏪 ${p.seller}</div>
+            <div class="product-title">${esc(p.title)}</div>
+            <div class="product-seller">🏪 ${esc(p.seller)}</div>
             <div>
               <span class="product-price">${fmt(p.price)}</span>
               ${p.old ? `<span class="product-price-old">${fmt(p.old)}</span><span class="product-discount">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : ''}
@@ -293,7 +292,7 @@ function showDetail(id) {
     <button class="back-btn" onclick="backProd()">← Volver</button>
     <div class="detail-panel">
       <div class="detail-img-area" style="overflow:hidden">${prodImg(p, true)}</div>
-      <div class="detail-title">${p.title}</div>
+      <div class="detail-title">${esc(p.title)}</div>
       <div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px">
         <span style="color:var(--accent2)">${stars}</span>
         <span style="font-size:12px;color:var(--text2)">${p.rating || '—'} · ${p.reviews} reseña${p.reviews === 1 ? '' : 's'}</span>
@@ -326,7 +325,7 @@ function showDetail(id) {
       </div>
 
       <div class="detail-desc">
-        ${p.desc || 'Producto disponible para entrega en todo el país. Garantía incluida. Acepta tarjeta y efectivo contra entrega.'}
+        ${esc(p.desc || 'Producto disponible para entrega en todo el país. Garantía incluida. Acepta tarjeta y efectivo contra entrega.')}
       </div>
 
       <h3 class="co-sec">📋 Características del artículo</h3>
@@ -335,13 +334,13 @@ function showDetail(id) {
         <div class="spec-row"><span>Categoría</span><strong>${catLabel}</strong></div>
         <div class="spec-row"><span>Ubicación</span><strong>${locLabel}</strong></div>
         <div class="spec-row"><span>Disponibilidad</span><strong>En stock</strong></div>
-        <div class="spec-row"><span>Vendedor</span><strong>${p.seller}</strong></div>
+        <div class="spec-row"><span>Vendedor</span><strong>${esc(p.seller)}</strong></div>
       </div>
 
       <div class="seller-card">
-        <div class="seller-avatar">${p.seller[0]}</div>
+        <div class="seller-avatar">${esc(p.seller[0])}</div>
         <div>
-          <div style="font-size:14px;font-weight:600">${p.seller}</div>
+          <div style="font-size:14px;font-weight:600">${esc(p.seller)}</div>
           <div style="font-size:12px;color:var(--text2)">⭐ ${p.rating || '—'} · ${p.mine ? 'Tu anuncio' : 'Vendedor verificado ✓'}</div>
         </div>
         <button style="margin-left:auto;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:13px;font-family:'Sora',sans-serif"
@@ -360,8 +359,8 @@ function showDetail(id) {
       <div class="rev-list">
         ${reviews.map(r => `
           <div class="rev-card">
-            <div class="rev-head"><span class="rev-name">${r.name}</span><span style="color:var(--accent2)">${'★'.repeat(r.stars)}</span></div>
-            <div class="rev-text">${r.text}</div>
+            <div class="rev-head"><span class="rev-name">${esc(r.name)}</span><span style="color:var(--accent2)">${'★'.repeat(r.stars)}</span></div>
+            <div class="rev-text">${esc(r.text)}</div>
             <div class="rev-when">${r.when}</div>
           </div>`).join('')}
       </div>` : ''}
@@ -407,12 +406,6 @@ function backProd() {
   cview = 'home';
   restoreHome();
   renderProducts();
-}
-
-// ─── Comprar ahora: añade al carrito y va directo al checkout ───
-function buyNow(id) {
-  addCart(id, true);
-  requireAuth('checkout');
 }
 
 // ─── Vistas ───
@@ -721,7 +714,7 @@ function openOffer(id) {
   document.getElementById('offerBody').innerHTML = `
     <div style="background:#f8f9fc;border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px">
       <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Precio publicado</span><strong>${fmt(p.price)}</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Vendedor</span><strong>${p.seller}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Vendedor</span><strong>${esc(p.seller)}</strong></div>
     </div>
     <div class="fg"><label>Tu oferta (RD$)</label><input type="number" id="offerAmount" placeholder="0" min="1"><div class="ferr" id="offerErr"></div></div>
     <button class="auth-btn btn-pri" onclick="sendOffer()">Enviar oferta 💰</button>
@@ -743,20 +736,20 @@ function sendOffer() {
     addOfferToCart(p, Math.round(amt));
     body.innerHTML = `
       <div class="vc"><div class="vc-icon">🎉</div><div class="vc-title">¡Oferta aceptada!</div>
-      <div class="vc-desc"><strong>${p.seller}</strong> aceptó tu oferta de <strong>${fmt(amt)}</strong>. El producto ya está en tu carrito con el precio negociado.</div></div>
+      <div class="vc-desc"><strong>${esc(p.seller)}</strong> aceptó tu oferta de <strong>${fmt(amt)}</strong>. El producto ya está en tu carrito con el precio negociado.</div></div>
       <button class="auth-btn btn-pri" onclick="closeOffer();requireAuth('checkout')">Ir al checkout →</button>
       <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="closeOffer()">Seguir comprando</button>`;
   } else if (ratio >= 0.7) {
     const counter = Math.round(p.price * 0.95);
     body.innerHTML = `
       <div class="vc"><div class="vc-icon">🤝</div><div class="vc-title">Contraoferta del vendedor</div>
-      <div class="vc-desc"><strong>${p.seller}</strong> no acepta ${fmt(amt)}, pero te ofrece el artículo por <strong>${fmt(counter)}</strong>.</div></div>
+      <div class="vc-desc"><strong>${esc(p.seller)}</strong> no acepta ${fmt(amt)}, pero te ofrece el artículo por <strong>${fmt(counter)}</strong>.</div></div>
       <button class="auth-btn btn-pri" onclick="acceptCounter(${counter})">Aceptar ${fmt(counter)} ✓</button>
       <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="openOffer(${p.id})">Hacer otra oferta</button>`;
   } else {
     body.innerHTML = `
       <div class="vc"><div class="vc-icon">😕</div><div class="vc-title">Oferta rechazada</div>
-      <div class="vc-desc"><strong>${p.seller}</strong> rechazó tu oferta de ${fmt(amt)} por estar muy por debajo del precio publicado.</div></div>
+      <div class="vc-desc"><strong>${esc(p.seller)}</strong> rechazó tu oferta de ${fmt(amt)} por estar muy por debajo del precio publicado.</div></div>
       <button class="auth-btn btn-pri" onclick="openOffer(${p.id})">Intentar otra oferta</button>
       <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="closeOffer()">Cerrar</button>`;
   }
@@ -797,8 +790,8 @@ function renderFavs() {
               ${prodImg(p)}
             </div>
             <div class="product-info">
-              <div class="product-title">${p.title}</div>
-              <div class="product-seller">🏪 ${p.seller}</div>
+              <div class="product-title">${esc(p.title)}</div>
+              <div class="product-seller">🏪 ${esc(p.seller)}</div>
               <div>
                 <span class="product-price">${fmt(p.price)}</span>
                 ${p.old ? `<span class="product-price-old">${fmt(p.old)}</span>` : ''}
@@ -825,7 +818,7 @@ function renderSeller() {
         <div class="section-title">📊 Seller Center</div>
         <button onclick="requireAuth('sell')" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Publicar anuncio</button>
       </div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Hola <strong>${name}</strong> — ${userState.verified ? 'Vendedor verificado ✓' : 'Identidad sin verificar'}</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Hola <strong>${esc(name)}</strong> — ${userState.verified ? 'Vendedor verificado ✓' : 'Identidad sin verificar'}</p>
       ${!userState.verified ? `
       <div class="verification-info-box" style="margin-bottom:16px">
         🪪 <strong>Verifica tu identidad</strong> para empezar a vender.
@@ -858,7 +851,7 @@ function renderSellForm() {
   document.getElementById('contentArea').innerHTML = `
     <div class="sell-form">
       <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">📦 Publicar un anuncio</h2>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Hola <strong>${uname}</strong> — ${userState.verified ? 'Cuenta verificada ✓' : 'Verificación pendiente ⏳'}</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Hola <strong>${esc(uname)}</strong> — ${userState.verified ? 'Cuenta verificada ✓' : 'Verificación pendiente ⏳'}</p>
       <form id="sellForm" onsubmit="event.preventDefault();publishProduct()">
         <div class="form-grid">
           <div class="fg2"><label for="sellTitle">Título *</label><input type="text" id="sellTitle" placeholder="Describe tu producto" maxlength="80" required></div>
@@ -1009,8 +1002,8 @@ function renderMyAds() {
         <div class="auction-card">
           <div class="auction-img" style="overflow:hidden">${prodImg(p)}</div>
           <div class="auction-info">
-            <div class="auction-title">${p.title}</div>
-            <div class="auction-meta">📍 ${p.loc} · Publicado ${new Date(p.createdAt || Date.now()).toLocaleDateString('es-DO')}</div>
+            <div class="auction-title">${esc(p.title)}</div>
+            <div class="auction-meta">📍 ${esc(p.loc)} · Publicado ${new Date(p.createdAt || Date.now()).toLocaleDateString('es-DO')}</div>
             <div class="auction-price-row">
               <div class="auction-price">${fmt(p.price)}</div>
               <div style="display:flex;gap:8px">
@@ -1052,7 +1045,7 @@ function renderCheckout() {
       <div style="background:#f8f9fc;border-radius:8px;padding:14px;margin-bottom:18px">
         ${cart.map(c => `
           <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span>${c.title.slice(0, 38)}${c.title.length > 38 ? '…' : ''} × ${c.qty}</span>
+            <span>${esc(c.title.slice(0, 38))}${c.title.length > 38 ? '…' : ''} × ${c.qty}</span>
             <strong>${fmt(c.price * c.qty)}</strong>
           </div>`).join('')}
         <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span>Envío</span><span>RD$350</span></div>
@@ -1063,9 +1056,9 @@ function renderCheckout() {
       <form id="checkoutForm" onsubmit="event.preventDefault();confirmOrder()">
         <h3 class="co-sec">📍 Dirección de entrega</h3>
         <div class="form-grid">
-          <div class="fg2"><label for="coName">Nombre completo *</label><input type="text" id="coName" value="${vName}" autocomplete="name" required></div>
-          <div class="fg2"><label for="coPhone">Teléfono *</label><input type="tel" id="coPhone" value="${vPhone}" placeholder="809-000-0000" autocomplete="tel" required></div>
-          <div class="fg2" style="grid-column:1/-1"><label for="coAddr">Dirección de entrega *</label><input type="text" id="coAddr" value="${vAddr}" placeholder="Calle, número, sector" autocomplete="street-address" required></div>
+          <div class="fg2"><label for="coName">Nombre completo *</label><input type="text" id="coName" value="${esc(vName)}" autocomplete="name" required></div>
+          <div class="fg2"><label for="coPhone">Teléfono *</label><input type="tel" id="coPhone" value="${esc(vPhone)}" placeholder="809-000-0000" autocomplete="tel" required></div>
+          <div class="fg2" style="grid-column:1/-1"><label for="coAddr">Dirección de entrega *</label><input type="text" id="coAddr" value="${esc(vAddr)}" placeholder="Calle, número, sector" autocomplete="street-address" required></div>
           <div class="fg2"><label for="coProv">Provincia *</label>
             <select id="coProv">${provs.map(p => `<option ${p === selProv ? 'selected' : ''}>${p}</option>`).join('')}</select>
           </div>
@@ -1086,7 +1079,7 @@ function renderCheckout() {
           <div class="form-grid">
             <div class="fg2"><label for="ccExp">Vencimiento *</label><input type="text" id="ccExp" inputmode="numeric" placeholder="MM/AA" maxlength="5" oninput="fmtExpiryInput(this)" autocomplete="cc-exp"><div class="ferr" id="ccExpE"></div></div>
             <div class="fg2"><label for="ccCvv">CVV *</label><input type="password" id="ccCvv" inputmode="numeric" placeholder="123" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,'')" autocomplete="cc-csc"><div class="ferr" id="ccCvvE"></div></div>
-            <div class="fg2" style="grid-column:1/-1"><label for="ccName">Titular de la tarjeta *</label><input type="text" id="ccName" value="${vName}" placeholder="Como aparece en la tarjeta" autocomplete="cc-name"></div>
+            <div class="fg2" style="grid-column:1/-1"><label for="ccName">Titular de la tarjeta *</label><input type="text" id="ccName" value="${esc(vName)}" placeholder="Como aparece en la tarjeta" autocomplete="cc-name"></div>
           </div>
           <div class="cc-brands">🔒 Aceptamos <strong id="ccBrand">Visa · Mastercard · Amex</strong> — pago cifrado SSL 256-bit</div>
         </div>
@@ -1242,7 +1235,7 @@ function renderOrders() {
           <div class="auction-img">🧾</div>
           <div class="auction-info">
             <div class="auction-title">${o.id} <span style="font-size:12px;font-weight:400;color:var(--text2)">· ${new Date(o.date).toLocaleString('es-DO')}</span></div>
-            <div class="auction-meta">${o.items.map(i => `${i.title.slice(0, 30)} ×${i.qty}`).join(' · ')}</div>
+            <div class="auction-meta">${o.items.map(i => `${esc(i.title.slice(0, 30))} ×${i.qty}`).join(' · ')}</div>
             <div class="auction-meta">${payLabel[o.payment] || ''}${o.card ? ` ${o.card.brand} •••• ${o.card.last4}` : ''} · 🚚 ${o.buyer?.prov || 'RD'}</div>
             <div class="auction-price-row">
               <div class="auction-price">${fmt(o.total)}</div>
@@ -1268,8 +1261,8 @@ function renderAccount() {
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)">
         <div style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700">${ini}</div>
         <div>
-          <div style="font-size:20px;font-weight:700">${name}</div>
-          <div style="font-size:13px;color:var(--text2)">${email}</div>
+          <div style="font-size:20px;font-weight:700">${esc(name)}</div>
+          <div style="font-size:13px;color:var(--text2)">${esc(email)}</div>
           <div style="font-size:12px;color:${userState.verified ? 'var(--green)' : 'var(--accent2)'};margin-top:4px">${vline}</div>
         </div>
       </div>
@@ -1333,7 +1326,7 @@ function renderCart() {
     <div class="cart-item">
       <div class="cart-item-img" style="overflow:hidden">${c.img ? `<img src="${c.img}" alt="" style="width:100%;height:100%;object-fit:cover">` : c.icon}</div>
       <div class="cart-item-info">
-        <div class="cart-item-title">${c.title}</div>
+        <div class="cart-item-title">${esc(c.title)}</div>
         <div style="font-size:11px;color:var(--text2)">${fmt(c.price)} c/u</div>
         <div class="cart-qty">
           <button class="qty-btn" onclick="chQty(${c.id},-1)" aria-label="Restar">−</button>
@@ -2262,7 +2255,7 @@ function renderAuctionDetail(a) {
       <div class="adt-share">
         <span>🔗 Enlace de esta subasta</span>
         <div class="adt-share-row">
-          <input id="adtLink" value="${link}" readonly onclick="this.select()">
+          <input id="adtLink" value="${esc(link)}" readonly onclick="this.select()">
           <button class="mrd-btn-ghost" onclick="copyAuctionLink()">Copiar</button>
         </div>
       </div>
@@ -2461,9 +2454,9 @@ function renderAddresses() {
         : `<div class="addr-list">${l.map(a => `
           <div class="addr-card${a.def ? ' addr-def' : ''}">
             <div class="addr-main">
-              <div class="addr-name">${a.name} ${a.def ? '<span class="addr-badge">Predeterminada</span>' : ''}</div>
-              <div class="addr-line">${a.addr}</div>
-              <div class="addr-line">${a.prov} · 📞 ${a.phone}</div>
+              <div class="addr-name">${esc(a.name)} ${a.def ? '<span class="addr-badge">Predeterminada</span>' : ''}</div>
+              <div class="addr-line">${esc(a.addr)}</div>
+              <div class="addr-line">${esc(a.prov)} · 📞 ${esc(a.phone)}</div>
             </div>
             <div class="addr-actions">
               ${a.def ? '' : `<button class="mrd-link" onclick="setDefaultAddress(${a.id})">Predeterminar</button>`}
@@ -2480,9 +2473,9 @@ function openAddrForm(id) {
   document.getElementById('addrFormBox').innerHTML = `
     <div class="addr-form">
       <div class="form-grid">
-        <div class="fg2"><label>Nombre del destinatario *</label><input type="text" id="afName" value="${a?.name || ''}"></div>
-        <div class="fg2"><label>Teléfono *</label><input type="tel" id="afPhone" value="${a?.phone || ''}" placeholder="809-000-0000"></div>
-        <div class="fg2" style="grid-column:1/-1"><label>Dirección *</label><input type="text" id="afAddr" value="${a?.addr || ''}" placeholder="Calle, número, sector"></div>
+        <div class="fg2"><label>Nombre del destinatario *</label><input type="text" id="afName" value="${esc(a?.name || '')}"></div>
+        <div class="fg2"><label>Teléfono *</label><input type="tel" id="afPhone" value="${esc(a?.phone || '')}" placeholder="809-000-0000"></div>
+        <div class="fg2" style="grid-column:1/-1"><label>Dirección *</label><input type="text" id="afAddr" value="${esc(a?.addr || '')}" placeholder="Calle, número, sector"></div>
         <div class="fg2"><label>Provincia</label><select id="afProv">${provs.map(p => `<option ${a?.prov === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
         <label class="co-check" style="grid-column:1/-1"><input type="checkbox" id="afDef" ${a?.def ? 'checked' : ''}> Usar como predeterminada</label>
       </div>
@@ -2533,9 +2526,9 @@ function renderSettings() {
     <div class="account-panel">
       <div class="section-title" style="margin-bottom:16px">⚙️ Configuración de la cuenta</div>
       <div class="form-grid">
-        <div class="fg2"><label>Nombre para mostrar</label><input type="text" id="stName" value="${pf.name || ''}"></div>
-        <div class="fg2"><label>Teléfono</label><input type="tel" id="stPhone" value="${pf.phone || ''}" placeholder="809-000-0000"></div>
-        <div class="fg2"><label>Correo (no editable)</label><input type="email" value="${email}" disabled style="opacity:.6;cursor:not-allowed"></div>
+        <div class="fg2"><label>Nombre para mostrar</label><input type="text" id="stName" value="${esc(pf.name || '')}"></div>
+        <div class="fg2"><label>Teléfono</label><input type="tel" id="stPhone" value="${esc(pf.phone || '')}" placeholder="809-000-0000"></div>
+        <div class="fg2"><label>Correo (no editable)</label><input type="email" value="${esc(email)}" disabled style="opacity:.6;cursor:not-allowed"></div>
         <div class="fg2"><label>Provincia</label><select id="stProv">${provs.map(p => `<option value="${p}" ${pf.province === p ? 'selected' : ''}>${p || 'Selecciona…'}</option>`).join('')}</select></div>
       </div>
       <button class="submit-btn" style="width:auto;padding:12px 24px;margin-top:6px" onclick="saveSettings()">Guardar cambios</button>
@@ -2719,3 +2712,73 @@ function contactSellerById(id) {
   closeSubsection();
   openThread(t.id);
 }
+
+// ══════════════════════════════════════════════════
+// ACCESIBILIDAD (WCAG 2.2 AA) — añadidos no intrusivos
+// ══════════════════════════════════════════════════
+
+// Newsletter: valida el correo y lo guarda localmente (antes era un toast de éxito falso)
+function subscribeNewsletter() {
+  const el = document.getElementById('nlEmail');
+  const v  = ((el && el.value) || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { showToast('Ingresa un correo válido 📧'); if (el) el.focus(); return; }
+  try {
+    const subs = JSON.parse(localStorage.getItem('mrd_newsletter') || '[]');
+    if (!subs.includes(v)) { subs.push(v); localStorage.setItem('mrd_newsletter', JSON.stringify(subs)); }
+  } catch (_) {}
+  if (el) el.value = '';
+  showToast('¡Suscrito! 🎉 Te avisaremos de ofertas y subastas nuevas');
+}
+
+// Cerrar con Escape el modal/panel que esté abierto (de más reciente a más antiguo)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' && e.keyCode !== 27) return;
+  const isOpen = el => el && getComputedStyle(el).display !== 'none';
+  const offer = document.getElementById('offerOverlay');
+  const bid   = document.getElementById('bidOverlay');
+  const ver   = document.getElementById('verificationOverlay');
+  const legal = document.getElementById('legalOverlay');
+  const auth  = document.getElementById('authOverlay');
+  const cart  = document.getElementById('cartOverlay');
+  const sub   = [...document.querySelectorAll('.subsection-overlay')].find(isOpen);
+  if (isOpen(offer)) return closeOffer();
+  if (isOpen(bid))   return closeBid();
+  if (isOpen(ver) && typeof closeVerification === 'function') return closeVerification();
+  if (sub && typeof closeSubsection === 'function') return closeSubsection();
+  if (isOpen(legal)) { legal.style.display = 'none'; return; }
+  if (isOpen(auth) && typeof cancelAuth === 'function') return cancelAuth();
+  if (isOpen(cart) && typeof toggleCart === 'function') return toggleCart();
+  const np = document.getElementById('notifPanel');
+  if (isOpen(np)) { np.style.display = 'none'; }
+});
+
+// Activar con Enter/Espacio los controles no nativos (div/span con rol de botón o enlace)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+  const t = e.target;
+  if (!t || !t.matches) return;
+  if (t.matches('.nav-item, .scat, [role="button"], [role="link"]') &&
+      t.tagName !== 'BUTTON' && t.tagName !== 'A' && t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    t.click();
+  }
+});
+
+// Marcar diálogos para lectores de pantalla y hacer alcanzables por teclado los controles no nativos
+(function a11yEnhance() {
+  [['authOverlay', 'Cuenta'], ['legalOverlay', 'Información'], ['verificationOverlay', 'Verificación de identidad'],
+   ['bidOverlay', 'Hacer una puja'], ['offerOverlay', 'Hacer una oferta'], ['cartOverlay', 'Carrito de compras']]
+    .forEach(([id, label]) => {
+      const el = document.getElementById(id);
+      if (el) { el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label); }
+    });
+  document.querySelectorAll('.subsection-overlay').forEach(el => {
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+  });
+  document.querySelectorAll('.nav-item, .scat').forEach(el => {
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    if (!el.hasAttribute('role'))     el.setAttribute('role', 'button');
+  });
+  const badge = document.getElementById('notifBadge');
+  if (badge) { badge.setAttribute('aria-live', 'polite'); badge.setAttribute('role', 'status'); }
+})();

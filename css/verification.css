@@ -391,31 +391,6 @@
   line-height: 1.6;
 }
 
-.verification-pending {
-  background: #fff3cd;
-  border-radius: 8px;
-  padding: 24px;
-  text-align: center;
-}
-
-.verification-pending-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.verification-pending-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #856404;
-  margin-bottom: 8px;
-}
-
-.verification-pending-msg {
-  font-size: 13px;
-  color: #856404;
-  margin-bottom: 16px;
-  line-height: 1.6;
-}
 
 @media (max-width: 768px) {
   .verification-panel {
