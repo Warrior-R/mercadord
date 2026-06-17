@@ -336,10 +336,10 @@
 
     <div class="verification-form-group">
      <label class="verification-label">📸 Foto del documento</label>
-     <div class="file-upload" id="docUploadArea" onclick="document.getElementById('docUploadInput').click()">
+     <div class="file-upload" id="docUploadArea" onclick="document.getElementById('docUploadInput').click()" tabindex="0" role="button" aria-label="Cargar foto del documento de identidad (JPG, PNG o WEBP)">
       <div class="file-upload-icon">📄</div>
       <p class="file-upload-text">Haz clic para seleccionar o arrastra un archivo</p>
-      <input type="file" id="docUploadInput" class="verification-input" style="display:none" accept="image/*" onchange="handleDocUpload(this)">
+      <input type="file" id="docUploadInput" class="verification-input" style="display:none" accept="image/jpeg,image/png,image/webp" onchange="handleDocUpload(this)">
       <p class="file-upload-file" id="docUploadName"></p>
      </div>
     </div>

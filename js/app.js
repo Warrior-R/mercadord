@@ -880,32 +880,87 @@ function renderSellForm() {
           <label for="sellDesc">Descripción</label>
           <textarea id="sellDesc" placeholder="Describe el producto, estado, qué incluye..." maxlength="1000"></textarea>
         </div>
-        <div class="photo-area" id="sellPhotoArea" onclick="document.getElementById('sellPhotoInput').click()">
+        <div class="photo-area" id="sellPhotoArea" onclick="document.getElementById('sellPhotoInput').click()" tabindex="0" role="button" aria-label="Subir foto del producto (JPG, PNG o WEBP, máximo 5MB)">
           <div style="font-size:30px;margin-bottom:8px" id="sellPhotoIcon">📷</div>
           <strong id="sellPhotoLabel">Subir foto principal</strong>
           <div style="font-size:12px;margin-top:4px">JPG, PNG · 5MB máx (opcional)</div>
           <img id="sellPhotoPreview" style="display:none;max-height:140px;border-radius:8px;margin-top:10px" alt="Vista previa">
         </div>
-        <input type="file" id="sellPhotoInput" accept="image/*" style="display:none" onchange="handleSellPhoto(this)">
+        <input type="file" id="sellPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleSellPhoto(this)">
         <button type="submit" class="submit-btn">✓ Publicar gratis</button>
       </form>
     </div>`;
 }
 
-function handleSellPhoto(input) {
+// ══════════════════════════════════════════════════
+// VALIDACIÓN SEGURA DE IMÁGENES (carga de archivos)
+// Whitelist de tipo + firma real (magic bytes) + verificación de decodificación.
+// Bloquea PDF/ejecutable renombrado, SVG con script, HEIC no soportado y archivos corruptos.
+// ══════════════════════════════════════════════════
+const ALLOWED_IMG_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Detecta el tipo REAL por los primeros bytes (no por la extensión ni el MIME declarado)
+function sniffImageType(b) {
+  if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return 'image/png';
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  return null; // PDF (%PDF), ejecutable (MZ/ELF), SVG (<svg/<?xml), etc. → no es imagen permitida
+}
+
+// Valida un archivo de imagen de forma asíncrona. Devuelve {ok:true} o {ok:false, error}.
+function validateImageFile(file, maxBytes) {
+  return new Promise(resolve => {
+    if (!file) { resolve({ ok: false, error: 'No se seleccionó ningún archivo.' }); return; }
+    if (file.size > maxBytes) { resolve({ ok: false, error: `La imagen supera ${Math.round(maxBytes / 1048576)}MB.` }); return; }
+    if (!ALLOWED_IMG_TYPES.includes(file.type)) { resolve({ ok: false, error: 'Formato no permitido. Usa JPG, PNG o WEBP.' }); return; }
+    const fr = new FileReader();
+    fr.onerror = () => resolve({ ok: false, error: 'No se pudo leer el archivo.' });
+    fr.onload = () => {
+      const sig = sniffImageType(new Uint8Array(fr.result));
+      if (!sig || !ALLOWED_IMG_TYPES.includes(sig)) { resolve({ ok: false, error: 'El archivo no es una imagen real (firma inválida).' }); return; }
+      // Confirmar que el navegador puede decodificarla (descarta corruptas)
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload  = () => { URL.revokeObjectURL(url); resolve({ ok: true }); };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve({ ok: false, error: 'La imagen está dañada o no se puede abrir.' }); };
+      img.src = url;
+    };
+    fr.readAsArrayBuffer(file.slice(0, 16));
+  });
+}
+
+// Re-codifica a JPEG en un canvas: normaliza tamaño, elimina EXIF y cualquier carga útil incrustada.
+function reencodeToJpeg(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      try { resolve(c.toDataURL('image/jpeg', quality)); } catch (e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode')); };
+    img.src = url;
+  });
+}
+
+async function handleSellPhoto(input) {
   const file = input.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { showToast('La imagen supera 5MB'); input.value = ''; return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    sellImgData = e.target.result;
-    const prev = document.getElementById('sellPhotoPreview');
-    prev.src = sellImgData;
-    prev.style.display = 'inline-block';
-    document.getElementById('sellPhotoLabel').textContent = '✓ ' + file.name;
-    showToast('Foto cargada ✓');
-  };
-  reader.readAsDataURL(file);
+  const v = await validateImageFile(file, 5 * 1024 * 1024);
+  if (!v.ok) { showToast(v.error); input.value = ''; return; }
+  try {
+    sellImgData = await reencodeToJpeg(file, 1280, 0.82); // re-codifica: limpia carga útil + comprime (evita reventar localStorage)
+  } catch (_) { showToast('No se pudo procesar la imagen.'); input.value = ''; return; }
+  const prev = document.getElementById('sellPhotoPreview');
+  prev.src = sellImgData;
+  prev.style.display = 'inline-block';
+  document.getElementById('sellPhotoLabel').textContent = '✓ ' + file.name;
+  showToast('Foto cargada ✓');
 }
 
 function publishProduct() {
@@ -1894,10 +1949,10 @@ function verificationBack() {
   showVerificationStep(stepNum - 1);
 }
 
-function handleDocUpload(input) {
+async function handleDocUpload(input) {
   const file = input.files[0];
-  if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { showToast('El archivo es demasiado grande (máximo 10MB)'); return; }
+  const v = await validateImageFile(file, 10 * 1024 * 1024);
+  if (!v.ok) { showToast(v.error); input.value = ''; return; }
   verificationData.docFile = file;
   document.getElementById('docUploadName').textContent = '✓ ' + file.name;
   document.getElementById('docUploadArea').classList.add('has-file');
