@@ -2067,6 +2067,10 @@ function submitVerification() {
   document.getElementById('verificationSuccess').style.display = 'block';
   showToast('✅ Verificación enviada correctamente');
 
+  // Privacidad: descartar de memoria las imágenes (documento y selfie) una vez enviada la solicitud
+  verificationData.docFile = null;
+  verificationData.faceCapture = null;
+
   const reason = verificationData.reason;
   if (userState.verified && (reason === 'sell' || reason === 'bid')) {
     setTimeout(() => { closeVerification(); showView(reason === 'bid' ? 'auctions' : 'sell'); }, 1200);
@@ -2863,3 +2867,161 @@ document.addEventListener('keydown', e => {
   const badge = document.getElementById('notifBadge');
   if (badge) { badge.setAttribute('aria-live', 'polite'); badge.setAttribute('role', 'status'); }
 })();
+
+// ══════════════════════════════════════════════════
+// BÚSQUEDA POR IMAGEN — CLIP (Transformers.js) 100% en el navegador
+// La foto NUNCA sale del dispositivo. El modelo se carga de forma perezosa
+// (solo la primera vez que alguien usa 📷) y queda en caché del navegador.
+// ══════════════════════════════════════════════════
+const VISUAL_LABELS = [
+  { cat: 'electronics', en: 'a photo of electronics: a phone, laptop, television, camera or gadget' },
+  { cat: 'vehicles',    en: 'a photo of a vehicle: a car, motorcycle, truck or bicycle' },
+  { cat: 'fashion',     en: 'a photo of clothing, shoes, a handbag, a watch or a fashion accessory' },
+  { cat: 'home2',       en: 'a photo of a home appliance or furniture' },
+  { cat: 'sports',      en: 'a photo of sports equipment or fitness gear' },
+  { cat: 'services',    en: 'a photo of hand tools, repair work or a professional service' },
+  { cat: 'agro',        en: 'a photo of food, fruit, vegetables or farm produce' },
+  // Señuelos: si gana uno de estos, la imagen NO es un producto del catálogo (→ "sin coincidencias")
+  { cat: null, en: 'a photo of a person, a face, hands or a crowd' },
+  { cat: null, en: 'a photo of scenery, landscape, sky, plants or a building' },
+  { cat: null, en: 'an abstract pattern, random colorful noise or a blurry unclear image' }
+];
+const CAT_ES = { electronics: 'Electrónica', vehicles: 'Vehículos', fashion: 'Moda', home2: 'Hogar', sports: 'Deportes', services: 'Servicios', agro: 'Agropecuario' };
+
+let _clipPipe = null, _clipLoading = null, _visualCancelled = false;
+
+async function loadClip(onProgress) {
+  if (_clipPipe) return _clipPipe;
+  if (!_clipLoading) {
+    _clipLoading = (async () => {
+      const TF = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      TF.env.allowLocalModels = false;
+      TF.env.useBrowserCache = true;
+      return TF.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32',
+        { quantized: true, progress_callback: onProgress });
+    })();
+  }
+  _clipPipe = await _clipLoading;
+  return _clipPipe;
+}
+
+async function handleImageSearch(input) {
+  const file = input.files[0];
+  input.value = '';
+  const v = await validateImageFile(file, 8 * 1024 * 1024);
+  if (!v.ok) { showToast(v.error); return; }
+  let dataUrl;
+  try { dataUrl = await reencodeToJpeg(file, 512, 0.9); }
+  catch (_) { showToast('No se pudo procesar la imagen.'); return; }
+
+  _visualCancelled = false;
+  showVisualOverlay(dataUrl);
+
+  let pipe;
+  try {
+    pipe = await loadClip(p => {
+      if (_visualCancelled) return;
+      if (p && p.status === 'progress' && typeof p.progress === 'number')
+        setVisualStatus(`Preparando la IA… ${Math.round(p.progress)}%`);
+    });
+  } catch (e) {
+    if (!_visualCancelled) setVisualStatus('No se pudo cargar la búsqueda visual. Revisa tu conexión e inténtalo de nuevo.', true);
+    return;
+  }
+  if (_visualCancelled) return;
+
+  setVisualStatus('Analizando tu imagen…');
+  let out;
+  try { out = await pipe(dataUrl, VISUAL_LABELS.map(l => l.en)); }
+  catch (e) { if (!_visualCancelled) setVisualStatus('No se pudo analizar la imagen.', true); return; }
+  if (_visualCancelled) return;
+
+  const ranked = out.map(o => {
+    const m = VISUAL_LABELS.find(l => l.en === o.label);
+    return { cat: m ? m.cat : 'all', score: o.score };
+  }).sort((a, b) => b.score - a.score);
+
+  hideVisualOverlay();
+  renderVisualResults(ranked, dataUrl);
+}
+
+function cancelVisualSearch() { _visualCancelled = true; hideVisualOverlay(); }
+
+function showVisualOverlay(previewUrl) {
+  let ov = document.getElementById('visualOverlay');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'visualOverlay'; ov.className = 'visual-overlay'; document.body.appendChild(ov); }
+  ov.innerHTML = `
+    <div class="visual-modal" role="dialog" aria-modal="true" aria-label="Buscando por imagen">
+      <img src="${esc(previewUrl)}" alt="Imagen que estás buscando" class="visual-modal-img">
+      <div class="visual-spinner" aria-hidden="true"></div>
+      <div class="visual-status" id="visualStatus" role="status" aria-live="polite">Preparando la búsqueda visual…</div>
+      <div class="visual-hint">La primera vez puede tardar (se descarga el modelo de IA). Tu foto no sale de tu dispositivo. 🔒</div>
+      <button class="visual-cancel" onclick="cancelVisualSearch()">Cancelar</button>
+    </div>`;
+  ov.style.display = 'flex';
+}
+function setVisualStatus(msg, isError) {
+  const s = document.getElementById('visualStatus');
+  if (s) { s.textContent = msg; s.classList.toggle('visual-status-error', !!isError); }
+  if (isError) { const sp = document.querySelector('#visualOverlay .visual-spinner'); if (sp) sp.style.display = 'none'; }
+}
+function hideVisualOverlay() { const ov = document.getElementById('visualOverlay'); if (ov) ov.style.display = 'none'; }
+
+// Tarjeta de producto reutilizable (mismo marcado que el listado)
+function productCardHTML(p) {
+  return `
+    <div class="product-card" onclick="showDetail(${p.id})">
+      <div class="product-img">
+        ${p.badge === 'new'  ? '<div class="badge badge-new">NUEVO</div>' : ''}
+        ${p.badge === 'hot'  ? '<div class="badge badge-hot">🔥 HOT</div>' : ''}
+        ${p.badge === 'deal' ? '<div class="badge badge-deal">OFERTA</div>' : ''}
+        <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)" role="button" aria-label="Añadir a favoritos">${favs.has(p.id) ? '❤️' : '♡'}</div>
+        ${prodImg(p)}
+      </div>
+      <div class="product-info">
+        <div class="product-title">${esc(p.title)}</div>
+        <div class="product-seller">🏪 ${esc(p.seller)}</div>
+        <div><span class="product-price">${fmt(p.price)}</span>${p.old ? `<span class="product-price-old">${fmt(p.old)}</span><span class="product-discount">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : ''}</div>
+        <div class="product-footer">
+          <div class="rating">★ ${p.rating} <span style="color:var(--text2)">(${p.reviews})</span></div>
+          <button class="add-cart" onclick="event.stopPropagation();addCart(${p.id})">+ Carrito</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderVisualResults(ranked, previewUrl) {
+  const top = ranked[0];
+  const conf = Math.round((top ? top.score : 0) * 100);
+  // "Sin coincidencias" si gana un señuelo (cat null) o la confianza es muy baja
+  const matched = top && top.cat && top.score >= 0.22;
+  const cat = matched ? top.cat : null;
+  const items = matched ? products.filter(p => p.cat === cat) : [];
+
+  cview = 'page';
+  document.getElementById('heroBanner').style.display = 'none';
+  const csec = document.querySelector('.carousel-section'); if (csec) csec.style.display = 'none';
+
+  const head = `
+    <button class="back-btn" onclick="goHome()">← Volver</button>
+    <div class="visual-result-head">
+      <img src="${esc(previewUrl)}" alt="Imagen buscada" class="visual-thumb">
+      <div>
+        <div class="visual-result-title">🔎 Resultados de tu foto</div>
+        ${matched
+          ? `<div class="visual-result-sub">Detectamos: <strong>${esc(CAT_ES[cat] || cat)}</strong> · ${conf}% de confianza</div>`
+          : `<div class="visual-result-sub">No encontramos productos que se parezcan a tu foto.</div>`}
+      </div>
+    </div>`;
+
+  let body;
+  if (!matched) {
+    body = `<div class="no-results"><div>🔍</div><p>Probá con una foto más clara y centrada del producto, o usá la búsqueda por texto.</p></div>`;
+  } else if (!items.length) {
+    body = `<div class="no-results"><div>🛍️</div><p>Reconocimos <strong>${esc(CAT_ES[cat] || cat)}</strong>, pero ahora no hay productos en esa categoría. <a class="mrd-link" onclick="goHome()">Ver todo</a></p></div>`;
+  } else {
+    body = `<div class="products-grid">${items.map(productCardHTML).join('')}</div>`;
+  }
+  document.getElementById('contentArea').innerHTML = head + body;
+  window.scrollTo(0, 0);
+}

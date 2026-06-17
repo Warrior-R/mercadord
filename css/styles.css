@@ -45,6 +45,24 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .static-page-body a{color:var(--primary);cursor:pointer}
 .static-page-body strong{color:var(--text)}
 
+/* ── Búsqueda por imagen (CLIP en el navegador) ── */
+.search-bar .img-search-btn{padding:10px 12px;border:none;background:#fff;color:var(--primary);cursor:pointer;font-size:16px;line-height:1;border-left:1px solid var(--border)}
+.search-bar .img-search-btn:hover{background:#eef2fb}
+.visual-overlay{position:fixed;inset:0;background:rgba(10,20,50,.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+.visual-modal{background:#fff;border-radius:14px;max-width:340px;width:100%;padding:24px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.28)}
+.visual-modal-img{width:120px;height:120px;object-fit:cover;border-radius:10px;margin:0 auto 14px;display:block;border:1px solid var(--border)}
+.visual-spinner{width:34px;height:34px;border:3px solid #e3e6ee;border-top-color:var(--primary);border-radius:50%;margin:0 auto 12px;animation:mrdspin .8s linear infinite}
+@keyframes mrdspin{to{transform:rotate(360deg)}}
+.visual-status{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}
+.visual-status-error{color:var(--red)}
+.visual-hint{font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:16px}
+.visual-cancel{background:#f0f3f8;color:var(--text2);border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.visual-cancel:hover{background:#e6eaf2}
+.visual-result-head{display:flex;align-items:center;gap:14px;margin:6px 0 18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.visual-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--border);flex-shrink:0}
+.visual-result-title{font-size:18px;font-weight:700;color:var(--text)}
+.visual-result-sub{font-size:13px;color:var(--text2);margin-top:3px}
+
 /* ── HEADER ── */
 .header{background:var(--primary);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .header-top{display:flex;align-items:center;gap:12px;padding:10px 20px}
