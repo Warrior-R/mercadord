@@ -38,5 +38,9 @@ const K = {
   USER:      'mrd_user',
   USERSTATE: 'mrd_userstate',
   PRODUCTS:  'mrd_user_products',
-  ORDERS:    'mrd_orders'
+  ORDERS:    'mrd_orders',
+  ADDRESSES: 'mrd_addresses',     // libreta de direcciones de entrega
+  PROFILE:   'mrd_profile',       // preferencias de perfil editables (nombre, teléfono, provincia)
+  NOTIFPREFS:'mrd_notifprefs',    // preferencias de notificaciones
+  MESSAGES:  'mrd_messages'       // hilos de mensajería comprador-vendedor
 };

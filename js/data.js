@@ -19,7 +19,13 @@ const products = [
   { id:13, title:"Lavadora LG 20 Lbs Carga Frontal",  price:22000,  old:26000,   icon:"🫧", cat:"home2",       cond:"new",  loc:"SD",  rating:4.6, reviews:112, seller:"ElectroMax",   badge:"deal" },
   { id:14, title:"Honda Civic 2020 EX Turbo",         price:1150000,old:null,    icon:"🚙", cat:"vehicles",    cond:"used", loc:"STI", rating:4.7, reviews:15,  seller:"AutosElite",   badge:null   },
   { id:15, title:"JBL Boombox 3 Speaker",             price:18500,  old:22000,   icon:"🔊", cat:"electronics", cond:"new",  loc:"SD",  rating:4.8, reviews:234, seller:"AudioRD",      badge:"hot"  },
-  { id:16, title:"Generador Yamaha 3000W Inverter",   price:65000,  old:72000,   icon:"⚡", cat:"services",    cond:"new",  loc:"SD",  rating:4.9, reviews:189, seller:"GeneraRD",     badge:"hot"  },
+  { id:16, title:"Generador Yamaha 3000W Inverter",   price:65000,  old:72000,   icon:"⚡", cat:"home2",       cond:"new",  loc:"SD",  rating:4.9, reviews:189, seller:"GeneraRD",     badge:"hot"  },
+  { id:17, title:"Café Orgánico en Grano 5 lb",       price:1450,   old:1800,    icon:"☕", cat:"agro",        cond:"new",  loc:"STI", rating:4.8, reviews:96,  seller:"Finca Don Pedro",  badge:"deal" },
+  { id:18, title:"Aguacates Hass — Caja 20 unidades", price:1200,   old:null,    icon:"🥑", cat:"agro",        cond:"new",  loc:"LR",  rating:4.6, reviews:54,  seller:"AgroFresco RD",    badge:null   },
+  { id:19, title:"Saco de Arroz Selecto 125 lb",      price:3900,   old:4300,    icon:"🌾", cat:"agro",        cond:"new",  loc:"SD",  rating:4.7, reviews:71,  seller:"AgroFresco RD",    badge:"deal" },
+  { id:20, title:"Servicio de Plomería a Domicilio",  price:1500,   old:null,    icon:"🔧", cat:"services",    cond:"new",  loc:"SD",  rating:4.9, reviews:142, seller:"PlomeRD",          badge:"hot"  },
+  { id:21, title:"Mudanzas y Fletes (camión + 2 ayudantes)", price:4500, old:null, icon:"🚚", cat:"services",  cond:"new",  loc:"SD",  rating:4.5, reviews:88,  seller:"MudanzasExpress",  badge:null   },
+  { id:22, title:"Instalación de Aires Acondicionados", price:2500, old:3000,    icon:"❄️", cat:"services",    cond:"new",  loc:"STI", rating:4.8, reviews:67,  seller:"ClimaTec RD",      badge:"deal" },
 ];
 
 // endsMin: minutos restantes al primer arranque (luego se persiste el fin real)
@@ -64,7 +70,7 @@ const legalContent = {
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD se reserva el derecho de modificar estos términos notificándote con 30 días de anticipación. El uso continuado de la plataforma implica aceptación de los cambios.</p>
 
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">10. Resolución de disputas</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Para disputas, contacta a soporte@mercadord.do. Las partes confieren a MercadoRD autoridad para mediar. Si persiste el conflicto, se canaliza a arbitraje conforme a las leyes de República Dominicana.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Para disputas, contacta a soporte@mercadord.net. Las partes confieren a MercadoRD autoridad para mediar. Si persiste el conflicto, se canaliza a arbitraje conforme a las leyes de República Dominicana.</p>
 
       <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: abril 2026 · MercadoRD S.R.L. · RNC: 1-30-12345-6<br>Conforme a Ley 358-05 del Consumidor y regulaciones de PROCONSUMIDOR</p>`
   },
@@ -101,7 +107,7 @@ const legalContent = {
   },
   accessibility: {
     title: '♿ Accesibilidad',
-    body: `<p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Seguimos pautas WCAG 2.1 nivel AA. Si encuentras alguna barrera, contáctanos en accesibilidad@mercadord.do y la resolvemos en 5 días hábiles.</p><p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
+    body: `<p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Seguimos pautas WCAG 2.1 nivel AA. Si encuentras alguna barrera, contáctanos en accesibilidad@mercadord.net y la resolvemos en 5 días hábiles.</p><p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
   }
 };
 
@@ -126,12 +132,12 @@ const infoContent = {
   payments: {
     title: '💳 Métodos de Pago',
     body: `
-      <h3 style="${H3}">Disponibles ahora</h3>
-      <p style="${P}">💵 <strong>Efectivo contra entrega</strong> — paga al recibir tu pedido.<br>🏦 <strong>Transferencia bancaria</strong> — Banreservas, Popular, BHD.</p>
-      <h3 style="${H3}">Próximamente</h3>
-      <p style="${P}">💳 Tarjetas de crédito/débito vía <strong>Cardnet y Azul</strong>.<br>📱 Billeteras digitales: <strong>mPago</strong>.</p>
+      <h3 style="${H3}">Paga con tarjeta</h3>
+      <p style="${P}">💳 <strong>Tarjeta de crédito o débito</strong> — Visa, Mastercard y American Express. El pago se procesa de forma segura al finalizar la compra, igual que en eBay.</p>
+      <h3 style="${H3}">Otras opciones</h3>
+      <p style="${P}">💵 <strong>Efectivo contra entrega</strong> — paga en efectivo al recibir tu pedido, en zonas con cobertura de mensajería.</p>
       <h3 style="${H3}">Seguridad</h3>
-      <p style="${P}">Todos los pagos en línea pasarán por pasarelas certificadas PCI-DSS. MercadoRD nunca almacena los datos de tu tarjeta.</p>`
+      <p style="${P}">Tus datos viajan cifrados con SSL de 256 bits. MercadoRD nunca almacena el número completo de tu tarjeta ni tu código CVV.</p>`
   },
   howbuy: {
     title: '❓ ¿Cómo comprar en MercadoRD?',
@@ -207,7 +213,7 @@ const infoContent = {
       <h3 style="${H3}">Comunicados recientes</h3>
       <p style="${P}">📅 <strong>Jun 2026</strong> — MercadoRD lanza subastas en línea con pujas en tiempo real.<br>📅 <strong>May 2026</strong> — Nueva verificación de identidad con reconocimiento facial.<br>📅 <strong>Abr 2026</strong> — Alianza con empresas de mensajería para envíos a 32 provincias.</p>
       <h3 style="${H3}">Contacto de prensa</h3>
-      <p style="${P}">prensa@mercadord.do · Kit de marca y logos disponibles bajo solicitud.</p>`
+      <p style="${P}">prensa@mercadord.net · Kit de marca y logos disponibles bajo solicitud.</p>`
   },
   jobs: {
     title: '💼 Trabaja con Nosotros',
@@ -216,7 +222,7 @@ const infoContent = {
       <p style="${P}">💻 Desarrollador Full-Stack (Santo Domingo / remoto)<br>🎨 Diseñador UX/UI (Santo Domingo)<br>🎧 Agente de Soporte al Cliente (Santiago)<br>📦 Coordinador de Logística (Santo Domingo Este)</p>
       <h3 style="${H3}">Beneficios</h3>
       <p style="${P}">Seguro médico complementario, horario flexible, capacitación continua y bonos por desempeño.</p>
-      <p style="${P}">Envía tu CV a <strong>talento@mercadord.do</strong></p>`
+      <p style="${P}">Envía tu CV a <strong>talento@mercadord.net</strong></p>`
   },
   community: {
     title: '👥 Comunidad MercadoRD',
@@ -247,7 +253,7 @@ const infoContent = {
       <p style="${P}">📈 +120K productos activos · +45K vendedores verificados · +800K compradores registrados · Presencia en 32 provincias.</p>
       <h3 style="${H3}">Modelo de negocio</h3>
       <p style="${P}">Ingresos por comisión de venta (5%), suscripciones Premium, publicidad interna y servicios de logística — el modelo probado de los grandes marketplaces.</p>
-      <p style="${P}">Contacto: <strong>inversion@mercadord.do</strong></p>`
+      <p style="${P}">Contacto: <strong>inversion@mercadord.net</strong></p>`
   },
   help: {
     title: '❓ Centro de Ayuda',
@@ -257,7 +263,7 @@ const infoContent = {
       <p style="${P}"><strong>¿Cómo funciona una subasta?</strong><br>Haz una puja igual o mayor a la mínima indicada. Si nadie te supera al cierre, ganas el artículo. También puedes usar "¡Cómpralo ya!" para llevártelo de inmediato.</p>
       <p style="${P}"><strong>¿Qué es "Mejor oferta"?</strong><br>Propón un precio al vendedor. Puede aceptar, rechazar o hacer una contraoferta.</p>
       <p style="${P}"><strong>¿Cuándo recibo mi pedido?</strong><br>2-5 días hábiles en Santo Domingo y Santiago; 3-7 en el resto del país.</p>
-      <p style="${P}"><strong>¿Cómo reporto un problema?</strong><br>Desde "Mis compras" → selecciona el pedido → "Abrir reclamo", o escribe a soporte@mercadord.do.</p>
+      <p style="${P}"><strong>¿Cómo reporto un problema?</strong><br>Desde "Mis compras" → selecciona el pedido → "Abrir reclamo", o escribe a soporte@mercadord.net.</p>
       <h3 style="${H3}">Chat en vivo</h3>
       <p style="${P}">💬 Disponible de 8am a 8pm. Escríbenos también por WhatsApp al +1 (809) 555-1234.</p>`
   }

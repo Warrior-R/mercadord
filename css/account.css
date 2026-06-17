@@ -1,0 +1,312 @@
+/* ═══════════════════════════════════════════════════
+   MercadoRD — Cuenta y módulos "My eBay"
+   Checkout (pago) · Direcciones · Configuración ·
+   Notificaciones · Seguridad · Mensajes
+   Usa los mismos tokens que styles.css (var(--primary), etc.)
+   ═══════════════════════════════════════════════════ */
+
+/* ─── Checkout: secciones y método de pago ─── */
+.co-sec {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #1a1a2e);
+  margin: 18px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border, #e3e6ec);
+}
+.co-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text2, #6b7280);
+  margin: 10px 0 4px;
+  cursor: pointer;
+}
+.co-check input { width: auto; }
+
+.pay-methods { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.pay-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid var(--border, #e3e6ec);
+  border-radius: 10px;
+  padding: 13px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.pay-opt:has(input:checked) {
+  border-color: var(--primary, #003087);
+  background: #f3f7ff;
+}
+.pay-opt input { width: auto; accent-color: var(--primary, #003087); }
+
+.cc-brands {
+  font-size: 12px;
+  color: var(--text2, #6b7280);
+  margin-top: 6px;
+}
+
+/* ─── Botones y enlaces reutilizables ─── */
+.mrd-btn-accent {
+  background: var(--accent, #f5a623);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mrd-btn-accent:hover { filter: brightness(.95); }
+.mrd-btn-ghost {
+  background: #f0f3f8;
+  color: var(--text2, #6b7280);
+  border: none;
+  padding: 11px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mrd-link {
+  background: none;
+  border: none;
+  color: var(--primary, #003087);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 2px;
+}
+.mrd-link:hover { text-decoration: underline; }
+.mrd-link-danger { color: var(--red, #e43e2b); }
+
+/* ─── Direcciones ─── */
+.addr-list { display: flex; flex-direction: column; gap: 12px; }
+.addr-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1.5px solid var(--border, #e3e6ec);
+  border-radius: 10px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+.addr-card.addr-def { border-color: var(--primary, #003087); background: #f8faff; }
+.addr-main { flex: 1; min-width: 0; }
+.addr-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.addr-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--primary, #003087);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.addr-line { font-size: 13px; color: var(--text2, #6b7280); line-height: 1.6; }
+.addr-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.addr-form {
+  border: 1.5px dashed var(--border, #e3e6ec);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fafbfd;
+}
+
+/* ─── Preferencias de notificación (toggles) ─── */
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border, #e3e6ec);
+  cursor: pointer;
+}
+.pref-row:last-child { border-bottom: none; }
+.pref-text { flex: 1; min-width: 0; }
+.pref-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.pref-desc { font-size: 12px; color: var(--text2, #6b7280); line-height: 1.5; }
+.pref-divider { height: 8px; }
+
+.switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute; inset: 0;
+  background: #cdd3dd;
+  border-radius: 26px;
+  transition: background .2s;
+}
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  height: 20px; width: 20px;
+  left: 3px; top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+.switch input:checked + .slider { background: var(--green, #0a8a4a); }
+.switch input:checked + .slider::before { transform: translateX(20px); }
+
+/* ─── Seguridad ─── */
+.sec-card {
+  border: 1.5px solid var(--border, #e3e6ec);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.sec-head { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+
+/* ─── Mensajes ─── */
+.msg-threads { display: flex; flex-direction: column; }
+.msg-thread {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 6px;
+  border-bottom: 1px solid var(--border, #e3e6ec);
+  cursor: pointer;
+  transition: background .15s;
+}
+.msg-thread:hover { background: #f8f9fc; }
+.msg-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--primary, #003087);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 17px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.msg-thread-main { min-width: 0; flex: 1; }
+.msg-thread-name { font-size: 14px; font-weight: 700; }
+.msg-thread-last {
+  font-size: 12px; color: var(--text2, #6b7280);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.msg-panel { display: flex; flex-direction: column; }
+.msg-chat-head {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 14px; margin-bottom: 14px;
+  border-bottom: 1px solid var(--border, #e3e6ec);
+}
+.msg-body {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 50vh; overflow-y: auto;
+  padding: 4px 2px;
+}
+.msg-bubble {
+  max-width: 78%;
+  padding: 9px 13px 18px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  position: relative;
+  word-wrap: break-word;
+}
+.msg-me { align-self: flex-end; background: var(--primary, #003087); color: #fff; border-bottom-right-radius: 4px; }
+.msg-them { align-self: flex-start; background: #eef1f6; color: #1a1a2e; border-bottom-left-radius: 4px; }
+.msg-time { position: absolute; right: 10px; bottom: 4px; font-size: 9px; opacity: .65; }
+.msg-compose {
+  display: flex; gap: 8px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--border, #e3e6ec);
+}
+.msg-compose input {
+  flex: 1;
+  border: 1.5px solid var(--border, #e3e6ec);
+  border-radius: 22px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+.msg-compose input:focus { border-color: var(--primary, #003087); }
+.msg-compose .mrd-btn-accent { border-radius: 22px; padding: 10px 20px; }
+
+/* ─── Detalle de producto (paridad eBay) ─── */
+.detail-buybox {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 14px 0 4px;
+}
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qty-stepper button {
+  width: 32px; height: 32px;
+  border: 1.5px solid var(--border, #dde3ee);
+  background: #fff;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--primary, #003087);
+}
+.qty-stepper input {
+  width: 50px;
+  text-align: center;
+  border: 1.5px solid var(--border, #dde3ee);
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.qty-stepper input::-webkit-outer-spin-button,
+.qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.spec-table {
+  border: 1px solid var(--border, #dde3ee);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.spec-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border, #dde3ee);
+}
+.spec-row:last-child { border-bottom: none; }
+.spec-row:nth-child(odd) { background: #f8f9fc; }
+.spec-row span { color: var(--text2, #555); }
+
+.rev-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.rev-big { font-size: 36px; font-weight: 800; color: var(--primary, #003087); line-height: 1; }
+.rev-list { display: flex; flex-direction: column; gap: 12px; }
+.rev-card {
+  border: 1px solid var(--border, #dde3ee);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.rev-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.rev-name { font-size: 13px; font-weight: 700; }
+.rev-text { font-size: 13px; color: var(--text, #1a1a2e); line-height: 1.6; }
+.rev-when { font-size: 11px; color: var(--text2, #555); margin-top: 6px; }
+
+@media (max-width: 700px) {
+  .addr-card { flex-direction: column; }
+  .msg-bubble { max-width: 86%; }
+  .detail-buybox { gap: 10px; }
+}

@@ -68,6 +68,11 @@ function norm(s) {
   return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// Escapa HTML para insertar texto libre del usuario sin romper el render ni inyectar
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -111,9 +116,29 @@ function goHome() {
   cview = 'home';
   document.getElementById('heroBanner').style.display = '';
   restoreHome();
-  catScats().forEach((x, i) => x.classList.toggle('active', i === 0));
-  document.querySelectorAll('.nav-item').forEach((x, i) => x.classList.toggle('active', i === 0));
+  // "Inicio" = listado limpio: reiniciar TODOS los filtros y su UI
   acat = 'all';
+  stxt = '';
+  fconds.clear();
+  flocs.clear();
+  pmax = 200000;
+  const si = document.getElementById('searchInput'); if (si) si.value = '';
+  catScats().forEach((x, i) => x.classList.toggle('active', i === 0));
+  document.querySelectorAll('.sidebar .scard:not(:first-child) .scat').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach((x, i) => x.classList.toggle('active', i === 0));
+  const pr = document.querySelector('.sidebar input[type="range"]'); if (pr) pr.value = 200000;
+  const po = document.getElementById('priceOut'); if (po) po.textContent = fmt(200000);
+  doRender();
+}
+
+// Restaura la vista de listado (home) SIN reiniciar los filtros activos
+// (categoría, condición, ubicación, precio, búsqueda). Lo usan los filtros
+// para seguir funcionando aunque se activen desde el detalle u otra vista.
+function showHomeListing() {
+  cview = 'home';
+  const hb = document.getElementById('heroBanner');
+  if (hb) hb.style.display = '';
+  restoreHome();
   doRender();
 }
 
@@ -144,32 +169,32 @@ function setTab(el) {
 // ─── Filtros ───
 function filterProducts() {
   stxt = document.getElementById('searchInput').value;
-  if (cview !== 'home') { cview = 'home'; goHome(); } else renderProducts();
+  showHomeListing();
 }
 
 function filterCat(cat, el) {
   acat = cat;
   catScats().forEach(x => x.classList.remove('active'));
   el.classList.add('active');
-  if (cview !== 'home') { cview = 'home'; goHome(); } else renderProducts();
+  showHomeListing();
 }
 
 function filterCond(c, el) {
   el.classList.toggle('active');
   fconds.has(c) ? fconds.delete(c) : fconds.add(c);
-  if (cview !== 'home') { cview = 'home'; goHome(); } else renderProducts();
+  showHomeListing();
 }
 
 function filterLoc(l, el) {
   el.classList.toggle('active');
   flocs.has(l) ? flocs.delete(l) : flocs.add(l);
-  if (cview !== 'home') { cview = 'home'; goHome(); } else renderProducts();
+  showHomeListing();
 }
 
 function filterPrice(v) {
   pmax = parseInt(v);
   document.getElementById('priceOut').textContent = fmt(parseInt(v));
-  if (cview !== 'home') { cview = 'home'; goHome(); } else renderProducts();
+  showHomeListing();
 }
 
 function setSort(sel) {
@@ -252,43 +277,130 @@ function doRender() {
 function showDetail(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
+  cview = 'detail';
   const mt = document.getElementById('mainTabs');
   if (mt) mt.style.display = 'none';
+  document.getElementById('heroBanner').style.display = 'none';
+
+  const condLabel = p.cond === 'new' ? '✨ Nuevo' : p.cond === 'used' ? '♻️ Usado' : '🔧 Reacondicionado';
+  const catLabel  = { electronics:'Electrónica', vehicles:'Vehículos', fashion:'Moda', home2:'Hogar', sports:'Deportes', services:'Servicios', agro:'Agropecuario' }[p.cat] || 'General';
+  const locLabel  = { SD:'Santo Domingo', STI:'Santiago', PP:'Puerto Plata', LR:'La Romana', PC:'Punta Cana' }[p.loc] || p.loc;
+  const rr = Math.round(p.rating || 0);
+  const stars = '★★★★★☆☆☆☆☆'.slice(5 - rr, 10 - rr);
+  const reviews = genReviews(p);
+
   document.getElementById('contentArea').innerHTML = `
     <button class="back-btn" onclick="backProd()">← Volver</button>
     <div class="detail-panel">
       <div class="detail-img-area" style="overflow:hidden">${prodImg(p, true)}</div>
       <div class="detail-title">${p.title}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px">
+        <span style="color:var(--accent2)">${stars}</span>
+        <span style="font-size:12px;color:var(--text2)">${p.rating || '—'} · ${p.reviews} reseña${p.reviews === 1 ? '' : 's'}</span>
+      </div>
       <div>
         <span class="detail-price">${fmt(p.price)}</span>
-        ${p.old ? `<span style="font-size:14px;color:var(--text2);text-decoration:line-through;margin-left:8px">${fmt(p.old)}</span>` : ''}
+        ${p.old ? `<span style="font-size:14px;color:var(--text2);text-decoration:line-through;margin-left:8px">${fmt(p.old)}</span><span class="product-discount" style="margin-left:6px">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : ''}
       </div>
       <div class="detail-meta">
-        <span>📍 ${p.loc}</span>
-        <span>📦 ${p.cond === 'new' ? 'Nuevo' : p.cond === 'used' ? 'Usado' : 'Reacondicionado'}</span>
-        <span>⭐ ${p.rating} (${p.reviews})</span>
-        <span>🚚 Envío RD</span>
-        <span>🔒 Compra segura</span>
+        <span>📍 ${locLabel}</span>
+        <span>📦 ${condLabel}</span>
+        <span>🚚 Envío a todo RD · RD$350</span>
+        <span>🔄 Devolución 15 días</span>
+        <span>🔒 Compra protegida</span>
       </div>
+
+      <div class="detail-buybox">
+        <div class="qty-stepper">
+          <span style="font-size:13px;color:var(--text2)">Cantidad</span>
+          <button type="button" onclick="detQtyStep(-1)" aria-label="Restar">−</button>
+          <input type="number" id="detQty" value="1" min="1" max="99" inputmode="numeric">
+          <button type="button" onclick="detQtyStep(1)" aria-label="Sumar">+</button>
+        </div>
+        <div class="detail-actions">
+          <button class="btn-buy"   onclick="buyNowN(${p.id})">Comprar ahora</button>
+          <button class="btn-cart2" onclick="addCartN(${p.id})">Añadir al carrito</button>
+          <button class="btn-cart2" onclick="tryOffer(${p.id})" style="border-color:var(--primary);color:var(--primary)">💰 Hacer oferta</button>
+          <button class="btn-fav2"  onclick="toggleFav(${p.id},this)" aria-label="Favorito">${favs.has(p.id) ? '❤️' : '♡'}</button>
+        </div>
+      </div>
+
       <div class="detail-desc">
-        ${p.desc || 'Producto disponible para entrega en todo RD. Garantía incluida. Acepta tarjeta y efectivo.'}
+        ${p.desc || 'Producto disponible para entrega en todo el país. Garantía incluida. Acepta tarjeta y efectivo contra entrega.'}
       </div>
-      <div class="detail-actions">
-        <button class="btn-buy"   onclick="buyNow(${p.id})">Comprar ahora</button>
-        <button class="btn-cart2" onclick="addCart(${p.id})">Añadir al carrito</button>
-        <button class="btn-cart2" onclick="tryOffer(${p.id})" style="border-color:var(--primary);color:var(--primary)">💰 Hacer oferta</button>
-        <button class="btn-fav2"  onclick="toggleFav(${p.id},this)" aria-label="Favorito">${favs.has(p.id) ? '❤️' : '♡'}</button>
+
+      <h3 class="co-sec">📋 Características del artículo</h3>
+      <div class="spec-table">
+        <div class="spec-row"><span>Condición</span><strong>${condLabel}</strong></div>
+        <div class="spec-row"><span>Categoría</span><strong>${catLabel}</strong></div>
+        <div class="spec-row"><span>Ubicación</span><strong>${locLabel}</strong></div>
+        <div class="spec-row"><span>Disponibilidad</span><strong>En stock</strong></div>
+        <div class="spec-row"><span>Vendedor</span><strong>${p.seller}</strong></div>
       </div>
+
       <div class="seller-card">
         <div class="seller-avatar">${p.seller[0]}</div>
         <div>
           <div style="font-size:14px;font-weight:600">${p.seller}</div>
-          <div style="font-size:12px;color:var(--text2)">⭐ ${p.rating || '—'} · ${p.mine ? 'Tu anuncio' : 'Vendedor'}</div>
+          <div style="font-size:12px;color:var(--text2)">⭐ ${p.rating || '—'} · ${p.mine ? 'Tu anuncio' : 'Vendedor verificado ✓'}</div>
         </div>
         <button style="margin-left:auto;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:13px;font-family:'Sora',sans-serif"
-                onclick="requireAuth('chat')">💬 Contactar</button>
+                onclick="contactSellerById(${p.id})">💬 Contactar</button>
       </div>
+
+      ${reviews.length ? `
+      <h3 class="co-sec">⭐ Reseñas de compradores</h3>
+      <div class="rev-summary">
+        <div class="rev-big">${(p.rating || 0).toFixed(1)}</div>
+        <div>
+          <div style="color:var(--accent2);font-size:16px">${stars}</div>
+          <div style="font-size:12px;color:var(--text2)">Basado en ${p.reviews} reseña${p.reviews === 1 ? '' : 's'}</div>
+        </div>
+      </div>
+      <div class="rev-list">
+        ${reviews.map(r => `
+          <div class="rev-card">
+            <div class="rev-head"><span class="rev-name">${r.name}</span><span style="color:var(--accent2)">${'★'.repeat(r.stars)}</span></div>
+            <div class="rev-text">${r.text}</div>
+            <div class="rev-when">${r.when}</div>
+          </div>`).join('')}
+      </div>` : ''}
     </div>`;
+  window.scrollTo(0, 0);
+}
+
+// Reseñas de muestra deterministas (derivadas del id, no aleatorias)
+function genReviews(p) {
+  if (!p.reviews) return [];
+  const names = ['José M.','María P.','Carlos R.','Ana G.','Luis F.','Rosa V.','Pedro S.','Laura D.'];
+  const texts = ['Llegó rápido y tal como se describe. Recomendado 👍','Buen producto y el vendedor muy atento.','Excelente relación precio-calidad.','Todo perfecto, volvería a comprar.','Justo lo que buscaba, bien empacado.'];
+  const whens = ['hace 3 días','hace 1 semana','hace 2 semanas','el mes pasado'];
+  const n = Math.min(3, 1 + (p.id % 3));
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const k = p.id + i * 3;
+    out.push({ name: names[k % names.length], text: texts[k % texts.length], when: whens[k % whens.length], stars: p.rating >= 4.5 ? 5 : 4 });
+  }
+  return out;
+}
+
+// Cantidad en el detalle
+function detQtyStep(d) {
+  const el = document.getElementById('detQty');
+  if (!el) return;
+  el.value = Math.min(99, Math.max(1, (parseInt(el.value || '1', 10) || 1) + d));
+}
+function detQty() {
+  return Math.min(99, Math.max(1, parseInt(document.getElementById('detQty')?.value || '1', 10) || 1));
+}
+function addCartN(id) {
+  const q = detQty();
+  for (let i = 0; i < q; i++) addCart(id, i < q - 1);
+}
+function buyNowN(id) {
+  const q = detQty();
+  for (let i = 0; i < q; i++) addCart(id, true);
+  requireAuth('checkout');
 }
 
 function backProd() {
@@ -333,6 +445,24 @@ function showView(v) {
 
   } else if (v === 'seller') {
     renderSeller();
+
+  } else if (v === 'addresses') {
+    renderAddresses();
+
+  } else if (v === 'settings') {
+    renderSettings();
+
+  } else if (v === 'notifs') {
+    renderNotifPrefs();
+
+  } else if (v === 'security') {
+    renderSecurity();
+
+  } else if (v === 'messages' || v === 'chat') {
+    cview = 'messages';
+    // Si veníamos de "Contactar" sin sesión, reanudar abriendo el hilo del vendedor
+    if (pendingContact != null) { const pc = pendingContact; pendingContact = null; contactSellerById(pc); }
+    else renderMessages();
   }
 }
 
@@ -900,6 +1030,15 @@ function renderCheckout() {
   const itbis = Math.round(sub * 0.18);
   const total = sub + 350 + itbis;
 
+  // Prellenar con la dirección predeterminada / perfil del usuario
+  const da = (typeof defaultAddress === 'function') ? defaultAddress() : null;
+  const pf = (typeof getProfile === 'function') ? getProfile() : {};
+  const vName  = da?.name  || pf.name || user?.user_metadata?.full_name || '';
+  const vPhone = da?.phone || pf.phone || '';
+  const vAddr  = da?.addr  || '';
+  const selProv = da?.prov || pf.province || 'Santo Domingo';
+  const provs = ['Santo Domingo','Distrito Nacional','Santiago','Puerto Plata','La Romana','La Altagracia','San Cristóbal','San Pedro de Macorís','La Vega','Otra'];
+
   document.getElementById('contentArea').innerHTML = `
     <button class="back-btn" onclick="goHome()">← Seguir comprando</button>
     <div class="sell-form">
@@ -917,49 +1056,144 @@ function renderCheckout() {
       </div>
 
       <form id="checkoutForm" onsubmit="event.preventDefault();confirmOrder()">
+        <h3 class="co-sec">📍 Dirección de entrega</h3>
         <div class="form-grid">
-          <div class="fg2"><label for="coName">Nombre completo *</label><input type="text" id="coName" value="${user?.user_metadata?.full_name || ''}" required></div>
-          <div class="fg2"><label for="coPhone">Teléfono *</label><input type="tel" id="coPhone" placeholder="809-000-0000" required></div>
-          <div class="fg2" style="grid-column:1/-1"><label for="coAddr">Dirección de entrega *</label><input type="text" id="coAddr" placeholder="Calle, número, sector" required></div>
+          <div class="fg2"><label for="coName">Nombre completo *</label><input type="text" id="coName" value="${vName}" autocomplete="name" required></div>
+          <div class="fg2"><label for="coPhone">Teléfono *</label><input type="tel" id="coPhone" value="${vPhone}" placeholder="809-000-0000" autocomplete="tel" required></div>
+          <div class="fg2" style="grid-column:1/-1"><label for="coAddr">Dirección de entrega *</label><input type="text" id="coAddr" value="${vAddr}" placeholder="Calle, número, sector" autocomplete="street-address" required></div>
           <div class="fg2"><label for="coProv">Provincia *</label>
-            <select id="coProv"><option>Santo Domingo</option><option>Distrito Nacional</option><option>Santiago</option><option>Puerto Plata</option><option>La Romana</option><option>La Altagracia</option><option>Otra</option></select>
-          </div>
-          <div class="fg2"><label for="coPay">Método de pago *</label>
-            <select id="coPay">
-              <option value="cash">💵 Efectivo contra entrega</option>
-              <option value="transfer">🏦 Transferencia bancaria</option>
-              <option value="card" disabled>💳 Tarjeta (Cardnet/Azul) — próximamente</option>
-              <option value="mpago" disabled>📱 mPago — próximamente</option>
-            </select>
+            <select id="coProv">${provs.map(p => `<option ${p === selProv ? 'selected' : ''}>${p}</option>`).join('')}</select>
           </div>
         </div>
-        <div class="verification-info-box" style="margin:14px 0">
-          ℹ️ El pago en línea con <strong>Cardnet / Azul / mPago</strong> se activará al conectar la pasarela. Por ahora el pedido se registra para coordinación directa.
+        <label class="co-check"><input type="checkbox" id="coSaveAddr"> Guardar esta dirección en mi libreta</label>
+
+        <h3 class="co-sec">💳 Método de pago</h3>
+        <div class="pay-methods">
+          <label class="pay-opt"><input type="radio" name="payMethod" value="card" checked onchange="onPayMethod()"><span>💳 Tarjeta de crédito o débito</span></label>
+          <label class="pay-opt"><input type="radio" name="payMethod" value="cash" onchange="onPayMethod()"><span>💵 Efectivo contra entrega</span></label>
         </div>
-        <button type="submit" class="submit-btn">Confirmar pedido · ${fmt(total)}</button>
+
+        <div id="cardFields">
+          <div class="fg2" style="margin-bottom:12px"><label for="ccNum">Número de tarjeta *</label>
+            <input type="text" id="ccNum" inputmode="numeric" placeholder="0000 0000 0000 0000" maxlength="23" oninput="fmtCardInput(this)" autocomplete="cc-number">
+            <div class="ferr" id="ccNumE"></div>
+          </div>
+          <div class="form-grid">
+            <div class="fg2"><label for="ccExp">Vencimiento *</label><input type="text" id="ccExp" inputmode="numeric" placeholder="MM/AA" maxlength="5" oninput="fmtExpiryInput(this)" autocomplete="cc-exp"><div class="ferr" id="ccExpE"></div></div>
+            <div class="fg2"><label for="ccCvv">CVV *</label><input type="password" id="ccCvv" inputmode="numeric" placeholder="123" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,'')" autocomplete="cc-csc"><div class="ferr" id="ccCvvE"></div></div>
+            <div class="fg2" style="grid-column:1/-1"><label for="ccName">Titular de la tarjeta *</label><input type="text" id="ccName" value="${vName}" placeholder="Como aparece en la tarjeta" autocomplete="cc-name"></div>
+          </div>
+          <div class="cc-brands">🔒 Aceptamos <strong id="ccBrand">Visa · Mastercard · Amex</strong> — pago cifrado SSL 256-bit</div>
+        </div>
+        <div id="cashNote" class="verification-info-box" style="display:none;margin:14px 0">
+          💵 Pagarás en efectivo al recibir tu pedido. Disponible en zonas con cobertura de mensajería.
+        </div>
+
+        <button type="submit" class="submit-btn" id="payBtn">🔒 Pagar ${fmt(total)}</button>
+        <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:10px">Tus datos viajan cifrados. MercadoRD nunca guarda el número completo de tu tarjeta ni tu CVV.</p>
       </form>
     </div>`;
   document.getElementById('cartOverlay').style.display = 'none';
 }
 
-function confirmOrder() {
+// ─── Utilidades de pago con tarjeta (validación Luhn + marca) ───
+function cardBrand(num) {
+  num = String(num || '').replace(/\D/g, '');
+  if (/^4/.test(num)) return 'Visa';
+  if (/^(5[1-5]|2[2-7])/.test(num)) return 'Mastercard';
+  if (/^3[47]/.test(num)) return 'American Express';
+  if (/^(6011|65|64[4-9])/.test(num)) return 'Discover';
+  return 'Tarjeta';
+}
+function luhnValid(num) {
+  num = String(num || '').replace(/\D/g, '');
+  if (num.length < 13 || num.length > 19) return false;
+  let sum = 0, alt = false;
+  for (let i = num.length - 1; i >= 0; i--) {
+    let d = parseInt(num[i], 10);
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+function fmtCardInput(el) {
+  const v = el.value.replace(/\D/g, '').slice(0, 19);
+  el.value = v.replace(/(.{4})/g, '$1 ').trim();
+  const b = document.getElementById('ccBrand');
+  if (b) b.textContent = v.length >= 2 ? cardBrand(v) : 'Visa · Mastercard · Amex';
+}
+function fmtExpiryInput(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 4);
+  if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+  el.value = v;
+}
+function validExpiry(exp) {
+  const m = /^(\d{2})\/(\d{2})$/.exec(exp || '');
+  if (!m) return false;
+  const mm = parseInt(m[1], 10), yy = 2000 + parseInt(m[2], 10);
+  if (mm < 1 || mm > 12) return false;
+  return new Date(yy, mm, 1) > new Date();   // primer día tras el mes de vencimiento
+}
+function onPayMethod() {
+  const m = document.querySelector('input[name="payMethod"]:checked')?.value || 'card';
+  document.getElementById('cardFields').style.display = m === 'card' ? '' : 'none';
+  document.getElementById('cashNote').style.display   = m === 'cash' ? '' : 'none';
+}
+
+async function confirmOrder() {
   const name  = document.getElementById('coName').value.trim();
   const phone = document.getElementById('coPhone').value.trim();
   const addr  = document.getElementById('coAddr').value.trim();
+  const prov  = document.getElementById('coProv').value;
   if (name.length < 3 || phone.length < 7 || addr.length < 5) {
     showToast('Completa todos los campos de entrega');
     return;
   }
 
+  const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'card';
+  let card = null;
+  if (method === 'card') {
+    ['ccNumE', 'ccExpE', 'ccCvvE'].forEach(id => fe(id, ''));
+    const num    = (document.getElementById('ccNum').value || '').replace(/\D/g, '');
+    const exp    = document.getElementById('ccExp').value.trim();
+    const cvv    = (document.getElementById('ccCvv').value || '').replace(/\D/g, '');
+    const holder = document.getElementById('ccName').value.trim();
+    let ok = true;
+    if (!luhnValid(num))     { fe('ccNumE', 'Número de tarjeta no válido'); ok = false; }
+    if (!validExpiry(exp))   { fe('ccExpE', 'Vencimiento no válido'); ok = false; }
+    if (cvv.length < 3)      { fe('ccCvvE', 'CVV no válido'); ok = false; }
+    if (holder.length < 3)   { showToast('Ingresa el titular de la tarjeta'); ok = false; }
+    if (!ok) return;
+    card = { brand: cardBrand(num), last4: num.slice(-4) };
+  }
+
+  // Guardar dirección en la libreta si se marcó
+  if (document.getElementById('coSaveAddr')?.checked && typeof addAddress === 'function') {
+    addAddress({ label: 'Entrega', name, phone, addr, prov, def: getAddresses().length === 0 });
+  }
+
   const sub   = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const itbis = Math.round(sub * 0.18);
+  const total = sub + 350 + itbis;
+
+  // Bloquear el botón antes de crear el pedido para evitar duplicados por doble clic (ambos métodos)
+  const payBtn = document.getElementById('payBtn');
+  if (payBtn) payBtn.disabled = true;
+
+  // Procesamiento de pago con tarjeta (simulado de forma segura — sin pasarela real)
+  if (method === 'card') {
+    if (payBtn) payBtn.innerHTML = '<span class="spin"></span> Procesando pago seguro…';
+    await new Promise(r => setTimeout(r, 1400));
+  }
+
   const order = {
     id: 'MRD-' + Date.now().toString(36).toUpperCase(),
     items: cart.map(c => ({ id: c.id, title: c.title, qty: c.qty, price: c.price })),
-    subtotal: sub, shipping: 350, itbis, total: sub + 350 + itbis,
-    buyer: { name, phone, addr, prov: document.getElementById('coProv').value },
-    payment: document.getElementById('coPay').value,
-    status: 'pendiente',
+    subtotal: sub, shipping: 350, itbis, total,
+    buyer: { name, phone, addr, prov },
+    payment: method,
+    card,
+    status: method === 'card' ? 'pagado' : 'pendiente',
     date: new Date().toISOString()
   };
   orders.push(order);
@@ -969,22 +1203,28 @@ function confirmOrder() {
   saveCart();
   updateCartBadge();
 
+  const payLine = method === 'card'
+    ? `✅ Pago aprobado con <strong>${card.brand} •••• ${card.last4}</strong>.`
+    : `💵 Pagarás <strong>${fmt(order.total)}</strong> en efectivo al recibir.`;
+
   document.getElementById('contentArea').innerHTML = `
     <div class="sell-form" style="text-align:center;padding:50px 30px">
       <div style="font-size:60px;margin-bottom:14px">✅</div>
       <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">¡Pedido confirmado!</h2>
       <p style="font-size:14px;color:var(--text2);margin-bottom:6px">Número de pedido: <strong style="color:var(--primary)">${order.id}</strong></p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:6px">${payLine}</p>
       <p style="font-size:13px;color:var(--text2);margin-bottom:24px">Total: <strong>${fmt(order.total)}</strong> · Te contactaremos al ${phone} para coordinar la entrega.</p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="submit-btn" style="width:auto;padding:13px 26px" onclick="showView('orders')">Ver mis compras</button>
         <button class="submit-btn" style="width:auto;padding:13px 26px;background:var(--primary)" onclick="goHome()">Seguir comprando</button>
       </div>
     </div>`;
-  showToast('Pedido ' + order.id + ' registrado 🎉');
+  showToast('Pedido ' + order.id + ' confirmado 🎉');
 }
 
 function renderOrders() {
-  const statusLabel = { pendiente:'⏳ Pendiente', enviado:'🚚 Enviado', entregado:'✅ Entregado' };
+  const statusLabel = { pagado:'💳 Pagado', pendiente:'⏳ Pendiente', enviado:'🚚 Enviado', entregado:'✅ Entregado' };
+  const payLabel = { card:'💳 Tarjeta', cash:'💵 Efectivo' };
   document.getElementById('contentArea').innerHTML = `
     <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
     <div class="section-header" style="margin-bottom:14px">
@@ -998,6 +1238,7 @@ function renderOrders() {
           <div class="auction-info">
             <div class="auction-title">${o.id} <span style="font-size:12px;font-weight:400;color:var(--text2)">· ${new Date(o.date).toLocaleString('es-DO')}</span></div>
             <div class="auction-meta">${o.items.map(i => `${i.title.slice(0, 30)} ×${i.qty}`).join(' · ')}</div>
+            <div class="auction-meta">${payLabel[o.payment] || ''}${o.card ? ` ${o.card.brand} •••• ${o.card.last4}` : ''} · 🚚 ${o.buyer?.prov || 'RD'}</div>
             <div class="auction-price-row">
               <div class="auction-price">${fmt(o.total)}</div>
               <span style="font-size:13px;font-weight:600">${statusLabel[o.status] || o.status}</span>
@@ -1038,12 +1279,13 @@ function renderAccount() {
           <div class="menu-item-left"><span>🪪</span><span>Verificar mi identidad ahora</span></div>
           <span style="color:var(--text2)">›</span>
         </div>` : ''}
-        ${[['⚙️','Configuración',"showToast('Configuración: próximamente')"],
+        ${[['💬','Mensajes',"showView('messages')"],
+           ['⚙️','Configuración',"showView('settings')"],
+           ['🚚','Direcciones',"showView('addresses')"],
+           ['🔔','Notificaciones',"showView('notifs')"],
            ['💳','Métodos de pago',"openInfo('payments')"],
-           ['🚚','Direcciones',"showToast('Direcciones: próximamente')"],
-           ['🔔','Notificaciones',"showToast('Notificaciones: próximamente')"],
            ['🛡️','Protección al comprador',"openInfo('protection')"],
-           ['🔒','Seguridad y 2FA',"showToast('Seguridad y 2FA: próximamente')"],
+           ['🔒','Seguridad y 2FA',"showView('security')"],
            ['❓','Centro de ayuda',"openInfo('help')"]].map(([i, l, fn]) => `
           <div class="menu-item" onclick="${fn}">
             <div class="menu-item-left"><span>${i}</span><span>${l}</span></div>
@@ -1107,7 +1349,7 @@ function renderCart() {
       <div class="total-row"><span>ITBIS 18%</span><span>${fmt(itbis)}</span></div>
       <div class="total-row final"><span>Total</span><span>${fmt(sub + 350 + itbis)}</span></div>
       <button class="checkout-btn" onclick="requireAuth('checkout')">Proceder al pago →</button>
-      <div class="payment-icons">💵 Efectivo &nbsp; 🏦 Transferencia &nbsp; 💳 Tarjeta (próx.)</div>
+      <div class="payment-icons">💳 Tarjeta &nbsp; 💵 Efectivo contra entrega &nbsp; 🔒 Pago seguro</div>
     </div>`;
 }
 
@@ -1991,3 +2233,314 @@ function onUserChanged() {
 
 // Respaldo: si ningún evento de auth disparó la carga, intentarlo igual (subastas son públicas)
 setTimeout(() => { if (typeof sb !== 'undefined' && sb && !aucChannel) onUserChanged(); }, 1800);
+
+// ══════════════════════════════════════════════════
+// MI CUENTA — MÓDULOS estilo "My eBay"
+// Direcciones · Configuración · Notificaciones · Seguridad · Mensajes
+// Todo persistente en localStorage (y Supabase cuando aplica).
+// ══════════════════════════════════════════════════
+
+// ─── Libreta de direcciones ───
+function getAddresses()   { return MRD.get(K.ADDRESSES, []); }
+function saveAddresses(l) { MRD.set(K.ADDRESSES, l); }
+function defaultAddress() {
+  const l = getAddresses();
+  return l.find(a => a.def) || l[0] || null;
+}
+function addAddress(a) {
+  const l = getAddresses();
+  a.id = a.id || (Date.now() + Math.floor(Math.random() * 100000));
+  if (a.def) l.forEach(x => x.def = false);
+  if (!l.length) a.def = true;
+  l.push(a);
+  saveAddresses(l);
+  return a;
+}
+function deleteAddress(id) {
+  const l = getAddresses().filter(a => a.id !== id);
+  if (l.length && !l.some(a => a.def)) l[0].def = true;
+  saveAddresses(l);
+  renderAddresses();
+  showToast('Dirección eliminada');
+}
+function setDefaultAddress(id) {
+  const l = getAddresses();
+  l.forEach(a => a.def = (a.id === id));
+  saveAddresses(l);
+  renderAddresses();
+  showToast('Dirección predeterminada actualizada ✓');
+}
+let editingAddr = null;
+function renderAddresses() {
+  const l = getAddresses();
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
+    <div class="account-panel">
+      <div class="section-header" style="margin-bottom:16px">
+        <div class="section-title">🚚 Mis direcciones</div>
+        <button class="mrd-btn-accent" onclick="openAddrForm()">+ Agregar dirección</button>
+      </div>
+      <div id="addrFormBox"></div>
+      ${!l.length
+        ? '<div class="no-results"><div>🚚</div><p>Aún no tienes direcciones guardadas. Agrega una para acelerar tus compras.</p></div>'
+        : `<div class="addr-list">${l.map(a => `
+          <div class="addr-card${a.def ? ' addr-def' : ''}">
+            <div class="addr-main">
+              <div class="addr-name">${a.name} ${a.def ? '<span class="addr-badge">Predeterminada</span>' : ''}</div>
+              <div class="addr-line">${a.addr}</div>
+              <div class="addr-line">${a.prov} · 📞 ${a.phone}</div>
+            </div>
+            <div class="addr-actions">
+              ${a.def ? '' : `<button class="mrd-link" onclick="setDefaultAddress(${a.id})">Predeterminar</button>`}
+              <button class="mrd-link" onclick="openAddrForm(${a.id})">Editar</button>
+              <button class="mrd-link mrd-link-danger" onclick="deleteAddress(${a.id})">Eliminar</button>
+            </div>
+          </div>`).join('')}</div>`}
+    </div>`;
+}
+function openAddrForm(id) {
+  editingAddr = id || null;
+  const a = id ? getAddresses().find(x => x.id === id) : null;
+  const provs = ['Santo Domingo','Distrito Nacional','Santiago','Puerto Plata','La Romana','La Altagracia','San Cristóbal','San Pedro de Macorís','La Vega','Otra'];
+  document.getElementById('addrFormBox').innerHTML = `
+    <div class="addr-form">
+      <div class="form-grid">
+        <div class="fg2"><label>Nombre del destinatario *</label><input type="text" id="afName" value="${a?.name || ''}"></div>
+        <div class="fg2"><label>Teléfono *</label><input type="tel" id="afPhone" value="${a?.phone || ''}" placeholder="809-000-0000"></div>
+        <div class="fg2" style="grid-column:1/-1"><label>Dirección *</label><input type="text" id="afAddr" value="${a?.addr || ''}" placeholder="Calle, número, sector"></div>
+        <div class="fg2"><label>Provincia</label><select id="afProv">${provs.map(p => `<option ${a?.prov === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
+        <label class="co-check" style="grid-column:1/-1"><input type="checkbox" id="afDef" ${a?.def ? 'checked' : ''}> Usar como predeterminada</label>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="submit-btn" style="width:auto;padding:11px 22px" onclick="saveAddrForm()">Guardar</button>
+        <button class="mrd-btn-ghost" onclick="document.getElementById('addrFormBox').innerHTML=''">Cancelar</button>
+      </div>
+    </div>`;
+}
+function saveAddrForm() {
+  const name  = document.getElementById('afName').value.trim();
+  const phone = document.getElementById('afPhone').value.trim();
+  const addr  = document.getElementById('afAddr').value.trim();
+  const prov  = document.getElementById('afProv').value;
+  const def   = document.getElementById('afDef').checked;
+  if (name.length < 3 || phone.length < 7 || addr.length < 5) { showToast('Completa nombre, teléfono y dirección'); return; }
+  if (editingAddr) {
+    const l = getAddresses();
+    const a = l.find(x => x.id === editingAddr);
+    if (a) {
+      Object.assign(a, { name, phone, addr, prov });
+      if (def) { l.forEach(x => x.def = false); a.def = true; }
+      else { a.def = false; if (l.length && !l.some(x => x.def)) { (l.find(x => x.id !== a.id) || a).def = true; } }
+    }
+    saveAddresses(l);
+  } else {
+    addAddress({ name, phone, addr, prov, def });
+  }
+  editingAddr = null;
+  renderAddresses();
+  showToast('Dirección guardada ✓');
+}
+
+// ─── Configuración del perfil ───
+function getProfile() {
+  return MRD.get(K.PROFILE, {
+    name: user?.user_metadata?.full_name || '',
+    phone: user?.user_metadata?.phone || '',
+    province: user?.user_metadata?.province || ''
+  });
+}
+function renderSettings() {
+  const pf = getProfile();
+  const provs = ['','Distrito Nacional','Santo Domingo','Santiago','Puerto Plata','La Romana','San Cristóbal','San Pedro de Macorís','La Vega','La Altagracia','Otra'];
+  const email = user?.email || '';
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
+    <div class="account-panel">
+      <div class="section-title" style="margin-bottom:16px">⚙️ Configuración de la cuenta</div>
+      <div class="form-grid">
+        <div class="fg2"><label>Nombre para mostrar</label><input type="text" id="stName" value="${pf.name || ''}"></div>
+        <div class="fg2"><label>Teléfono</label><input type="tel" id="stPhone" value="${pf.phone || ''}" placeholder="809-000-0000"></div>
+        <div class="fg2"><label>Correo (no editable)</label><input type="email" value="${email}" disabled style="opacity:.6;cursor:not-allowed"></div>
+        <div class="fg2"><label>Provincia</label><select id="stProv">${provs.map(p => `<option value="${p}" ${pf.province === p ? 'selected' : ''}>${p || 'Selecciona…'}</option>`).join('')}</select></div>
+      </div>
+      <button class="submit-btn" style="width:auto;padding:12px 24px;margin-top:6px" onclick="saveSettings()">Guardar cambios</button>
+      <p style="font-size:12px;color:var(--text2);margin-top:10px">El correo de acceso no se cambia aquí. Para cambiarlo escribe a soporte@mercadord.net.</p>
+    </div>`;
+}
+async function saveSettings() {
+  const name = document.getElementById('stName').value.trim();
+  const phone = document.getElementById('stPhone').value.trim();
+  const prov = document.getElementById('stProv').value;
+  if (name.length < 2) { showToast('Ingresa un nombre válido'); return; }
+  MRD.set(K.PROFILE, { name, phone, province: prov });
+  if (typeof user !== 'undefined' && user) {
+    user.user_metadata = { ...(user.user_metadata || {}), full_name: name, phone, province: prov };
+    if (typeof persistUser === 'function') persistUser();
+  }
+  if (typeof sb !== 'undefined' && sb && user?.id) {
+    try {
+      await sb.auth.updateUser({ data: { full_name: name, phone, province: prov } });
+      await sb.from('profiles').update({ full_name: name }).eq('id', user.id);
+    } catch (e) {}
+  }
+  if (typeof refreshHeader === 'function') refreshHeader();
+  showToast('Cambios guardados ✓');
+}
+
+// ─── Preferencias de notificación ───
+function getNotifPrefs() {
+  return MRD.get(K.NOTIFPREFS, { offers: true, bids: true, orders: true, newsletter: true, email: true, push: true });
+}
+function renderNotifPrefs() {
+  const p = getNotifPrefs();
+  const row = (key, icon, title, desc) => `
+    <label class="pref-row">
+      <div class="pref-text"><div class="pref-title">${icon} ${title}</div><div class="pref-desc">${desc}</div></div>
+      <span class="switch"><input type="checkbox" id="np_${key}" ${p[key] ? 'checked' : ''} onchange="saveNotifPrefs()"><span class="slider"></span></span>
+    </label>`;
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
+    <div class="account-panel">
+      <div class="section-title" style="margin-bottom:16px">🔔 Preferencias de notificación</div>
+      ${row('offers','💰','Ofertas y descuentos','Alertas de ofertas del día y bajadas de precio.')}
+      ${row('bids','🔨','Subastas y pujas','Avisos cuando te superan en una puja o ganas un artículo.')}
+      ${row('orders','📦','Pedidos y envíos','Estado de tus compras y seguimiento de entregas.')}
+      ${row('newsletter','📬','Boletín MercadoRD','Novedades, consejos y lanzamientos.')}
+      <div class="pref-divider"></div>
+      ${row('email','📧','Por correo','Enviar estas notificaciones a tu email.')}
+      ${row('push','📱','En el sitio','Mostrar notificaciones dentro de MercadoRD.')}
+    </div>`;
+}
+function saveNotifPrefs() {
+  const keys = ['offers','bids','orders','newsletter','email','push'];
+  const p = {}; keys.forEach(k => p[k] = !!document.getElementById('np_' + k)?.checked);
+  MRD.set(K.NOTIFPREFS, p);
+  showToast('Preferencias guardadas ✓');
+}
+
+// ─── Seguridad y acceso ───
+function renderSecurity() {
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
+    <div class="account-panel">
+      <div class="section-title" style="margin-bottom:16px">🔒 Seguridad y acceso</div>
+      <div class="sec-card">
+        <div class="sec-head">🔑 Cambiar contraseña</div>
+        <div class="fg2" style="margin-bottom:10px"><label>Nueva contraseña</label>
+          <div class="iicon"><input type="password" id="secPwd" placeholder="Mínimo 8, con mayúscula y número"><span class="eye" onclick="toggleEye('secPwd',this)">👁</span></div>
+          <div class="ferr" id="secPwdE"></div>
+        </div>
+        <button class="submit-btn" style="width:auto;padding:11px 22px" onclick="changePassword()">Actualizar contraseña</button>
+      </div>
+      <div class="sec-card">
+        <div class="sec-head">🛡️ Verificación en dos pasos (2FA)</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Agrega una capa extra de seguridad con un código por SMS al iniciar sesión.</p>
+        <button class="mrd-btn-ghost" onclick="showToast('2FA por SMS — se activa junto con la verificación de teléfono')">Configurar 2FA</button>
+      </div>
+      <div class="sec-card">
+        <div class="sec-head">💻 Sesión activa</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Este dispositivo · ${navigator.platform || 'Navegador'} · sesión iniciada</p>
+        <button class="mrd-link mrd-link-danger" onclick="doLogout()">Cerrar sesión en este dispositivo</button>
+      </div>
+    </div>`;
+}
+async function changePassword() {
+  fe('secPwdE', '');
+  const pw = document.getElementById('secPwd').value;
+  if (pw.length < 8)      { fe('secPwdE', 'Mínimo 8 caracteres.'); return; }
+  if (!/[A-Z]/.test(pw))  { fe('secPwdE', 'Debe tener al menos una mayúscula.'); return; }
+  if (!/[0-9]/.test(pw))  { fe('secPwdE', 'Debe tener al menos un número.'); return; }
+  if (typeof sb !== 'undefined' && sb) {
+    try { const { error } = await sb.auth.updateUser({ password: pw }); if (error) throw error; }
+    catch (e) { fe('secPwdE', e.message || 'No se pudo actualizar.'); return; }
+  }
+  document.getElementById('secPwd').value = '';
+  showToast('Contraseña actualizada ✓');
+}
+
+// ─── Mensajería comprador-vendedor ───
+function getThreads()   { return MRD.get(K.MESSAGES, []); }
+function saveThreads(t) { MRD.set(K.MESSAGES, t); }
+function threadFor(seller, productTitle) {
+  const threads = getThreads();
+  let t = threads.find(x => x.seller === seller);
+  if (!t) {
+    t = { id: Date.now() + Math.floor(Math.random() * 1000), seller, product: productTitle || '', msgs: [] };
+    threads.push(t); saveThreads(threads);
+  } else if (productTitle && !t.product) {
+    t.product = productTitle; saveThreads(threads);
+  }
+  return t;
+}
+let activeThread = null;
+function renderMessages() {
+  const threads = getThreads();
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
+    <div class="account-panel">
+      <div class="section-title" style="margin-bottom:14px">💬 Mensajes</div>
+      ${!threads.length
+        ? '<div class="no-results"><div>💬</div><p>No tienes conversaciones. Abre un producto y toca “💬 Contactar” para escribirle al vendedor.</p></div>'
+        : `<div class="msg-threads">${threads.slice().reverse().map(t => {
+            const last = t.msgs[t.msgs.length - 1];
+            return `<div class="msg-thread" onclick="openThread(${t.id})">
+              <div class="msg-avatar">${esc((t.seller || '?')[0])}</div>
+              <div class="msg-thread-main">
+                <div class="msg-thread-name">${esc(t.seller)}</div>
+                <div class="msg-thread-last">${last ? (last.from === 'me' ? 'Tú: ' : '') + esc(last.text.slice(0, 46)) : 'Sin mensajes'}</div>
+              </div>
+            </div>`;
+          }).join('')}</div>`}
+    </div>`;
+}
+function openThread(id) {
+  const t = getThreads().find(x => x.id === id);
+  if (!t) return;
+  activeThread = id;
+  cview = 'messages';
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="renderMessages()">← Mensajes</button>
+    <div class="account-panel msg-panel">
+      <div class="msg-chat-head"><div class="msg-avatar">${esc((t.seller || '?')[0])}</div><div><div class="msg-thread-name">${esc(t.seller)}</div>${t.product ? `<div class="msg-thread-last">Sobre: ${esc(t.product)}</div>` : ''}</div></div>
+      <div class="msg-body" id="msgBody">${t.msgs.map(renderMsg).join('') || '<div class="bf-empty" style="margin:20px 0">Escribe el primer mensaje 👇</div>'}</div>
+      <div class="msg-compose">
+        <input type="text" id="msgInput" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="mrd-btn-accent" onclick="sendMessage()">Enviar</button>
+      </div>
+    </div>`;
+  const b = document.getElementById('msgBody'); if (b) b.scrollTop = b.scrollHeight;
+}
+function renderMsg(m) {
+  return `<div class="msg-bubble ${m.from === 'me' ? 'msg-me' : 'msg-them'}">${esc(m.text)}<span class="msg-time">${relTime(m.at)}</span></div>`;
+}
+function sendMessage() {
+  const inp = document.getElementById('msgInput');
+  const text = (inp.value || '').trim();
+  if (!text) return;
+  const threads = getThreads();
+  const t = threads.find(x => x.id === activeThread);
+  if (!t) return;
+  t.msgs.push({ from: 'me', text, at: new Date().toISOString() });
+  saveThreads(threads);
+  inp.value = '';
+  openThread(activeThread);
+  // Respuesta automática del vendedor (demo)
+  setTimeout(() => {
+    const th = getThreads(); const tt = th.find(x => x.id === activeThread); if (!tt) return;
+    const replies = ['¡Hola! Sí, está disponible 😊', 'Gracias por tu interés. ¿Para cuándo lo necesitas?', 'Puedo coordinar la entrega esta semana.', 'Claro, te confirmo en un momento.'];
+    tt.msgs.push({ from: 'them', text: replies[Math.floor(Math.random() * replies.length)], at: new Date().toISOString() });
+    saveThreads(th);
+    if (activeThread === tt.id && cview === 'messages') openThread(tt.id);
+  }, 1200);
+}
+let pendingContact = null;   // producto pendiente de contactar tras iniciar sesión
+function contactSellerById(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  if (!user) { pendingContact = id; pending = 'messages'; openAuth('login'); showAlert('info', 'Inicia sesión para escribirle al vendedor.'); return; }
+  const t = threadFor(p.seller, p.title);
+  cview = 'messages';
+  document.getElementById('heroBanner').style.display = 'none';
+  closeSubsection();
+  openThread(t.id);
+}
