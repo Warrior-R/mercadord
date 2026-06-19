@@ -28,7 +28,9 @@ create policy "subastas: crear propias" on public.auctions for insert
   );
 
 -- ─── Revocar el batch de cierre a usuarios (solo cron/service_role) ───
-revoke execute on function public.close_ended_auctions() from anon, authenticated;
+-- Incluir PUBLIC: las funciones tienen un grant por defecto a PUBLIC que anon/authenticated
+-- heredan; revocar solo de anon/authenticated NO basta. pg_cron corre como postgres (lo ejecuta igual).
+revoke execute on function public.close_ended_auctions() from public, anon, authenticated;
 
 -- ─── CHECK de dominio (NOT VALID) ───
 do $$ begin
