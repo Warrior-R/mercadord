@@ -54,6 +54,17 @@ function saveOrders()    { MRD.set(K.ORDERS, orders); }
 function saveUserState() { MRD.set(K.USERSTATE, userState); }
 function saveUserProducts() { MRD.set(K.PRODUCTS, userProducts); }
 
+// ─── Catálogo compartido en Supabase (C1) ───
+// id local numérico ESTABLE derivado del uuid (djb2): evita reescribir los ~19 onclick
+// que asumen ids numéricos (showDetail/addCart/toggleFav/...); el uuid real va en p.sbId.
+const CAT_ICONS = { electronics:'📱', vehicles:'🚗', fashion:'👗', home2:'🏠', sports:'⚽', services:'🔧', agro:'🌿' };
+function catIcon(cat) { return CAT_ICONS[cat] || '📦'; }
+function hashId(s) {
+  let h = 5381; s = String(s);
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return Math.abs(h) + 1000000;   // por encima de los ids demo (1-22)
+}
+
 let verificationData = {
   docType: null, docNumber: null, fullName: null,
   docFile: null, faceCapture: null, timestamp: null
@@ -876,7 +887,7 @@ function renderSeller() {
         <span class="alink" onclick="openVerification('sell')">Verificar ahora →</span>
       </div>` : ''}
       <div class="stats-grid">
-        <div class="stat-box" onclick="showView('myads')"><div style="font-size:24px;margin-bottom:4px">🏷️</div><div style="font-size:11px;color:var(--text2)">Anuncios activos</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${userProducts.length}</div></div>
+        <div class="stat-box" onclick="showView('myads')"><div style="font-size:24px;margin-bottom:4px">🏷️</div><div style="font-size:11px;color:var(--text2)">Anuncios activos</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${products.filter(p=>p.mine).length}</div></div>
         <div class="stat-box"><div style="font-size:24px;margin-bottom:4px">💵</div><div style="font-size:11px;color:var(--text2)">Valor publicado</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${fmt(totalVal)}</div></div>
         <div class="stat-box"><div style="font-size:24px;margin-bottom:4px">👁</div><div style="font-size:11px;color:var(--text2)">Visitas (30 días)</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${views}</div></div>
       </div>
@@ -1084,8 +1095,26 @@ function publishProduct() {
 
   // Edición: actualiza el anuncio existente in-place (conserva id, createdAt y posición)
   if (sellEditId != null) {
-    const patch = { title, price, icon: catIcons[cat] || '📦', img: sellImgData, cat, cond, loc, muni, desc };
     const ex = products.find(p => p.id === sellEditId);
+    // Producto en Supabase: actualizar en la BD (visible para todos)
+    if (ex && ex._db && typeof sb !== 'undefined' && sb && user?.id) {
+      (async () => {
+        try {
+          const { error } = await sb.from('products').update({
+            title, description: desc, price, category: cat, condition: cond,
+            location: loc, image_url: sellImgData || ex.img || null
+          }).eq('id', ex.sbId);
+          if (error) throw error;
+          sellEditId = null;
+          await loadProductsDB();
+          showToast('Anuncio actualizado ✓');
+          showView('myads');
+        } catch (e) { showToast('No se pudo actualizar: ' + (e.message || e)); }
+      })();
+      return;
+    }
+    // Local (demo)
+    const patch = { title, price, icon: catIcons[cat] || '📦', img: sellImgData, cat, cond, loc, muni, desc };
     const u  = userProducts.find(p => p.id === sellEditId);
     if (ex) Object.assign(ex, patch);
     if (u && u !== ex) Object.assign(u, patch);
@@ -1096,6 +1125,24 @@ function publishProduct() {
     return;
   }
 
+  // Precio fijo / Mejor oferta → Supabase (visible para TODOS los usuarios, no solo este navegador)
+  if (typeof sb !== 'undefined' && sb && user?.id) {
+    (async () => {
+      try {
+        const { error } = await sb.from('products').insert({
+          user_id: user.id, seller_name: sellerName, title, description: desc,
+          price, category: cat, condition: cond, location: loc, image_url: sellImgData || null
+        });
+        if (error) throw error;
+        await loadProductsDB();
+        showToast('¡Anuncio publicado! 🎉 Ya lo ven todos los usuarios');
+        goHome();
+      } catch (e) { showToast('No se pudo publicar: ' + (e.message || e)); }
+    })();
+    return;
+  }
+
+  // Modo demo (local): el anuncio solo es visible en este navegador
   const np = {
     id: Date.now(),
     title, price, old: null,
@@ -1125,6 +1172,21 @@ function editAd(id) {
 }
 
 function deleteAd(id) {
+  const prod = products.find(x => x.id === id);
+  // Producto en Supabase: borrar en la BD
+  if (prod && prod._db && typeof sb !== 'undefined' && sb && user?.id) {
+    (async () => {
+      try {
+        const { error } = await sb.from('products').delete().eq('id', prod.sbId);
+        if (error) throw error;
+        await loadProductsDB();
+        showToast('Anuncio eliminado');
+        renderMyAds();
+      } catch (e) { showToast('No se pudo eliminar: ' + (e.message || e)); }
+    })();
+    return;
+  }
+  // Local (demo)
   userProducts = userProducts.filter(p => p.id !== id);
   const idx = products.findIndex(p => p.id === id);
   if (idx >= 0) products.splice(idx, 1);
@@ -1134,15 +1196,16 @@ function deleteAd(id) {
 }
 
 function renderMyAds() {
+  const mine = products.filter(p => p.mine);   // incluye anuncios en Supabase (_db) + locales (demo)
   document.getElementById('contentArea').innerHTML = `
     <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
     <div class="section-header" style="margin-bottom:14px">
-      <div class="section-title">🏷️ Mis anuncios (${userProducts.length})</div>
+      <div class="section-title">🏷️ Mis anuncios (${mine.length})</div>
       <button onclick="requireAuth('sell')" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Publicar</button>
     </div>
-    ${!userProducts.length
+    ${!mine.length
       ? '<div class="no-results"><div>🏷️</div><p>Aún no has publicado anuncios.</p></div>'
-      : userProducts.map(p => `
+      : mine.map(p => `
         <div class="auction-card">
           <div class="auction-img" style="overflow:hidden">${prodImg(p)}</div>
           <div class="auction-info">
@@ -1342,6 +1405,19 @@ async function confirmOrder() {
   orders.push(order);
   saveOrders();
 
+  // C2: persistir el pedido en Supabase (best-effort) → registro server-side + historial cross-device.
+  // No bloquea la confirmación si falla (pago es simulado); el pedido local sigue mostrándose.
+  if (typeof sb !== 'undefined' && sb && user?.id) {
+    try {
+      const { error } = await sb.from('orders').insert({
+        code: order.id, buyer_id: user.id, items: order.items,
+        subtotal: sub, shipping: 350, itbis, total,
+        buyer_info: order.buyer, payment: method, status: order.status
+      });
+      if (error) throw error;
+    } catch (e) { console.warn('No se pudo guardar el pedido en el servidor:', e.message || e); }
+  }
+
   cart = [];
   saveCart();
   updateCartBadge();
@@ -1413,7 +1489,7 @@ function renderAccount() {
       </div>
       <div class="stats-grid">
         <div class="stat-box" onclick="showView('orders')"><div style="font-size:24px;margin-bottom:4px">📦</div><div style="font-size:11px;color:var(--text2)">Compras</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${orders.length}</div></div>
-        <div class="stat-box" onclick="showView('myads')"><div style="font-size:24px;margin-bottom:4px">🏷️</div><div style="font-size:11px;color:var(--text2)">Anuncios</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${userProducts.length}</div></div>
+        <div class="stat-box" onclick="showView('myads')"><div style="font-size:24px;margin-bottom:4px">🏷️</div><div style="font-size:11px;color:var(--text2)">Anuncios</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${products.filter(p=>p.mine).length}</div></div>
         <div class="stat-box" onclick="showView('favs')"><div style="font-size:24px;margin-bottom:4px">❤️</div><div style="font-size:11px;color:var(--text2)">Favoritos</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${favs.size}</div></div>
       </div>
       <div class="menu-list">
@@ -2258,6 +2334,57 @@ async function loadAuctionsDB() {
   } catch (e) { console.warn('loadAuctionsDB', e); }
 }
 
+// ─── C1: cargar catálogo de productos COMPARTIDO desde Supabase ───
+// Antes los anuncios de precio fijo solo vivían en el localStorage de quien publicaba
+// (invisibles para los demás). Ahora se leen de la tabla `products` (RLS: ver todos).
+async function loadProductsDB() {
+  if (typeof sb === 'undefined' || !sb) return;
+  try {
+    const { data, error } = await sb.from('products').select('*')
+      .order('created_at', { ascending: false }).limit(100);
+    if (error || !data) return;
+    const uid = (typeof user !== 'undefined' && user) ? user.id : null;
+    // Quitar los productos previamente cargados de la BD (recarga limpia), conservando demo + locales
+    for (let i = products.length - 1; i >= 0; i--) if (products[i]._db) products.splice(i, 1);
+    data.forEach(r => {
+      products.push({
+        id: hashId(r.id), _db: true, sbId: r.id,
+        title: r.title, price: Number(r.price), old: r.old_price != null ? Number(r.old_price) : null,
+        icon: catIcon(r.category), img: r.image_url || null,
+        cat: r.category, cond: r.condition || 'new', loc: r.location || 'RD', muni: '',
+        desc: r.description || '', rating: Number(r.rating) || 0, reviews: r.reviews || 0,
+        seller: r.seller_name || 'Vendedor', badge: 'new',
+        mine: !!(r.user_id && uid && r.user_id === uid),
+        createdAt: r.created_at
+      });
+    });
+    if (typeof cview !== 'undefined' && cview === 'home') {
+      if (typeof doRender === 'function') doRender();
+      if (typeof renderCarousel === 'function') renderCarousel();
+    }
+  } catch (e) { console.warn('loadProductsDB', e); }
+}
+
+// ─── C2: cargar pedidos del usuario desde Supabase (historial cross-device) ───
+async function loadOrdersDB() {
+  if (typeof sb === 'undefined' || !sb || !(typeof user !== 'undefined' && user && user.id)) return;
+  try {
+    const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+    if (error || !data) return;
+    const mapped = data.map(r => ({
+      id: r.code || r.id, items: r.items || [],
+      subtotal: r.subtotal, shipping: r.shipping, itbis: r.itbis, total: r.total,
+      buyer: r.buyer_info || {}, payment: r.payment, card: null,
+      status: r.status, date: r.created_at, _db: true
+    }));
+    // La BD es la fuente para el usuario; conservar locales no duplicados (por código)
+    const codes = new Set(mapped.map(o => o.id));
+    const localOnly = orders.filter(o => !codes.has(o.id));
+    orders.splice(0, orders.length, ...mapped, ...localOnly);
+    if (typeof cview !== 'undefined' && cview === 'orders' && typeof renderOrders === 'function') renderOrders();
+  } catch (e) { console.warn('loadOrdersDB', e); }
+}
+
 // Refrescar una sola subasta (tras un rechazo por puja baja, etc.)
 async function refreshAuction(id) {
   if (typeof sb === 'undefined' || !sb) return;
@@ -2579,10 +2706,12 @@ document.addEventListener('click', e => {
 function onUserChanged() {
   if (typeof sb === 'undefined' || !sb) return;
   loadAuctionsDB();
+  loadProductsDB();
   subscribeAuctions();
   if (typeof user !== 'undefined' && user && user.id) {
     loadNotifications();
     subscribeNotifications();
+    loadOrdersDB();
   } else {
     unsubscribeNotifications();
   }

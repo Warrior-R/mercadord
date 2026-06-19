@@ -113,6 +113,7 @@ create policy "verificacion: leer propia"  on public.verifications for select us
 create table if not exists public.products (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid references auth.users(id) on delete cascade,
+  seller_name text,                       -- denormalizado (RLS de profiles no deja leer nombres ajenos)
   title       text not null,
   description text,
   price       numeric(12,2) not null check (price > 0),
@@ -133,6 +134,9 @@ drop policy if exists "productos: ver todos"        on public.products;
 drop policy if exists "productos: crear propios"    on public.products;
 drop policy if exists "productos: editar propios"   on public.products;
 drop policy if exists "productos: eliminar propios" on public.products;
+-- Idempotente: añade seller_name si la tabla products ya existía sin esa columna
+alter table public.products add column if not exists seller_name text;
+
 create policy "productos: ver todos"        on public.products for select using (true);
 create policy "productos: crear propios"    on public.products for insert with check (auth.uid() = user_id);
 create policy "productos: editar propios"   on public.products for update using (auth.uid() = user_id);
