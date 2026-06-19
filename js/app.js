@@ -18,6 +18,7 @@ let userProducts = MRD.get(K.PRODUCTS, []);
 userProducts.forEach(p => { if (!products.find(x => x.id === p.id)) products.push(p); });
 
 let orders = MRD.get(K.ORDERS, []);
+let sales  = [];   // ventas del usuario (líneas de pedido donde es vendedor), cargadas de Supabase
 
 // ─── Estado de subastas: pujas y hora de cierre persisten entre recargas ───
 // Las subastas publicadas por el usuario se guardan como objetos completos
@@ -489,6 +490,10 @@ function showView(v) {
   } else if (v === 'myads') {
     renderMyAds();
 
+  } else if (v === 'sales') {
+    renderSales();
+    loadSalesDB();
+
   } else if (v === 'account') {
     renderAccount();
 
@@ -827,7 +832,7 @@ function acceptCounter(price) {
 
 function addOfferToCart(p, price) {
   cart = cart.filter(c => c.id !== p.id);
-  cart.push({ id: p.id, title: p.title + ' (oferta aceptada)', price, icon: p.icon, img: p.img || null, qty: 1 });
+  cart.push({ id: p.id, sbId: p.sbId || null, title: p.title + ' (oferta aceptada)', price, icon: p.icon, img: p.img || null, qty: 1 });
   saveCart();
   updateCartBadge();
 }
@@ -1392,29 +1397,51 @@ async function confirmOrder() {
     await new Promise(r => setTimeout(r, 1400));
   }
 
+  // Si hay sesión, el SERVIDOR recalcula precios y totales (create_order, anti-manipulación)
+  // a partir de la tabla products, crea las líneas con vendedor y devuelve el código canónico.
+  // Sin sesión / modo demo: pedido local con los totales calculados en el cliente.
+  const payloadItems = cart.map(c => ({ sb: c.sbId || null, t: c.title, q: c.qty, p: c.price }));
+  let code = 'MRD-' + Date.now().toString(36).toUpperCase();
+  let oSub = sub, oShip = 350, oItbis = itbis, oTotal = total;
+  let oStatus = method === 'card' ? 'pagado' : 'pendiente';
+  let serverOk = false;
+
+  if (typeof sb !== 'undefined' && sb && user?.id) {
+    try {
+      const { data, error } = await sb.rpc('create_order', {
+        p_items: payloadItems, p_buyer: { name, phone, addr, prov }, p_payment: method
+      });
+      if (error) throw error;
+      if (data && data.code) {
+        code = data.code; oSub = Number(data.subtotal); oShip = Number(data.shipping);
+        oItbis = Number(data.itbis); oTotal = Number(data.total); oStatus = data.status || oStatus;
+        serverOk = true;
+      }
+    } catch (e) { console.warn('create_order falló, usando pedido local:', e.message || e); }
+  }
+
   const order = {
-    id: 'MRD-' + Date.now().toString(36).toUpperCase(),
+    id: code,
     items: cart.map(c => ({ id: c.id, title: c.title, qty: c.qty, price: c.price })),
-    subtotal: sub, shipping: 350, itbis, total,
+    subtotal: oSub, shipping: oShip, itbis: oItbis, total: oTotal,
     buyer: { name, phone, addr, prov },
     payment: method,
     card,
-    status: method === 'card' ? 'pagado' : 'pendiente',
+    status: oStatus,
     date: new Date().toISOString()
   };
   orders.push(order);
   saveOrders();
 
-  // C2: persistir el pedido en Supabase (best-effort) → registro server-side + historial cross-device.
-  // No bloquea la confirmación si falla (pago es simulado); el pedido local sigue mostrándose.
-  if (typeof sb !== 'undefined' && sb && user?.id) {
+  // Respaldo: si había sesión pero el RPC no estaba disponible (ventana de despliegue),
+  // registrar el pedido por inserción directa para no perder el historial server-side.
+  if (typeof sb !== 'undefined' && sb && user?.id && !serverOk) {
     try {
-      const { error } = await sb.from('orders').insert({
+      await sb.from('orders').insert({
         code: order.id, buyer_id: user.id, items: order.items,
-        subtotal: sub, shipping: 350, itbis, total,
+        subtotal: oSub, shipping: oShip, itbis: oItbis, total: oTotal,
         buyer_info: order.buyer, payment: method, status: order.status
       });
-      if (error) throw error;
     } catch (e) { console.warn('No se pudo guardar el pedido en el servidor:', e.message || e); }
   }
 
@@ -1490,6 +1517,7 @@ function renderAccount() {
       <div class="stats-grid">
         <div class="stat-box" onclick="showView('orders')"><div style="font-size:24px;margin-bottom:4px">📦</div><div style="font-size:11px;color:var(--text2)">Compras</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${orders.length}</div></div>
         <div class="stat-box" onclick="showView('myads')"><div style="font-size:24px;margin-bottom:4px">🏷️</div><div style="font-size:11px;color:var(--text2)">Anuncios</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${products.filter(p=>p.mine).length}</div></div>
+        <div class="stat-box" onclick="showView('sales')"><div style="font-size:24px;margin-bottom:4px">📥</div><div style="font-size:11px;color:var(--text2)">Ventas</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${sales.length}</div></div>
         <div class="stat-box" onclick="showView('favs')"><div style="font-size:24px;margin-bottom:4px">❤️</div><div style="font-size:11px;color:var(--text2)">Favoritos</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${favs.size}</div></div>
       </div>
       <div class="menu-list">
@@ -1498,7 +1526,8 @@ function renderAccount() {
           <div class="menu-item-left"><span>🪪</span><span>Verificar mi identidad ahora</span></div>
           <span style="color:var(--text2)">›</span>
         </div>` : ''}
-        ${[['💬','Mensajes',"showView('messages')"],
+        ${[['📥','Mis ventas',"showView('sales')"],
+           ['💬','Mensajes',"showView('messages')"],
            ['⚙️','Configuración',"showView('settings')"],
            ['🚚','Direcciones',"showView('addresses')"],
            ['🔔','Notificaciones',"showView('notifs')"],
@@ -1525,7 +1554,7 @@ function addCart(id, silent) {
   if (!p) return;
   const ex = cart.find(c => c.id === id);
   if (ex) ex.qty++;
-  else cart.push({ id: p.id, title: p.title, price: p.price, icon: p.icon, img: p.img || null, qty: 1 });
+  else cart.push({ id: p.id, sbId: p.sbId || null, title: p.title, price: p.price, icon: p.icon, img: p.img || null, qty: 1 });
   saveCart();
   updateCartBadge();
   if (!silent) showToast(`"${p.title.slice(0, 26)}..." añadido 🛒`);
@@ -2385,6 +2414,62 @@ async function loadOrdersDB() {
   } catch (e) { console.warn('loadOrdersDB', e); }
 }
 
+// ─── Lado-vendedor: cargar mis ventas (líneas de pedido donde soy el vendedor) ───
+async function loadSalesDB() {
+  if (typeof sb === 'undefined' || !sb || !(typeof user !== 'undefined' && user && user.id)) { sales = []; return; }
+  try {
+    const { data, error } = await sb.rpc('get_my_sales');
+    if (error) throw error;
+    sales = data || [];
+    if (typeof cview !== 'undefined' && cview === 'sales' && typeof renderSales === 'function') renderSales();
+    if (typeof cview !== 'undefined' && cview === 'account' && typeof renderAccount === 'function') renderAccount();
+  } catch (e) { console.warn('loadSalesDB', e); }
+}
+
+// El vendedor avanza el estado de una línea (enviado/entregado/cancelado)
+async function updateSaleStatus(itemId, status) {
+  if (typeof sb === 'undefined' || !sb || !(typeof user !== 'undefined' && user && user.id)) return;
+  try {
+    const { error } = await sb.rpc('set_order_item_status', { p_item: itemId, p_status: status });
+    if (error) throw error;
+    const lbl = { enviado: 'enviado 🚚', entregado: 'entregado ✅', cancelado: 'cancelado' };
+    showToast('Pedido marcado como ' + (lbl[status] || status));
+    loadSalesDB();
+  } catch (e) { showToast('No se pudo actualizar el pedido'); console.warn('updateSaleStatus', e); }
+}
+
+function renderSales() {
+  const statusLabel = { pendiente:'⏳ Por enviar', enviado:'🚚 Enviado', entregado:'✅ Entregado', cancelado:'🚫 Cancelado' };
+  document.getElementById('contentArea').innerHTML = `
+    <button class="back-btn" onclick="showView('account')">← Mi cuenta</button>
+    <div class="section-header" style="margin-bottom:14px">
+      <div class="section-title">📥 Mis ventas (${sales.length})</div>
+    </div>
+    ${!sales.length
+      ? '<div class="no-results"><div>📥</div><p>Aún no has vendido nada.<br><span style="font-size:12px">Cuando alguien compre uno de tus anuncios, aparecerá aquí para que coordines el envío.</span></p></div>'
+      : sales.map(s => {
+        const act = s.status === 'pendiente'
+          ? `<button class="submit-btn" style="width:auto;padding:9px 16px;font-size:13px" onclick="updateSaleStatus('${esc(s.item_id)}','enviado')">Marcar enviado 🚚</button>`
+          : (s.status === 'enviado'
+            ? `<button class="submit-btn" style="width:auto;padding:9px 16px;font-size:13px;background:var(--green)" onclick="updateSaleStatus('${esc(s.item_id)}','entregado')">Marcar entregado ✅</button>`
+            : '');
+        return `
+        <div class="auction-card" style="cursor:default">
+          <div class="auction-img">📦</div>
+          <div class="auction-info">
+            <div class="auction-title">${esc((s.title || '').slice(0, 40))} <span style="font-size:12px;font-weight:400;color:var(--text2)">×${s.qty}</span></div>
+            <div class="auction-meta">${esc(s.order_code || '')} · ${new Date(s.created_at).toLocaleDateString('es-DO')}</div>
+            <div class="auction-meta">🚚 ${esc(s.buyer_name || 'Comprador')} · 📞 ${esc(s.buyer_phone || '—')} · ${esc(s.buyer_prov || 'RD')}</div>
+            <div class="auction-price-row">
+              <div class="auction-price">${fmt(Number(s.line_total) || 0)}</div>
+              <span style="font-size:13px;font-weight:600">${statusLabel[s.status] || s.status}</span>
+            </div>
+            ${act ? `<div style="margin-top:8px">${act}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('')}`;
+}
+
 // Refrescar una sola subasta (tras un rechazo por puja baja, etc.)
 async function refreshAuction(id) {
   if (typeof sb === 'undefined' || !sb) return;
@@ -2712,7 +2797,9 @@ function onUserChanged() {
     loadNotifications();
     subscribeNotifications();
     loadOrdersDB();
+    loadSalesDB();
   } else {
+    sales = [];
     unsubscribeNotifications();
   }
   // Si la URL trae #subasta=ID, abrir el detalle (al cargar y tras iniciar sesión)
