@@ -39,7 +39,18 @@ function displayName(u) {
 function initSupabase() {
   if (DEMO || sb || !window.supabase) return;
   try {
-    sb = window.supabase.createClient(SB_URL, SB_KEY);
+    // flowType PKCE: tras el login (Google/recuperación) la URL vuelve con
+    // ?code=<un solo uso> y el SDK lo canjea y limpia la URL. Así los tokens
+    // (access/refresh) NUNCA aparecen en la barra de direcciones ni se pueden
+    // filtrar copiando el enlace (el flujo implícito sí los ponía en el #).
+    sb = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth: {
+        flowType: 'pkce',
+        detectSessionInUrl: true,
+        autoRefreshToken: true,
+        persistSession: true
+      }
+    });
   } catch (e) {
     console.warn('Supabase init falló:', e);
     return;
