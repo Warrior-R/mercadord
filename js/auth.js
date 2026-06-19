@@ -252,7 +252,10 @@ function toggleEye(id, el) {
   const i = document.getElementById(id);
   if (!i) return;
   i.type = i.type === 'password' ? 'text' : 'password';
-  el.textContent = i.type === 'password' ? '👁' : '🙈';
+  const shown = i.type === 'text';
+  el.textContent = shown ? '🙈' : '👁';
+  el.setAttribute('aria-pressed', shown ? 'true' : 'false');
+  el.setAttribute('aria-label', shown ? 'Ocultar contraseña' : 'Mostrar contraseña');
 }
 
 // ─── Fortaleza de contraseña ───
@@ -342,7 +345,7 @@ async function doLogin() {
   const pwd   = document.getElementById('lPwd').value;
   let ok = true;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fe('lEmailE','Correo no válido.'); ok = false; }
-  if (pwd.length < 6) { fe('lPwdE','Contraseña incorrecta.'); ok = false; }
+  if (pwd.length < 8) { fe('lPwdE','La contraseña es demasiado corta (mínimo 8).'); ok = false; }
   if (!ok) return;
 
   const btn = document.getElementById('loginBtn');
@@ -438,7 +441,9 @@ function verify2fa() {
 // ─── Reset password ───
 async function doReset() {
   const email = document.getElementById('resetE').value.trim();
-  if (!email) { showAlert('fail','Ingresa tu correo.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showAlert('fail','Ingresa un correo válido.'); return; }
+  const btn = document.getElementById('resetBtn');
+  if (btn) btn.disabled = true;
   try {
     if (!DEMO) {
       const client = requireSb();
@@ -450,6 +455,7 @@ async function doReset() {
     }
     showAlert('ok', `✅ Enlace enviado a ${email}. Revisa tu bandeja.`);
   } catch (e) { showAlert('fail','Error al enviar. Verifica la dirección.'); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 // ─── Recuperación: definir nueva contraseña tras el enlace del correo ───

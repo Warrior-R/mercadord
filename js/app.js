@@ -86,8 +86,15 @@ function setBNav(id) {
 }
 
 function prodImg(p, big) {
-  if (p.img) return `<img src="${esc(p.img)}" alt="${esc(p.title)}" loading="${big ? 'eager' : 'lazy'}" decoding="async" style="width:100%;height:100%;object-fit:cover">`;
+  if (p.img) return `<img src="${esc(p.img)}" alt="${esc(p.title)}" loading="${big ? 'eager' : 'lazy'}" decoding="async" data-icon="${esc(p.icon || '📦')}" onerror="imgErr(this)" style="width:100%;height:100%;object-fit:cover">`;
   return esc(p.icon);
+}
+// Fallback si una imagen no carga: la sustituye por el emoji del producto
+function imgErr(el) {
+  const s = document.createElement('span');
+  s.textContent = el.dataset.icon || '📦';
+  s.style.fontSize = '42px';
+  el.replaceWith(s);
 }
 
 // ─── Provincias / municipios de RD (fuente única: data.js RD_PROVINCES / RD_MUNICIPIOS) ───
@@ -138,6 +145,7 @@ function catScats() {
 
 function goHome() {
   cview = 'home';
+  document.title = 'MercadoRD — Compra y Vende en República Dominicana';
   document.getElementById('heroBanner').style.display = '';
   const cs0 = document.querySelector('.carousel-section'); if (cs0) cs0.style.display = '';
   restoreHome();
@@ -219,6 +227,8 @@ function filterLoc(l, el) {
 function filterPrice(v) {
   pmax = parseInt(v);
   document.getElementById('priceOut').textContent = fmt(parseInt(v));
+  const r = document.getElementById('priceRange');
+  if (r) r.setAttribute('aria-valuetext', fmt(parseInt(v)));
   showHomeListing();
 }
 
@@ -303,6 +313,7 @@ function showDetail(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
   cview = 'detail';
+  document.title = `${p.title} — MercadoRD`;
   const mt = document.getElementById('mainTabs');
   if (mt) mt.style.display = 'none';
   document.getElementById('heroBanner').style.display = 'none';
@@ -336,6 +347,12 @@ function showDetail(id) {
       </div>
 
       <div class="detail-buybox">
+        ${p.mine ? `
+        <div style="padding:6px 0 12px;color:var(--text2);font-size:14px">📋 Este es tu anuncio.</div>
+        <div class="detail-actions">
+          <button class="btn-buy"   onclick="editAd(${p.id})">✏️ Editar anuncio</button>
+          <button class="btn-cart2" onclick="deleteAd(${p.id})" style="border-color:var(--red);color:var(--red)">🗑️ Eliminar</button>
+        </div>` : `
         <div class="qty-stepper">
           <span style="font-size:13px;color:var(--text2)">Cantidad</span>
           <button type="button" onclick="detQtyStep(-1)" aria-label="Restar">−</button>
@@ -347,7 +364,7 @@ function showDetail(id) {
           <button class="btn-cart2" onclick="addCartN(${p.id})">Añadir al carrito</button>
           <button class="btn-cart2" onclick="tryOffer(${p.id})" style="border-color:var(--primary);color:var(--primary)">💰 Hacer oferta</button>
           <button class="btn-fav2"  onclick="toggleFav(${p.id},this)" aria-label="Favorito">${favs.has(p.id) ? '❤️' : '♡'}</button>
-        </div>
+        </div>`}
       </div>
 
       <div class="detail-desc">
@@ -369,8 +386,8 @@ function showDetail(id) {
           <div style="font-size:14px;font-weight:600">${esc(p.seller)}</div>
           <div style="font-size:12px;color:var(--text2)">⭐ ${p.rating || '—'} · ${p.mine ? 'Tu anuncio' : 'Vendedor verificado ✓'}</div>
         </div>
-        <button style="margin-left:auto;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:13px;font-family:'Sora',sans-serif"
-                onclick="contactSellerById(${p.id})">💬 Contactar</button>
+        ${p.mine ? '' : `<button style="margin-left:auto;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:13px;font-family:'Sora',sans-serif"
+                onclick="contactSellerById(${p.id})">💬 Contactar</button>`}
       </div>
 
       ${reviews.length ? `
@@ -419,10 +436,14 @@ function detQty() {
   return Math.min(99, Math.max(1, parseInt(document.getElementById('detQty')?.value || '1', 10) || 1));
 }
 function addCartN(id) {
+  const p = products.find(x => x.id === id);
+  if (p?.mine) { showToast('No puedes comprar tu propio anuncio'); return; }
   const q = detQty();
   for (let i = 0; i < q; i++) addCart(id, i < q - 1);
 }
 function buyNowN(id) {
+  const p = products.find(x => x.id === id);
+  if (p?.mine) { showToast('No puedes comprar tu propio anuncio'); return; }
   const q = detQty();
   for (let i = 0; i < q; i++) addCart(id, true);
   requireAuth('checkout');
@@ -695,7 +716,7 @@ async function tryBuyNow(id) {
       const { data, error } = await sb.rpc('buy_now', { p_auction: a.id });
       if (error) throw error;
       a.sold = true; a.status = 'sold'; a.endAt = Date.now();
-      cart.push({ id: 'auc-' + a.id, title: a.title + ' (¡Cómpralo ya!)', price: Number(data.price), icon: a.icon, img: null, qty: 1 });
+      if (!cart.some(c => String(c.id) === 'auc-' + a.id)) cart.push({ id: 'auc-' + a.id, title: a.title + ' (¡Cómpralo ya!)', price: Number(data.price), icon: a.icon, img: null, qty: 1 });
       saveCart(); updateCartBadge();
       showToast('⚡ ¡Cómpralo ya! La subasta se cerró para ti');
       showView('checkout');
@@ -730,6 +751,8 @@ function tryOffer(id) {
     showAlert('info', 'Inicia sesión para hacer una oferta al vendedor.');
     return;
   }
+  const p = products.find(x => x.id === id);
+  if (p?.mine) { showToast('No puedes ofertar en tu propio anuncio'); return; }
   openOffer(id);
 }
 
@@ -755,7 +778,8 @@ function sendOffer() {
   const p = products.find(x => x.id === offerProdId);
   if (!p) return;
   const amt = parseFloat(document.getElementById('offerAmount').value);
-  if (!amt || amt <= 0) { fe('offerErr', 'Ingresa una oferta válida.'); return; }
+  if (!Number.isFinite(amt) || amt <= 0) { fe('offerErr', 'Ingresa una oferta válida.'); return; }
+  if (amt > p.price * 1.5) { fe('offerErr', 'La oferta no puede superar 1.5× el precio publicado.'); return; }
   const ratio = amt / p.price;
   const body  = document.getElementById('offerBody');
   // Demo: el "vendedor" responde según qué tan cerca esté la oferta del precio
@@ -1010,7 +1034,7 @@ function publishProduct() {
     return;
   }
   const title = document.getElementById('sellTitle').value.trim();
-  const price = parseFloat(document.getElementById('sellPrice').value);
+  const price = Math.round(parseFloat(document.getElementById('sellPrice').value));
   const cat   = document.getElementById('sellCat').value;
   const cond  = document.getElementById('sellCond').value.startsWith('used') ? 'used' : document.getElementById('sellCond').value === 'refurb' ? 'refurb' : 'new';
   const loc   = document.getElementById('sellProv').value;
@@ -1018,7 +1042,7 @@ function publishProduct() {
   const desc  = document.getElementById('sellDesc').value.trim();
 
   if (title.length < 4)        { showToast('El título debe tener al menos 4 caracteres'); return; }
-  if (!price || price <= 0)    { showToast('Ingresa un precio válido'); return; }
+  if (!Number.isFinite(price) || price < 1) { showToast('Ingresa un precio válido (entero, mínimo RD$1)'); return; }
 
   const catIcons = { electronics:'📱', vehicles:'🚗', fashion:'👗', home2:'🏠', sports:'⚽', services:'🔧', agro:'🌿' };
   const sellerName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendedor';
@@ -1450,10 +1474,10 @@ function renderCart() {
         <div class="cart-item-title">${esc(c.title)}</div>
         <div style="font-size:11px;color:var(--text2)">${fmt(c.price)} c/u</div>
         <div class="cart-qty">
-          <button class="qty-btn" onclick="chQty(${c.id},-1)" aria-label="Restar">−</button>
+          <button class="qty-btn" onclick="chQty('${c.id}',-1)" aria-label="Restar una unidad">−</button>
           <span class="qty-num">${c.qty}</span>
-          <button class="qty-btn" onclick="chQty(${c.id},1)" aria-label="Sumar">+</button>
-          <span class="remove-item" onclick="rmCart(${c.id})">✕</span>
+          <button class="qty-btn" onclick="chQty('${c.id}',1)" aria-label="Sumar una unidad">+</button>
+          <span class="remove-item" role="button" tabindex="0" onclick="rmCart('${c.id}')" aria-label="Eliminar del carrito">✕</span>
         </div>
       </div>
       <div class="cart-item-total">${fmt(c.price * c.qty)}</div>
@@ -1473,15 +1497,16 @@ function renderCart() {
 }
 
 function chQty(id, d) {
-  const c = cart.find(x => x.id === id);
+  const c = cart.find(x => String(x.id) === String(id));
   if (!c) return;
   c.qty += d;
-  if (c.qty <= 0) cart = cart.filter(x => x.id !== id);
+  if (c.qty <= 0) cart = cart.filter(x => String(x.id) !== String(id));
+  else if (c.qty > 99) { c.qty = 99; showToast('Máximo 99 unidades por artículo'); }
   saveCart();
   updateCartBadge();
   renderCart();
 }
-function rmCart(id) { cart = cart.filter(x => x.id !== id); saveCart(); updateCartBadge(); renderCart(); }
+function rmCart(id) { cart = cart.filter(x => String(x.id) !== String(id)); saveCart(); updateCartBadge(); renderCart(); }
 function toggleCart() {
   const ov   = document.getElementById('cartOverlay');
   const open = ov.style.display === 'none' || !ov.style.display;
@@ -1545,6 +1570,25 @@ function getCarouselData() {
   return products.filter(p => p.badge === 'hot' || p.reviews > 200).slice(0, 12);
 }
 
+// Ítems visibles por página según el breakpoint del CSS (carousel.css):
+// 25%/4 por defecto · 33%/3 ≤1024 · 50%/2 ≤768 · 100%/1 ≤480.
+// Antes se asumía 4 fijo → en tablet/móvil quedaban páginas inalcanzables y puntos sobrantes.
+function carouselPerPage() {
+  const w = window.innerWidth;
+  if (w <= 480)  return 1;
+  if (w <= 768)  return 2;
+  if (w <= 1024) return 3;
+  return 4;
+}
+function carouselPages() { return Math.max(1, Math.ceil(getCarouselData().length / carouselPerPage())); }
+
+// Recalcular el carrusel al cambiar el tamaño (los ítems-por-página cambian con el breakpoint)
+let _carouselResizeT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_carouselResizeT);
+  _carouselResizeT = setTimeout(() => { if (document.getElementById('carouselContent')) renderCarousel(); }, 200);
+});
+
 function renderCarousel() {
   const data = getCarouselData();
   const content = document.getElementById('carouselContent');
@@ -1588,7 +1632,7 @@ function renderCarousel() {
       </div>`;
   }).join('');
 
-  indicators.innerHTML = Array.from({ length: Math.max(1, Math.ceil(data.length / 4)) }).map((_, i) =>
+  indicators.innerHTML = Array.from({ length: carouselPages() }).map((_, i) =>
     `<button class="carousel-dot ${i === 0 ? 'active' : ''}" onclick="carouselGoTo(${i})" aria-label="Página ${i + 1}"></button>`
   ).join('');
 
@@ -1604,13 +1648,13 @@ function updateCarouselPosition() {
 }
 
 function carouselNext() {
-  const max = Math.max(1, Math.ceil(getCarouselData().length / 4));
+  const max = carouselPages();
   carouselState.index = (carouselState.index + 1) % max;
   updateCarouselPosition();
   resetCarouselAutoScroll();
 }
 function carouselPrev() {
-  const max = Math.max(1, Math.ceil(getCarouselData().length / 4));
+  const max = carouselPages();
   carouselState.index = (carouselState.index - 1 + max) % max;
   updateCarouselPosition();
   resetCarouselAutoScroll();
@@ -2083,37 +2127,40 @@ function resetCamera() {
   if (c) c.disabled = true;
 }
 
-function submitVerification() {
+async function submitVerification() {
   if (!verificationData.faceCapture) { showToast('Por favor captura una foto de tu rostro'); return; }
   verificationData.timestamp = new Date().toISOString();
+
+  const btn = document.getElementById('submitVerification');
 
   // Con Supabase activo: registra la solicitud en la tabla `verifications`
   // y marca el perfil como pendiente. `is_verified` solo lo cambia el admin
   // (protegido por trigger en la BD). Subir docFile/faceCapture a Storage
   // queda para cuando se cree el bucket — ver SUPABASE_SETUP.md.
+  // IMPORTANTE: se hace `await` y SOLO se muestra "éxito" si el servidor
+  // confirma; antes la escritura era fire-and-forget y la UI decía
+  // "enviada correctamente" aunque la inserción fallara.
   if (typeof sb !== 'undefined' && sb && user?.id) {
-    (async () => {
-      try {
-        let r = await sb.from('verifications').insert({
-          user_id:    user.id,
-          doc_type:   verificationData.docType,
-          doc_number: verificationData.docNumber,
-          full_name:  verificationData.fullName,
-          status:     'pending'
-        });
-        if (r.error) throw r.error;
-        r = await sb.from('profiles')
-          .update({ verification_status: 'pending' })
-          .eq('id', user.id);
-        if (r.error) throw r.error;
-      } catch (e) {
-        console.warn('No se pudo registrar la verificación:', e.message || e);
-        showToast('⚠️ No se pudo registrar la verificación en el servidor. Intenta de nuevo.');
-      }
-    })();
-  }
-
-  if (typeof sb !== 'undefined' && sb) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }   // anti doble-envío
+    try {
+      let r = await sb.from('verifications').insert({
+        user_id:    user.id,
+        doc_type:   verificationData.docType,
+        doc_number: verificationData.docNumber,
+        full_name:  verificationData.fullName,
+        status:     'pending'
+      });
+      if (r.error) throw r.error;
+      r = await sb.from('profiles')
+        .update({ verification_status: 'pending' })
+        .eq('id', user.id);
+      if (r.error) throw r.error;
+    } catch (e) {
+      console.warn('No se pudo registrar la verificación:', e.message || e);
+      showToast('⚠️ No se pudo registrar la verificación en el servidor. Intenta de nuevo.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Completar verificación'; }
+      return;   // NO mostrar éxito si el servidor no confirmó
+    }
     // Modo real: queda EN REVISIÓN. La aprobación la da el proveedor KYC
     // automático (o el admin en Table Editor) escribiendo profiles.is_verified
     // — protegido por trigger, el cliente no puede auto-aprobarse.
@@ -2412,7 +2459,7 @@ function renderAuctionDetail(a) {
 function payAuction(id) {
   const a = auctionDetailData;
   if (!a || a.id != id) return;
-  cart.push({ id: 'auc-' + a.id, title: a.title + ' (subasta ganada)', price: a.cur, icon: a.icon, img: null, qty: 1 });
+  if (!cart.some(c => String(c.id) === 'auc-' + a.id)) cart.push({ id: 'auc-' + a.id, title: a.title + ' (subasta ganada)', price: a.cur, icon: a.icon, img: null, qty: 1 });
   saveCart(); updateCartBadge();
   showToast('🏆 Artículo ganado añadido al carrito');
   requireAuth('checkout');
@@ -2956,6 +3003,55 @@ function a11yTagInteractive(root) {
   });
   const badge = document.getElementById('notifBadge');
   if (badge) { badge.setAttribute('aria-live', 'polite'); badge.setAttribute('role', 'status'); }
+})();
+
+// ─── Gestión de foco en modales (WCAG 2.4.3 / 2.1.2) ───
+// Al abrir un modal: guarda el foco previo y lo mueve al primer control.
+// Mientras está abierto: atrapa Tab/Shift+Tab dentro del diálogo.
+// Al cerrar: restaura el foco al elemento que lo abrió. Centralizado vía
+// MutationObserver para no tener que tocar cada función open/close.
+(function modalFocusManager() {
+  const overlays = ['authOverlay', 'verificationOverlay', 'bidOverlay', 'offerOverlay', 'cartOverlay', 'legalOverlay']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if (!overlays.length) return;
+  let lastFocus = null;
+
+  const isOpen = el => {
+    const s = getComputedStyle(el);
+    return s.display !== 'none' && s.visibility !== 'hidden';
+  };
+  const focusables = el => [...el.querySelectorAll(
+    'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter(n => n.offsetWidth || n.offsetHeight || n.getClientRects().length);
+  const openModal = () => overlays.find(isOpen) || null;
+
+  overlays.forEach(el => {
+    new MutationObserver(() => {
+      const open = isOpen(el);
+      if (open && !el._a11yOpen) {
+        el._a11yOpen = true;
+        if (!el.contains(document.activeElement)) {
+          lastFocus = document.activeElement;
+          const f = focusables(el);
+          if (f[0]) setTimeout(() => f[0].focus(), 30);
+        }
+      } else if (!open && el._a11yOpen) {
+        el._a11yOpen = false;
+        if (lastFocus && typeof lastFocus.focus === 'function') { try { lastFocus.focus(); } catch (_) {} }
+        lastFocus = null;
+      }
+    }).observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const m = openModal(); if (!m) return;
+    const f = focusables(m); if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (!m.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 })();
 
 // Búsqueda desde la URL (?q=) — hace real la SearchAction declarada en JSON-LD

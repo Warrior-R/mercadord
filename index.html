@@ -82,7 +82,7 @@
      <div class="divider">o con tu email</div>
      <div class="fg"><label>Correo electrónico</label><input type="email" id="lEmail" placeholder="tu@email.com"><div class="ferr" id="lEmailE"></div></div>
      <div class="fg"><label>Contraseña</label>
-      <div class="iicon"><input type="password" id="lPwd" placeholder="••••••••"><span class="eye" onclick="toggleEye('lPwd',this)">👁</span></div>
+      <div class="iicon"><input type="password" id="lPwd" placeholder="••••••••"><span class="eye" role="button" tabindex="0" aria-label="Mostrar contraseña" aria-pressed="false" onclick="toggleEye('lPwd',this)">👁</span></div>
       <div class="ferr" id="lPwdE"></div>
      </div>
      <div style="text-align:right;margin:-6px 0 14px"><span class="alink" onclick="gotoStep('l',3)">¿Olvidaste tu contraseña?</span></div>
@@ -110,13 +110,13 @@
     <div class="auth-step" id="ls3">
      <div class="vc"><div class="vc-icon">📧</div><div class="vc-title">Recuperar contraseña</div><div class="vc-desc">Te enviaremos un enlace para restablecer tu contraseña.</div></div>
      <div class="fg"><label>Correo electrónico</label><input type="email" id="resetE" placeholder="tu@email.com"></div>
-     <button class="auth-btn btn-pri" onclick="doReset()">Enviar enlace de recuperación</button>
+     <button class="auth-btn btn-pri" id="resetBtn" onclick="doReset()">Enviar enlace de recuperación</button>
      <div style="text-align:center;margin-top:12px"><span class="alink" onclick="gotoStep('l',1)">← Volver</span></div>
     </div>
     <div class="auth-step" id="ls4">
      <div class="vc"><div class="vc-icon">🔑</div><div class="vc-title">Nueva contraseña</div><div class="vc-desc">Define tu nueva contraseña para completar la recuperación.</div></div>
      <div class="fg"><label>Nueva contraseña</label>
-      <div class="iicon"><input type="password" id="npPwd" placeholder="Mínimo 8 caracteres, mayúscula y número"><span class="eye" onclick="toggleEye('npPwd',this)">👁</span></div>
+      <div class="iicon"><input type="password" id="npPwd" placeholder="Mínimo 8 caracteres, mayúscula y número"><span class="eye" role="button" tabindex="0" aria-label="Mostrar contraseña" aria-pressed="false" onclick="toggleEye('npPwd',this)">👁</span></div>
       <div class="ferr" id="npPwdE"></div>
      </div>
      <button class="auth-btn btn-pri" onclick="doSetNewPassword()">Guardar contraseña</button>
@@ -144,13 +144,13 @@
      </div>
      <div class="fg" style="margin-top:12px"><label>Correo electrónico</label><input type="email" id="rEmail" placeholder="tu@email.com"><div class="ferr" id="rEmailE"></div></div>
      <div class="fg"><label>Contraseña</label>
-      <div class="iicon"><input type="password" id="rPwd" placeholder="Mínimo 8 caracteres" oninput="pwdStrength(this.value)"><span class="eye" onclick="toggleEye('rPwd',this)">👁</span></div>
+      <div class="iicon"><input type="password" id="rPwd" placeholder="Mínimo 8 caracteres" oninput="pwdStrength(this.value)"><span class="eye" role="button" tabindex="0" aria-label="Mostrar contraseña" aria-pressed="false" onclick="toggleEye('rPwd',this)">👁</span></div>
       <div class="pwd-bar"><div class="pwd-fill" id="pwdF"></div></div>
       <div class="pwd-lbl" id="pwdL">Ingresa una contraseña</div>
       <div class="ferr" id="rPwdE"></div>
      </div>
      <div class="fg"><label>Confirmar contraseña</label>
-      <div class="iicon"><input type="password" id="rPwd2" placeholder="Repite tu contraseña"><span class="eye" onclick="toggleEye('rPwd2',this)">👁</span></div>
+      <div class="iicon"><input type="password" id="rPwd2" placeholder="Repite tu contraseña"><span class="eye" role="button" tabindex="0" aria-label="Mostrar contraseña" aria-pressed="false" onclick="toggleEye('rPwd2',this)">👁</span></div>
       <div class="ferr" id="rPwd2E"></div>
      </div>
      <button class="auth-btn btn-pri" onclick="rs1next()">Continuar →</button>
@@ -826,8 +826,8 @@
    <div class="scard-title">Precio máximo (DOP)</div>
    <div class="scard-body">
     <div class="filter-row">
-     <label>Máximo: <strong id="priceOut">RD$200,000</strong></label>
-     <input type="range" min="500" max="200000" value="200000" step="500" oninput="filterPrice(this.value)">
+     <label for="priceRange">Máximo: <strong id="priceOut">RD$200,000</strong></label>
+     <input type="range" id="priceRange" aria-label="Precio máximo en pesos dominicanos" aria-valuetext="RD$200,000" min="500" max="200000" value="200000" step="500" oninput="filterPrice(this.value)">
      <div class="fprice"><span>RD$500</span><span>RD$200K+</span></div>
     </div>
    </div>
@@ -1075,10 +1075,10 @@
 <!-- ══════════════════════════════════════════════════
      SCRIPTS (orden importante)
 ════════════════════════════════════════════════════ -->
-<script src="js/storage.js"></script>
-<script src="js/data.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/app.js"></script>
+<script defer src="js/storage.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/auth.js"></script>
+<script defer src="js/app.js"></script>
 
 </body>
 </html>
