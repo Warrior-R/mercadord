@@ -1,0 +1,27 @@
+Fotos del catalogo demo de MercadoRD
+Obtenidas via Openverse (openverse.org), filtro de uso comercial.
+Licencias Creative Commons / dominio publico. Atribucion por imagen:
+
+id	producto	licencia	autor	fuente
+1	iPhone	cc0-1.0	pixellaphoto	https://www.flickr.com/photos/137643065@N06/24217686692
+2	TV QLED	by-2.0	John Beans	https://www.flickr.com/photos/147592390@N06/32716079687
+3	MacBook	cc0-1.0	None	https://www.rawpixel.com/image/5968587/overhead-laptop-computer-notebook-smartphone
+4	Corolla	by-2.0	dave_7	https://www.flickr.com/photos/21612624@N00/6217227113
+5	Vestido	by-sa-2.0	Martina H.	https://www.flickr.com/photos/157338256@N03/27447555117
+6	A/C 18000	by-2.0	DaynaT	https://www.flickr.com/photos/67467618@N00/2497751040
+7	Bici MTB	by-2.0	LollyOhMy	https://www.flickr.com/photos/48529188@N04/4639308054
+8	Silla gamer	by-2.0	visual velocity pc	https://www.flickr.com/photos/44396549@N00/6920341
+9	Nevera	by-2.0	Wonderlane	https://www.flickr.com/photos/71401718@N00/5024682259
+10	Nike	by-2.0	chuckfeder585	https://www.flickr.com/photos/125864073@N04/14370161908
+11	PS5	by-sa-2.0	France1978	https://www.flickr.com/photos/51764518@N02/37425209492
+12	Terreno	by-sa-2.0	Derek Harper	http://www.geograph.org.uk/photo/180336
+13	Lavadora	by-2.0	James Cridland	https://www.flickr.com/photos/18378655@N00/2663785397
+14	Civic	by-2.0	charles cars	https://www.flickr.com/photos/92622665@N08/13150538935
+15	JBL speaker	by-sa-2.0	osde8info	https://www.flickr.com/photos/8764442@N07/4526603240
+16	Generador	by-2.0	Nagarjun	https://www.flickr.com/photos/64924693@N00/16061951133
+17	Cafe grano	by-2.0	Umer Shabib	https://www.flickr.com/photos/8896706@N05/6149598235
+18	Aguacate	cc0-1.0	Plant pests and diseases	https://www.flickr.com/photos/62295966@N07/14684628299
+19	Arroz	cc0-1.0	Bigul Malayi	https://wordpress.org/photos/photo/37069274da/
+20	Plomeria	by-2.0	rikkis_refuge	https://www.flickr.com/photos/60109376@N00/418184705
+21	Mudanza	by-2.0	Alikai	https://www.flickr.com/photos/39222685@N00/1376711273
+22	Instal A/C	by-2.0	Keith Williamson	https://www.flickr.com/photos/34673186@N03/6120855696
