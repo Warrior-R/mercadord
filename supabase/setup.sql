@@ -174,3 +174,9 @@ alter table public.favorites enable row level security;
 drop policy if exists "favoritos: gestionar propios" on public.favorites;
 create policy "favoritos: gestionar propios" on public.favorites
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Índices en columnas FK / de filtro (evitan seq-scans en lecturas y en los ON DELETE)
+create index if not exists products_user_idx on public.products(user_id);
+create index if not exists orders_buyer_idx on public.orders(buyer_id);
+create index if not exists favorites_product_idx on public.favorites(product_id);
+create index if not exists verifications_user_idx on public.verifications(user_id);

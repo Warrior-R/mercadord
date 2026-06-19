@@ -28,6 +28,80 @@ const products = [
   { id:22, title:"Instalación de Aires Acondicionados", price:2500, old:3000,    icon:"❄️", cat:"services",    cond:"new",  loc:"STI", rating:4.8, reviews:67,  seller:"ClimaTec RD",      badge:"deal" },
 ];
 
+// ═══════════════════════════════════════════════════
+//  Las 32 provincias de República Dominicana + municipios
+//  Los códigos SD/STI/PP/LR/PC son los históricos de los productos demo (no romper).
+// ═══════════════════════════════════════════════════
+const RD_PROVINCES = [
+  { code:'DN',  name:'Distrito Nacional' },
+  { code:'SD',  name:'Santo Domingo' },
+  { code:'STI', name:'Santiago' },
+  { code:'PP',  name:'Puerto Plata' },
+  { code:'LR',  name:'La Romana' },
+  { code:'PC',  name:'La Altagracia' },
+  { code:'AZ',  name:'Azua' },
+  { code:'BH',  name:'Bahoruco' },
+  { code:'BR',  name:'Barahona' },
+  { code:'DJ',  name:'Dajabón' },
+  { code:'DU',  name:'Duarte' },
+  { code:'EP',  name:'Elías Piña' },
+  { code:'ES',  name:'El Seibo' },
+  { code:'ET',  name:'Espaillat' },
+  { code:'HM',  name:'Hato Mayor' },
+  { code:'HMir',name:'Hermanas Mirabal' },
+  { code:'IN',  name:'Independencia' },
+  { code:'LV',  name:'La Vega' },
+  { code:'MTS', name:'María Trinidad Sánchez' },
+  { code:'MN',  name:'Monseñor Nouel' },
+  { code:'MC',  name:'Monte Cristi' },
+  { code:'MP',  name:'Monte Plata' },
+  { code:'PD',  name:'Pedernales' },
+  { code:'PR',  name:'Peravia' },
+  { code:'SC',  name:'San Cristóbal' },
+  { code:'SJO', name:'San José de Ocoa' },
+  { code:'SJ',  name:'San Juan' },
+  { code:'SPM', name:'San Pedro de Macorís' },
+  { code:'SR',  name:'Sánchez Ramírez' },
+  { code:'SM',  name:'Samaná' },
+  { code:'SAR', name:'Santiago Rodríguez' },
+  { code:'VA',  name:'Valverde' }
+];
+
+const RD_MUNICIPIOS = {
+  DN:  ['Santo Domingo de Guzmán'],
+  SD:  ['Santo Domingo Este','Santo Domingo Norte','Santo Domingo Oeste','Boca Chica','Los Alcarrizos','Pedro Brand','San Antonio de Guerra'],
+  STI: ['Santiago','Bisonó (Villa Bisonó)','Jánico','Licey al Medio','Puñal','Sabana Iglesia','San José de las Matas','Tamboril','Villa González'],
+  PP:  ['Puerto Plata','Altamira','Guananico','Imbert','Los Hidalgos','Luperón','Sosúa','Villa Isabela','Villa Montellano'],
+  LR:  ['La Romana','Guaymate','Villa Hostos'],
+  PC:  ['Higüey','San Rafael del Yuma','La Otra Banda','Punta Cana (Verón)'],
+  AZ:  ['Azua de Compostela','Estebanía','Guayabal','Las Charcas','Las Yayas de Viajama','Padre Las Casas','Peralta','Pueblo Viejo','Sabana Yegua','Tábara Arriba'],
+  BH:  ['Neiba','Galván','Los Ríos','Tamayo','Villa Jaragua'],
+  BR:  ['Barahona','Cabral','El Peñón','Enriquillo','Fundación','Jaquimeyes','La Ciénaga','Las Salinas','Paraíso','Polo','Vicente Noble'],
+  DJ:  ['Dajabón','El Pino','Loma de Cabrera','Partido','Restauración'],
+  DU:  ['San Francisco de Macorís','Arenoso','Castillo','Eugenio María de Hostos','Las Guáranas','Pimentel','Villa Riva'],
+  EP:  ['Comendador','Bánica','El Llano','Hondo Valle','Juan Santiago','Pedro Santana'],
+  ES:  ['Santa Cruz de El Seibo','Miches'],
+  ET:  ['Moca','Cayetano Germosén','Gaspar Hernández','Jamao al Norte'],
+  HM:  ['Hato Mayor del Rey','El Valle','Sabana de la Mar'],
+  HMir:['Salcedo','Tenares','Villa Tapia'],
+  IN:  ['Jimaní','Cristóbal','Duvergé','La Descubierta','Mella','Postrer Río'],
+  LV:  ['La Vega','Constanza','Jarabacoa','Jima Abajo'],
+  MTS: ['Nagua','Cabrera','El Factor','Río San Juan'],
+  MN:  ['Bonao','Maimón','Piedra Blanca'],
+  MC:  ['Monte Cristi','Castañuelas','Guayubín','Las Matas de Santa Cruz','Pepillo Salcedo','Villa Vásquez'],
+  MP:  ['Monte Plata','Bayaguana','Peralvillo','Sabana Grande de Boyá','Yamasá'],
+  PD:  ['Pedernales','Oviedo'],
+  PR:  ['Baní','Nizao','Matanzas'],
+  SC:  ['San Cristóbal','Bajos de Haina','Cambita Garabitos','Los Cacaos','Sabana Grande de Palenque','San Gregorio de Nigua','Villa Altagracia','Yaguate'],
+  SJO: ['San José de Ocoa','Rancho Arriba','Sabana Larga'],
+  SJ:  ['San Juan de la Maguana','Bohechío','El Cercado','Juan de Herrera','Las Matas de Farfán','Vallejuelo'],
+  SPM: ['San Pedro de Macorís','Consuelo','Guayacanes','Quisqueya','Ramón Santana','San José de los Llanos'],
+  SR:  ['Cotuí','Cevicos','Fantino','La Mata'],
+  SM:  ['Samaná','Las Terrenas','Sánchez'],
+  SAR: ['San Ignacio de Sabaneta','Los Almácigos','Monción'],
+  VA:  ['Mao','Esperanza','Laguna Salada']
+};
+
 // endsMin: minutos restantes al primer arranque (luego se persiste el fin real)
 // buy: precio "¡Cómpralo ya!" — compra inmediata que cierra la subasta (estilo eBay)
 const auctions = [

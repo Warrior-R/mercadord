@@ -86,8 +86,33 @@ function setBNav(id) {
 }
 
 function prodImg(p, big) {
-  if (p.img) return `<img src="${p.img}" alt="${esc(p.title)}" style="width:100%;height:100%;object-fit:cover">`;
-  return p.icon;
+  if (p.img) return `<img src="${esc(p.img)}" alt="${esc(p.title)}" loading="${big ? 'eager' : 'lazy'}" decoding="async" style="width:100%;height:100%;object-fit:cover">`;
+  return esc(p.icon);
+}
+
+// ─── Provincias / municipios de RD (fuente única: data.js RD_PROVINCES / RD_MUNICIPIOS) ───
+function provName(v) {
+  if (typeof RD_PROVINCES === 'undefined') return v || '';
+  const p = RD_PROVINCES.find(x => x.code === v || x.name === v);
+  return p ? p.name : (v || '');
+}
+function provOptions(sel, byCode) {
+  if (typeof RD_PROVINCES === 'undefined') return '';
+  return RD_PROVINCES.map(p => {
+    const v = byCode ? p.code : p.name;
+    const on = (v === sel || p.name === sel || p.code === sel) ? ' selected' : '';
+    return `<option value="${esc(v)}"${on}>${esc(p.name)}</option>`;
+  }).join('');
+}
+function muniOptions(provCodeOrName, sel) {
+  let code = provCodeOrName;
+  if (typeof RD_PROVINCES !== 'undefined') {
+    const p = RD_PROVINCES.find(x => x.code === provCodeOrName || x.name === provCodeOrName);
+    if (p) code = p.code;
+  }
+  const list = (typeof RD_MUNICIPIOS !== 'undefined' && RD_MUNICIPIOS[code]) || [];
+  return ['<option value="">Municipio (opcional)…</option>']
+    .concat(list.map(m => `<option${m === sel ? ' selected' : ''}>${esc(m)}</option>`)).join('');
 }
 
 // ─── Restaurar vista home ───
@@ -284,7 +309,7 @@ function showDetail(id) {
 
   const condLabel = p.cond === 'new' ? '✨ Nuevo' : p.cond === 'used' ? '♻️ Usado' : '🔧 Reacondicionado';
   const catLabel  = { electronics:'Electrónica', vehicles:'Vehículos', fashion:'Moda', home2:'Hogar', sports:'Deportes', services:'Servicios', agro:'Agropecuario' }[p.cat] || 'General';
-  const locLabel  = { SD:'Santo Domingo', STI:'Santiago', PP:'Puerto Plata', LR:'La Romana', PC:'Punta Cana' }[p.loc] || p.loc;
+  const locLabel  = provName(p.loc);
   const rr = Math.round(p.rating || 0);
   const stars = '★★★★★☆☆☆☆☆'.slice(5 - rr, 10 - rr);
   const reviews = genReviews(p);
@@ -846,18 +871,21 @@ function renderSeller() {
 // PUBLICAR ANUNCIO (funcional)
 // ══════════════════════════════════════════════════
 let sellImgData = null;
+let sellEditProduct = null, sellEditId = null;
 
 function renderSellForm() {
+  const sellEdit = sellEditProduct; sellEditProduct = null;
+  sellEditId = sellEdit ? sellEdit.id : null;
   const uname = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuario';
-  sellImgData = null;
+  sellImgData = sellEdit ? (sellEdit.img || null) : null;
   document.getElementById('contentArea').innerHTML = `
     <div class="sell-form">
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">📦 Publicar un anuncio</h2>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">${sellEdit ? '✏️ Editar anuncio' : '📦 Publicar un anuncio'}</h2>
       <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Hola <strong>${esc(uname)}</strong> — ${userState.verified ? 'Cuenta verificada ✓' : 'Verificación pendiente ⏳'}</p>
       <form id="sellForm" onsubmit="event.preventDefault();publishProduct()">
         <div class="form-grid">
-          <div class="fg2"><label for="sellTitle">Título *</label><input type="text" id="sellTitle" placeholder="Describe tu producto" maxlength="80" required></div>
-          <div class="fg2"><label for="sellPrice">Precio (RD$) *</label><input type="number" id="sellPrice" placeholder="0.00" min="1" step="0.01" required></div>
+          <div class="fg2"><label for="sellTitle">Título *</label><input type="text" id="sellTitle" value="${esc(sellEdit?.title || '')}" placeholder="Describe tu producto" maxlength="80" required></div>
+          <div class="fg2"><label for="sellPrice">Precio (RD$) *</label><input type="number" id="sellPrice" value="${sellEdit?.price || ''}" placeholder="0.00" min="1" step="0.01" required></div>
           <div class="fg2"><label for="sellCat">Categoría *</label>
             <select id="sellCat" required>
               <option value="electronics">Electrónica</option><option value="vehicles">Vehículos</option>
@@ -873,12 +901,15 @@ function renderSellForm() {
             <select id="sellType"><option>Precio fijo</option><option>Subasta</option><option>Mejor oferta</option></select>
           </div>
           <div class="fg2"><label for="sellProv">Provincia</label>
-            <select id="sellProv"><option value="SD">Santo Domingo</option><option value="STI">Santiago</option><option value="PP">Puerto Plata</option><option value="LR">La Romana</option><option value="PC">Punta Cana</option></select>
+            <select id="sellProv" onchange="var m=document.getElementById('sellMuni');if(m)m.innerHTML=muniOptions(this.value)">${provOptions(sellEdit?.loc || 'SD', true)}</select>
+          </div>
+          <div class="fg2"><label for="sellMuni">Municipio</label>
+            <select id="sellMuni">${muniOptions(sellEdit?.loc || 'SD', sellEdit?.muni)}</select>
           </div>
         </div>
         <div class="fg2" style="margin-bottom:14px">
           <label for="sellDesc">Descripción</label>
-          <textarea id="sellDesc" placeholder="Describe el producto, estado, qué incluye..." maxlength="1000"></textarea>
+          <textarea id="sellDesc" placeholder="Describe el producto, estado, qué incluye..." maxlength="1000">${esc(sellEdit?.desc || '')}</textarea>
         </div>
         <div class="photo-area" id="sellPhotoArea" onclick="document.getElementById('sellPhotoInput').click()" tabindex="0" role="button" aria-label="Subir foto del producto (JPG, PNG o WEBP, máximo 5MB)">
           <div style="font-size:30px;margin-bottom:8px" id="sellPhotoIcon">📷</div>
@@ -887,9 +918,19 @@ function renderSellForm() {
           <img id="sellPhotoPreview" style="display:none;max-height:140px;border-radius:8px;margin-top:10px" alt="Vista previa">
         </div>
         <input type="file" id="sellPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleSellPhoto(this)">
-        <button type="submit" class="submit-btn">✓ Publicar gratis</button>
+        <button type="submit" class="submit-btn">${sellEdit ? '✓ Guardar cambios' : '✓ Publicar gratis'}</button>
       </form>
     </div>`;
+  if (sellEdit) {
+    const setv = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+    setv('sellCat', sellEdit.cat);
+    setv('sellCond', sellEdit.cond);
+    if (sellEdit.img) {
+      const prev = document.getElementById('sellPhotoPreview');
+      if (prev) { prev.src = sellEdit.img; prev.style.display = 'inline-block'; }
+      const lbl = document.getElementById('sellPhotoLabel'); if (lbl) lbl.textContent = '✓ Foto actual (toca para cambiar)';
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -973,6 +1014,7 @@ function publishProduct() {
   const cat   = document.getElementById('sellCat').value;
   const cond  = document.getElementById('sellCond').value.startsWith('used') ? 'used' : document.getElementById('sellCond').value === 'refurb' ? 'refurb' : 'new';
   const loc   = document.getElementById('sellProv').value;
+  const muni  = document.getElementById('sellMuni') ? document.getElementById('sellMuni').value : '';
   const desc  = document.getElementById('sellDesc').value.trim();
 
   if (title.length < 4)        { showToast('El título debe tener al menos 4 caracteres'); return; }
@@ -1016,12 +1058,26 @@ function publishProduct() {
     return;
   }
 
+  // Edición: actualiza el anuncio existente in-place (conserva id, createdAt y posición)
+  if (sellEditId != null) {
+    const patch = { title, price, icon: catIcons[cat] || '📦', img: sellImgData, cat, cond, loc, muni, desc };
+    const ex = products.find(p => p.id === sellEditId);
+    const u  = userProducts.find(p => p.id === sellEditId);
+    if (ex) Object.assign(ex, patch);
+    if (u && u !== ex) Object.assign(u, patch);
+    saveUserProducts();
+    sellEditId = null;
+    showToast('Anuncio actualizado ✓');
+    showView('myads');
+    return;
+  }
+
   const np = {
     id: Date.now(),
     title, price, old: null,
     icon: catIcons[cat] || '📦',
     img: sellImgData,
-    cat, cond, loc, desc,
+    cat, cond, loc, muni, desc,
     rating: 0, reviews: 0,
     seller: sellerName,
     badge: 'new',
@@ -1035,6 +1091,13 @@ function publishProduct() {
 
   showToast('¡Anuncio publicado! 🎉 Ya aparece en el listado');
   goHome();
+}
+
+function editAd(id) {
+  const p = userProducts.find(x => x.id === id) || products.find(x => x.id === id);
+  if (!p) { showToast('Anuncio no encontrado'); return; }
+  sellEditProduct = p;
+  showView('sell');
 }
 
 function deleteAd(id) {
@@ -1065,6 +1128,7 @@ function renderMyAds() {
               <div class="auction-price">${fmt(p.price)}</div>
               <div style="display:flex;gap:8px">
                 <button class="bid-btn" style="background:var(--primary)" onclick="showDetail(${p.id})">Ver</button>
+                <button class="bid-btn" style="background:var(--accent2);color:#1a1a2e" onclick="editAd(${p.id})">Editar</button>
                 <button class="bid-btn" onclick="deleteAd(${p.id})">Eliminar</button>
               </div>
             </div>
@@ -1117,7 +1181,7 @@ function renderCheckout() {
           <div class="fg2"><label for="coPhone">Teléfono *</label><input type="tel" id="coPhone" value="${esc(vPhone)}" placeholder="809-000-0000" autocomplete="tel" required></div>
           <div class="fg2" style="grid-column:1/-1"><label for="coAddr">Dirección de entrega *</label><input type="text" id="coAddr" value="${esc(vAddr)}" placeholder="Calle, número, sector" autocomplete="street-address" required></div>
           <div class="fg2"><label for="coProv">Provincia *</label>
-            <select id="coProv">${provs.map(p => `<option ${p === selProv ? 'selected' : ''}>${p}</option>`).join('')}</select>
+            <select id="coProv">${provOptions(selProv, false)}</select>
           </div>
         </div>
         <label class="co-check"><input type="checkbox" id="coSaveAddr"> Guardar esta dirección en mi libreta</label>
@@ -1381,7 +1445,7 @@ function renderCart() {
   }
   ie.innerHTML = cart.map(c => `
     <div class="cart-item">
-      <div class="cart-item-img" style="overflow:hidden">${c.img ? `<img src="${c.img}" alt="" style="width:100%;height:100%;object-fit:cover">` : c.icon}</div>
+      <div class="cart-item-img" style="overflow:hidden">${c.img ? `<img src="${esc(c.img)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover">` : esc(c.icon)}</div>
       <div class="cart-item-info">
         <div class="cart-item-title">${esc(c.title)}</div>
         <div style="font-size:11px;color:var(--text2)">${fmt(c.price)} c/u</div>
@@ -1492,10 +1556,10 @@ function renderCarousel() {
       return `
         <div class="carousel-item" onclick="showView('auctions')">
           <div class="carousel-card">
-            <div class="carousel-img">${item.icon}<span class="carousel-badge hot">⏰ SUBASTA</span></div>
+            <div class="carousel-img">${esc(item.icon)}<span class="carousel-badge hot">⏰ SUBASTA</span></div>
             <div class="carousel-info">
-              <div class="carousel-title">${item.title}</div>
-              <div class="carousel-seller">🏪 ${item.seller}</div>
+              <div class="carousel-title">${esc(item.title)}</div>
+              <div class="carousel-seller">🏪 ${esc(item.seller)}</div>
               <div class="carousel-price">${fmt(item.cur)}</div>
               <div class="carousel-meta"><span>👥 ${item.bids} pujas</span><span class="carousel-time">${aucLeft(item) || 'Finalizada'}</span></div>
             </div>
@@ -1512,8 +1576,8 @@ function renderCarousel() {
             ${item.badge === 'new'  ? '<span class="carousel-badge">NUEVO</span>' : ''}
           </div>
           <div class="carousel-info">
-            <div class="carousel-title">${item.title}</div>
-            <div class="carousel-seller">🏪 ${item.seller}</div>
+            <div class="carousel-title">${esc(item.title)}</div>
+            <div class="carousel-seller">🏪 ${esc(item.seller)}</div>
             <div>
               <span class="carousel-price">${fmt(item.price)}</span>
               ${item.old ? `<span class="carousel-old-price">${fmt(item.old)}</span><span class="carousel-discount">-${Math.round((1 - item.price / item.old) * 100)}%</span>` : ''}
@@ -1711,7 +1775,7 @@ function resetPhoneCapture() {
 function ensureQRLib(cb) {
   if (window.QRCode) return cb(true);
   const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js';
+  s.src = 'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6/qrcode.min.js'; // pin a commit inmutable (no @master)
   s.onload = () => cb(true);
   s.onerror = () => cb(false);
   document.head.appendChild(s);
@@ -2206,7 +2270,7 @@ function patchAuctionDOM(a) {
   document.querySelectorAll(`.auc-bids[data-id="${a.id}"]`).forEach(el => el.textContent = a.bids);
   document.querySelectorAll(`.auc-leader[data-id="${a.id}"]`).forEach(el => {
     el.innerHTML = (a.leader && a.status === 'active' && !a.mine && !a.myBid)
-      ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${a.leader}</b> va ganando` : '';
+      ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${esc(a.leader)}</b> va ganando` : '';
   });
   if (typeof cview !== 'undefined' && cview === 'auctions' && a.status !== 'active') renderAuctions();
 }
@@ -2222,7 +2286,7 @@ async function loadBidFeed(id) {
     if (!data || !data.length) { box.innerHTML = '<div class="bf-empty">Sé el primero en pujar 🔨</div>'; return; }
     box.innerHTML = data.map((b, i) => `
       <div class="bf-row${i === 0 ? ' bf-top' : ''}">
-        <span class="bf-name">${i === 0 ? '🏆 ' : ''}${b.masked}</span>
+        <span class="bf-name">${i === 0 ? '🏆 ' : ''}${esc(b.masked)}</span>
         <span class="bf-amt">${fmt(b.amount)}</span>
         <span class="bf-time">${relTime(b.created_at)}</span>
       </div>`).join('');
@@ -2556,7 +2620,8 @@ function openAddrForm(id) {
         <div class="fg2"><label>Nombre del destinatario *</label><input type="text" id="afName" value="${esc(a?.name || '')}"></div>
         <div class="fg2"><label>Teléfono *</label><input type="tel" id="afPhone" value="${esc(a?.phone || '')}" placeholder="809-000-0000"></div>
         <div class="fg2" style="grid-column:1/-1"><label>Dirección *</label><input type="text" id="afAddr" value="${esc(a?.addr || '')}" placeholder="Calle, número, sector"></div>
-        <div class="fg2"><label>Provincia</label><select id="afProv">${provs.map(p => `<option ${a?.prov === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
+        <div class="fg2"><label>Provincia</label><select id="afProv" onchange="var m=document.getElementById('afMuni');if(m)m.innerHTML=muniOptions(this.value)">${provOptions(a?.prov, false)}</select></div>
+        <div class="fg2"><label>Municipio</label><select id="afMuni">${muniOptions(a?.prov, a?.muni)}</select></div>
         <label class="co-check" style="grid-column:1/-1"><input type="checkbox" id="afDef" ${a?.def ? 'checked' : ''}> Usar como predeterminada</label>
       </div>
       <div style="display:flex;gap:10px;margin-top:6px">
@@ -2570,19 +2635,20 @@ function saveAddrForm() {
   const phone = document.getElementById('afPhone').value.trim();
   const addr  = document.getElementById('afAddr').value.trim();
   const prov  = document.getElementById('afProv').value;
+  const muni  = document.getElementById('afMuni') ? document.getElementById('afMuni').value : '';
   const def   = document.getElementById('afDef').checked;
   if (name.length < 3 || phone.length < 7 || addr.length < 5) { showToast('Completa nombre, teléfono y dirección'); return; }
   if (editingAddr) {
     const l = getAddresses();
     const a = l.find(x => x.id === editingAddr);
     if (a) {
-      Object.assign(a, { name, phone, addr, prov });
+      Object.assign(a, { name, phone, addr, prov, muni });
       if (def) { l.forEach(x => x.def = false); a.def = true; }
       else { a.def = false; if (l.length && !l.some(x => x.def)) { (l.find(x => x.id !== a.id) || a).def = true; } }
     }
     saveAddresses(l);
   } else {
-    addAddress({ name, phone, addr, prov, def });
+    addAddress({ name, phone, addr, prov, muni, def });
   }
   editingAddr = null;
   renderAddresses();
@@ -2609,7 +2675,7 @@ function renderSettings() {
         <div class="fg2"><label>Nombre para mostrar</label><input type="text" id="stName" value="${esc(pf.name || '')}"></div>
         <div class="fg2"><label>Teléfono</label><input type="tel" id="stPhone" value="${esc(pf.phone || '')}" placeholder="809-000-0000"></div>
         <div class="fg2"><label>Correo (no editable)</label><input type="email" value="${esc(email)}" disabled style="opacity:.6;cursor:not-allowed"></div>
-        <div class="fg2"><label>Provincia</label><select id="stProv">${provs.map(p => `<option value="${p}" ${pf.province === p ? 'selected' : ''}>${p || 'Selecciona…'}</option>`).join('')}</select></div>
+        <div class="fg2"><label>Provincia</label><select id="stProv"><option value="">Selecciona…</option>${provOptions(pf.province, false)}</select></div>
       </div>
       <button class="submit-btn" style="width:auto;padding:12px 24px;margin-top:6px" onclick="saveSettings()">Guardar cambios</button>
       <p style="font-size:12px;color:var(--text2);margin-top:10px">El correo de acceso no se cambia aquí. Para cambiarlo escribe a soporte@mercadord.net.</p>
@@ -2844,6 +2910,28 @@ document.addEventListener('keydown', e => {
   if (interactive && t.tabIndex >= 0) { e.preventDefault(); t.click(); }
 });
 
+// Hace alcanzables por teclado los controles no nativos (tarjetas, chips, items) y
+// anuncia los títulos de vista SPA como encabezados. Se re-aplica tras cada render.
+function a11yTagInteractive(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('.product-card, .auction-card, .stat-box, .menu-item, .addr-card, .msg-thread, .carousel-item, .nt-row.nt-click, .scat, .nav-item').forEach(el => {
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    if (!el.hasAttribute('role'))     el.setAttribute('role', 'button');
+  });
+  // El corazón de favoritos ya trae role=button; solo le faltaba el foco
+  root.querySelectorAll('.fav-btn').forEach(el => { if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0'); });
+  // Títulos de vista renderizados como <div>: anunciarlos como encabezado de nivel 2
+  root.querySelectorAll('.section-title').forEach(el => {
+    if (!el.hasAttribute('role')) { el.setAttribute('role', 'heading'); el.setAttribute('aria-level', '2'); }
+  });
+  // Asociar cada <label> sin for= con su control (los formularios usan label+input hermanos)
+  root.querySelectorAll('.fg label:not([for]), .fg2 label:not([for]), .verification-form-group label:not([for])').forEach(lab => {
+    const grp = lab.closest('.fg, .fg2, .verification-form-group');
+    const ctrl = grp && grp.querySelector('input, select, textarea');
+    if (ctrl && ctrl.id) lab.setAttribute('for', ctrl.id);
+  });
+}
+
 // Marcar diálogos para lectores de pantalla y hacer alcanzables por teclado los controles no nativos
 (function a11yEnhance() {
   [['authOverlay', 'Cuenta'], ['legalOverlay', 'Información'], ['verificationOverlay', 'Verificación de identidad'],
@@ -2855,17 +2943,42 @@ document.addEventListener('keydown', e => {
   document.querySelectorAll('.subsection-overlay').forEach(el => {
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
   });
-  document.querySelectorAll('.nav-item, .scat').forEach(el => {
-    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
-    if (!el.hasAttribute('role'))     el.setAttribute('role', 'button');
+  // Etiquetar lo presente al cargar + re-aplicar tras cada render (las tarjetas se inyectan después en estos contenedores)
+  a11yTagInteractive(document);
+  ['contentArea', 'carouselContent', 'cartItems', 'notifList'].forEach(id => {
+    const c = document.getElementById(id);
+    if (c) new MutationObserver(() => a11yTagInteractive(c)).observe(c, { childList: true });
   });
-  // Enlaces del footer (sin href), encabezados de columna y tarjetas: alcanzables por teclado
+  // Enlaces del footer (sin href), encabezados de columna y badges: alcanzables por teclado
   document.querySelectorAll('.footer a[onclick]:not([href]), .footer-col h4[onclick], .footer-badge-link[onclick], .app-btn[onclick], .social-btn[onclick]').forEach(el => {
     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
     if (!el.hasAttribute('role'))     el.setAttribute('role', 'link');
   });
   const badge = document.getElementById('notifBadge');
   if (badge) { badge.setAttribute('aria-live', 'polite'); badge.setAttribute('role', 'status'); }
+})();
+
+// Búsqueda desde la URL (?q=) — hace real la SearchAction declarada en JSON-LD
+(function initSearchFromUrl() {
+  try {
+    const q = new URLSearchParams(location.search).get('q');
+    if (q) {
+      const si = document.getElementById('searchInput');
+      if (si) { si.value = q; if (typeof filterProducts === 'function') filterProducts(); }
+    }
+  } catch (_) {}
+})();
+
+// Poblar el filtro de ubicación y el select de registro con las 32 provincias (fuente única RD_PROVINCES)
+(function initProvinces() {
+  if (typeof RD_PROVINCES === 'undefined') return;
+  const loc = document.getElementById('locFilterBody');
+  if (loc) {
+    loc.innerHTML = RD_PROVINCES.map(p => `<div class="scat" onclick="filterLoc('${p.code}',this)"><span class="scat-icon">📍</span>${esc(p.name)}</div>`).join('');
+    if (typeof a11yTagInteractive === 'function') a11yTagInteractive(loc);
+  }
+  const rp = document.getElementById('rProv');
+  if (rp) rp.innerHTML = '<option value="">Selecciona tu provincia</option>' + RD_PROVINCES.map(p => `<option>${esc(p.name)}</option>`).join('') + '<option>Otra</option>';
 })();
 
 // ══════════════════════════════════════════════════

@@ -138,8 +138,8 @@ function refreshHeader() {
     const ini  = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
     btn.outerHTML = `
       <div class="user-pill" id="authBtn" onclick="requireAuth('account')" role="button" tabindex="0">
-        <div class="uav">${ini}</div>
-        ${name.split(' ')[0]}
+        <div class="uav">${esc(ini)}</div>
+        ${esc(name.split(' ')[0])}
         <span class="vtick">${userState?.verified ? '✓' : ''}</span>
       </div>`;
   } else {
@@ -237,6 +237,13 @@ function fe(id, msg) {
   if (!e) return;
   e.textContent = msg;
   e.classList.toggle('show', !!msg);
+  if (!e.getAttribute('role')) e.setAttribute('role', 'alert'); // anunciado por lector de pantalla
+  // Asociar el error con su input (id del error = id del input + "E") y marcar validez
+  const inp = document.getElementById(id.replace(/E$/, ''));
+  if (inp && inp.matches('input, select, textarea')) {
+    if (msg) inp.setAttribute('aria-invalid', 'true'); else inp.removeAttribute('aria-invalid');
+    if (!inp.getAttribute('aria-describedby')) inp.setAttribute('aria-describedby', id);
+  }
 }
 function cfe(...ids) { ids.forEach(id => fe(id, '')); }
 
@@ -667,6 +674,7 @@ async function doCreateAccount() {
         // Confirmación de email desactivada en el proyecto: sesión directa
         showToast(`¡Cuenta creada! Bienvenido/a ${nom} 🎉`);
         closeAuth();
+        if (pending) { const v = pending; pending = null; requireAuth(v); } // continuar la acción que pidió (vender/checkout)
       } else {
         showAlert('ok', `✅ Cuenta creada. Enviamos un enlace de verificación a ${em} — confírmalo para poder iniciar sesión.`);
       }

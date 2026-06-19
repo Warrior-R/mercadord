@@ -59,6 +59,12 @@ create table if not exists public.bids (
 );
 alter table public.bids enable row level security;
 create index if not exists bids_auction_idx on public.bids(auction_id, created_at desc);
+create index if not exists bids_bidder_idx on public.bids(bidder_id);
+-- Índices de la consulta más caliente (listado de subastas activas) y de la policy RLS por participante
+create index if not exists auctions_active_idx on public.auctions(status, ends_at);
+create index if not exists auctions_seller_idx on public.auctions(seller_id);
+create index if not exists auctions_high_bidder_idx on public.auctions(high_bidder);
+create index if not exists auctions_winner_idx on public.auctions(winner_id);
 
 drop policy if exists "pujas: leer propias" on public.bids;
 create policy "pujas: leer propias" on public.bids for select using (auth.uid() = bidder_id);

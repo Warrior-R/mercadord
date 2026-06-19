@@ -2,7 +2,8 @@
    MercadoRD — Estilos globales
    Archivo: css/styles.css
 ═══════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
+/* La fuente Sora se carga vía <link> en el <head> (preconnect + stylesheet),
+   no por @import, para no bloquear el render con una cadena de peticiones. */
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{overflow-x:hidden}
@@ -65,7 +66,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 
 /* ── HEADER ── */
 .header{background:var(--primary);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.header-top{display:flex;align-items:center;gap:12px;padding:10px 20px}
+.header-top{display:flex;align-items:center;gap:12px;padding:10px 20px;max-width:1280px;margin:0 auto;width:100%}
 .logo{font-size:24px;font-weight:700;color:#fff;letter-spacing:-.5px;white-space:nowrap;cursor:pointer;transition:opacity .2s}
 .logo:hover{opacity:.85}
 .logo span{color:var(--accent2)}
@@ -77,7 +78,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .hbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap;font-family:'Sora',sans-serif;transition:background .2s}
 .hbtn:hover{background:rgba(255,255,255,.28)}
 .cart-badge{background:var(--accent);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;font-weight:700}
-.nav{background:var(--primary-light);display:flex;overflow-x:auto;padding:0 12px;scrollbar-width:none}
+.nav{background:var(--primary-light);display:flex;overflow-x:auto;padding:0 12px;scrollbar-width:none;max-width:1280px;margin:0 auto;width:100%}
 .nav::-webkit-scrollbar{display:none}
 .nav-item{color:rgba(255,255,255,.85);padding:9px 16px;font-size:13px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;font-weight:500}
 .nav-item:hover,.nav-item.active{color:#fff;border-bottom-color:var(--accent2)}
@@ -140,7 +141,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .product-price-old{font-size:11px;color:var(--text2);text-decoration:line-through;margin-left:6px}
 .product-discount{font-size:11px;color:var(--green);font-weight:600;margin-left:4px}
 .product-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
-.rating{font-size:11px;color:var(--accent2)}
+.rating{font-size:11px;color:#8a6500}
 .add-cart{padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Sora',sans-serif;transition:background .2s}
 .add-cart:hover{background:var(--primary-light)}
 
@@ -188,7 +189,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .cart-qty{display:flex;align-items:center;gap:8px;margin-top:6px}
 .qty-btn{width:24px;height:24px;border:1px solid var(--border);background:none;cursor:pointer;border-radius:4px;font-size:16px;display:flex;align-items:center;justify-content:center}
 .qty-num{font-size:13px;font-weight:600;min-width:20px;text-align:center}
-.remove-item{font-size:11px;color:var(--accent);cursor:pointer;margin-left:8px}
+.remove-item{font-size:11px;color:var(--red);cursor:pointer;margin-left:8px}
 .cart-item-total{font-size:15px;font-weight:700;color:var(--accent);align-self:center;flex-shrink:0}
 .cart-total-section{margin-top:auto;padding-top:18px;border-top:1px solid var(--border)}
 .total-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px}
@@ -244,6 +245,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   .products-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   body{padding-bottom:65px}.cart-panel{width:100vw}.banner h1{font-size:22px}
   .banner-stats{gap:14px}
+  .toast{bottom:80px;white-space:normal;text-align:center}
 
   /* Header de dos filas: logo + iconos arriba, búsqueda a lo ancho abajo */
   .header-top{flex-wrap:wrap;padding:8px 12px;gap:8px 10px}

@@ -5,15 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MercadoRD — Compra y Vende en República Dominicana</title>
 <meta name="description" content="El marketplace #1 de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<link rel="canonical" href="https://mercadord.net/">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#003087">
+<meta property="og:site_name" content="MercadoRD">
 <meta property="og:title" content="MercadoRD — Compra y Vende en República Dominicana">
 <meta property="og:description" content="El marketplace de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
 <meta property="og:url" content="https://mercadord.net">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_DO">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MercadoRD — Compra y Vende en República Dominicana">
+<meta name="twitter:description" content="El marketplace de República Dominicana. Compra y vende electrónica, vehículos, moda, hogar y más.">
+<meta property="og:image" content="https://mercadord.net/og-image.svg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MercadoRD — Marketplace de República Dominicana">
+<meta name="twitter:image" content="https://mercadord.net/og-image.svg">
+<!-- Nota: og-image.svg funciona en plataformas que renderizan SVG; para WhatsApp/Facebook se recomienda exportar también un og-image.png 1200x630 -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://mercadord.net/#org","name":"MercadoRD","url":"https://mercadord.net/","logo":"https://mercadord.net/favicon.svg","areaServed":"DO","description":"Marketplace de compra y venta en República Dominicana."},
+{"@type":"WebSite","@id":"https://mercadord.net/#site","url":"https://mercadord.net/","name":"MercadoRD","inLanguage":"es-DO","publisher":{"@id":"https://mercadord.net/#org"},"potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://mercadord.net/?q={search_term_string}"},"query-input":"required name=search_term_string"}}
+]}
+</script>
+
+<!-- Preconnect a orígenes externos críticos (mejora LCP/handshakes) -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap">
+<link rel="dns-prefetch" href="https://flsixfuzvbapwnfepmwr.supabase.co">
 
 <!-- Estilos -->
 <link rel="stylesheet" href="css/styles.css">
@@ -46,13 +70,13 @@
    <button class="auth-tab" id="tabReg" onclick="switchTab('register')">Crear cuenta</button>
   </div>
   <div class="auth-body">
-   <div class="auth-alert" id="authAlert"></div>
+   <div class="auth-alert" id="authAlert" role="alert" aria-live="assertive"></div>
 
    <!-- LOGIN -->
    <div id="loginFlow">
     <div class="auth-step active" id="ls1">
      <button class="auth-btn btn-goog" onclick="loginGoogle()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" style="vertical-align:middle;margin-right:8px">Continuar con Google
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="" style="vertical-align:middle;margin-right:8px">Continuar con Google
      </button>
      <button class="auth-btn btn-sms" onclick="switchTab('register');gotoStep('r',2)">📱 Continuar con teléfono</button>
      <div class="divider">o con tu email</div>
@@ -67,18 +91,18 @@
       <div class="tbadge">🔒 SSL 256-bit</div>
       <div class="tbadge">🛡 Anti-fraude</div>
       <div class="tbadge">✅ Datos cifrados</div>
-      <div class="tbadge">🔐 2FA disponible</div>
+      <div class="tbadge">🪪 Verificación KYC</div>
      </div>
     </div>
     <div class="auth-step" id="ls2">
      <div class="vc"><div class="vc-icon">🔐</div><div class="vc-title">Verificación en dos pasos</div><div class="vc-desc">Ingresa el código de 6 dígitos enviado a tu dispositivo.</div></div>
-     <div class="otp-row">
-      <input class="otp-d" maxlength="1" id="lo0" oninput="onext(this,1,'l')" onkeydown="oback(event,this,null,'l')">
-      <input class="otp-d" maxlength="1" id="lo1" oninput="onext(this,2,'l')" onkeydown="oback(event,this,0,'l')">
-      <input class="otp-d" maxlength="1" id="lo2" oninput="onext(this,3,'l')" onkeydown="oback(event,this,1,'l')">
-      <input class="otp-d" maxlength="1" id="lo3" oninput="onext(this,4,'l')" onkeydown="oback(event,this,2,'l')">
-      <input class="otp-d" maxlength="1" id="lo4" oninput="onext(this,5,'l')" onkeydown="oback(event,this,3,'l')">
-      <input class="otp-d" maxlength="1" id="lo5" oninput="onext(this,-1,'l')" onkeydown="oback(event,this,4,'l')">
+     <div class="otp-row" role="group" aria-label="Código de verificación de 6 dígitos">
+      <input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" aria-label="Dígito 1 del código" id="lo0" oninput="onext(this,1,'l')" onkeydown="oback(event,this,null,'l')">
+      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 2 del código" id="lo1" oninput="onext(this,2,'l')" onkeydown="oback(event,this,0,'l')">
+      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 3 del código" id="lo2" oninput="onext(this,3,'l')" onkeydown="oback(event,this,1,'l')">
+      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 4 del código" id="lo3" oninput="onext(this,4,'l')" onkeydown="oback(event,this,2,'l')">
+      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 5 del código" id="lo4" oninput="onext(this,5,'l')" onkeydown="oback(event,this,3,'l')">
+      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 6 del código" id="lo5" oninput="onext(this,-1,'l')" onkeydown="oback(event,this,4,'l')">
      </div>
      <div class="resend-t">Reenviar en <span id="otpC">60</span>s</div>
      <button class="auth-btn btn-pri" style="margin-top:14px" onclick="verify2fa()">Verificar código</button>
@@ -155,13 +179,13 @@
      <button class="auth-btn btn-pri" id="smsBtnSend" onclick="sendSMS()">Enviar código SMS</button>
      <div id="smsSection" style="display:none;margin-top:14px">
       <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:10px">Código enviado a <strong id="phoneTo"></strong></div>
-      <div class="otp-row">
-       <input class="otp-d" maxlength="1" id="so0" oninput="onext(this,1,'s')" onkeydown="oback(event,this,null,'s')">
-       <input class="otp-d" maxlength="1" id="so1" oninput="onext(this,2,'s')" onkeydown="oback(event,this,0,'s')">
-       <input class="otp-d" maxlength="1" id="so2" oninput="onext(this,3,'s')" onkeydown="oback(event,this,1,'s')">
-       <input class="otp-d" maxlength="1" id="so3" oninput="onext(this,4,'s')" onkeydown="oback(event,this,2,'s')">
-       <input class="otp-d" maxlength="1" id="so4" oninput="onext(this,5,'s')" onkeydown="oback(event,this,3,'s')">
-       <input class="otp-d" maxlength="1" id="so5" oninput="onext(this,-1,'s')" onkeydown="oback(event,this,4,'s')">
+      <div class="otp-row" role="group" aria-label="Código SMS de 6 dígitos">
+       <input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" aria-label="Dígito 1 del código" id="so0" oninput="onext(this,1,'s')" onkeydown="oback(event,this,null,'s')">
+       <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 2 del código" id="so1" oninput="onext(this,2,'s')" onkeydown="oback(event,this,0,'s')">
+       <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 3 del código" id="so2" oninput="onext(this,3,'s')" onkeydown="oback(event,this,1,'s')">
+       <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 4 del código" id="so3" oninput="onext(this,4,'s')" onkeydown="oback(event,this,2,'s')">
+       <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 5 del código" id="so4" oninput="onext(this,5,'s')" onkeydown="oback(event,this,3,'s')">
+       <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 6 del código" id="so5" oninput="onext(this,-1,'s')" onkeydown="oback(event,this,4,'s')">
       </div>
       <div class="resend-t" id="smsResend">Reenviar en <span id="smsC">60</span>s</div>
       <button class="auth-btn btn-pri" style="margin-top:10px" onclick="verifySMS()">Verificar código</button>
@@ -818,7 +842,7 @@
   </div>
   <div class="scard">
    <div class="scard-title">Ubicación</div>
-   <div class="scard-body">
+   <div class="scard-body" id="locFilterBody" style="max-height:280px;overflow-y:auto">
     <div class="scat" onclick="filterLoc('SD',this)"><span class="scat-icon">📍</span>Santo Domingo</div>
     <div class="scat" onclick="filterLoc('STI',this)"><span class="scat-icon">📍</span>Santiago</div>
     <div class="scat" onclick="filterLoc('PP',this)"><span class="scat-icon">📍</span>Puerto Plata</div>
@@ -1037,7 +1061,7 @@
 </div>
 
 <!-- Toast -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- Bottom Nav -->
 <div class="bottom-nav">
