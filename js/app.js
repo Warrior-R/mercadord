@@ -1130,6 +1130,7 @@ function publishProduct() {
         });
         if (error) throw error;
         await loadProductsDB();
+        loadPlatformStats();
         showToast('¡Anuncio publicado! 🎉 Ya lo ven todos los usuarios');
         goHome();
       } catch (e) { showToast('No se pudo publicar: ' + (e.message || e)); }
@@ -1175,6 +1176,7 @@ function deleteAd(id) {
         const { error } = await sb.from('products').delete().eq('id', prod.sbId);
         if (error) throw error;
         await loadProductsDB();
+        loadPlatformStats();
         showToast('Anuncio eliminado');
         renderMyAds();
       } catch (e) { showToast('No se pudo eliminar: ' + (e.message || e)); }
@@ -2789,9 +2791,35 @@ document.addEventListener('click', e => {
   if (!wrap && p && p.style.display === 'block') p.style.display = 'none';
 });
 
+// ─── Estadísticas reales del hero (conteos vivos desde Supabase) ───
+// Reemplazan los números antes ficticios. La RPC get_platform_stats() devuelve
+// solo TOTALES agregados (sin datos personales) y es ejecutable por anon.
+let _statsTimer = null;
+function fmtStat(n) { return (Number(n) || 0).toLocaleString('es-DO'); }
+function setStat(id, n) { const el = document.getElementById(id); if (el) el.textContent = fmtStat(n); }
+async function loadPlatformStats() {
+  if (typeof sb === 'undefined' || !sb) return;
+  try {
+    const { data, error } = await sb.rpc('get_platform_stats');
+    if (error || !data) return;
+    setStat('statProducts', data.products);
+    setStat('statSellers', data.sellers_verified);
+    setStat('statAds', data.ads_total);
+    const prov = document.getElementById('statProvinces');
+    if (prov) prov.textContent = `${fmtStat(data.provinces)} / ${data.provinces_total || 32}`;
+  } catch (e) { console.warn('loadPlatformStats', e); }
+}
+// Auto-actualización constante: carga inmediata + refresco periódico (1 vez el timer).
+function startStatsAutoRefresh() {
+  loadPlatformStats();
+  if (_statsTimer) return;
+  _statsTimer = setInterval(loadPlatformStats, 60000);
+}
+
 // Punto de entrada llamado por auth.js cuando cambia la sesión (login/logout/carga)
 function onUserChanged() {
   if (typeof sb === 'undefined' || !sb) return;
+  startStatsAutoRefresh();
   loadAuctionsDB();
   loadProductsDB();
   subscribeAuctions();

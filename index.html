@@ -773,10 +773,10 @@
   <button class="bbtn bbtn-sec" onclick="showView('auctions')">Ver subastas activas 🔥</button>
  </div>
  <div class="banner-stats">
-  <div class="bstat"><div class="bstat-num">+120K</div><div class="bstat-label">Productos activos</div></div>
-  <div class="bstat"><div class="bstat-num">+45K</div><div class="bstat-label">Vendedores verificados</div></div>
-  <div class="bstat"><div class="bstat-num">+800K</div><div class="bstat-label">Compradores</div></div>
-  <div class="bstat"><div class="bstat-num">32</div><div class="bstat-label">Provincias cubiertas</div></div>
+  <div class="bstat"><div class="bstat-num" id="statProducts">—</div><div class="bstat-label">Productos activos</div></div>
+  <div class="bstat"><div class="bstat-num" id="statSellers">—</div><div class="bstat-label">Vendedores verificados</div></div>
+  <div class="bstat"><div class="bstat-num" id="statAds">—</div><div class="bstat-label">Anuncios publicados</div></div>
+  <div class="bstat"><div class="bstat-num" id="statProvinces">—</div><div class="bstat-label">Provincias cubiertas</div></div>
  </div>
 </div>
 
@@ -984,7 +984,7 @@
   <a class="footer-badge-link" onclick="requireAuth('seller')"><span class="fbl-icon">📊</span><div><div style="font-weight:700;font-size:13px;color:#fff">Seller Center</div><div style="font-size:11px;opacity:.7">Panel de métricas y campañas</div></div></a>
   <a class="footer-badge-link" onclick="openLegal('returns')"><span class="fbl-icon">🔄</span><div><div style="font-weight:700;font-size:13px;color:#fff">MercadoRD Retorno</div><div style="font-size:11px;opacity:.7">Devoluciones fáciles en 15 días</div></div></a>
   <a class="footer-badge-link" onclick="openInfo('community')"><span class="fbl-icon">👥</span><div><div style="font-weight:700;font-size:13px;color:#fff">Comunidad</div><div style="font-size:11px;opacity:.7">Foros, tips y grupos de compras</div></div></a>
-  <a class="footer-badge-link" onclick="openInfo('ads')"><span class="fbl-icon">📣</span><div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Llega a +800K compradores</div></div></a>
+  <a class="footer-badge-link" onclick="openInfo('ads')"><span class="fbl-icon">📣</span><div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Publica gratis y llega a todo el país</div></div></a>
  </div>
 
  <div class="footer-divider"></div>
