@@ -952,6 +952,11 @@ function renderSellForm() {
     const setv = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
     setv('sellCat', sellEdit.cat);
     setv('sellCond', sellEdit.cond);
+    // El WhatsApp de anuncios en BD no viaja en el feed (protegido por RLS): traerlo aparte.
+    if (sellEdit._db && sellEdit.sbId && typeof sb !== 'undefined' && sb) {
+      sb.from('seller_contacts').select('wa').eq('ref_id', sellEdit.sbId).eq('kind', 'product').maybeSingle()
+        .then(({ data }) => { const el = document.getElementById('sellWa'); if (el && data?.wa) el.value = data.wa; });
+    }
     if (sellEdit.img) {
       const prev = document.getElementById('sellPhotoPreview');
       if (prev) { prev.src = sellEdit.img; prev.style.display = 'inline-block'; }
@@ -1060,15 +1065,17 @@ function publishProduct() {
     if (typeof sb !== 'undefined' && sb && user?.id) {
       (async () => {
         try {
-          const { error } = await sb.from('auctions').insert({
+          const { data: insA, error } = await sb.from('auctions').insert({
             seller_id: user.id, seller_name: sellerName, title,
             icon: catIcons[cat] || '📦', location: loc,
             start_price: Math.round(price), current_bid: Math.round(price), bid_count: 0,
             buy_now_price: Math.round(price * 1.35),
             min_increment: Math.max(500, Math.round(price * 0.02 / 100) * 100),
             ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-          });
+          }).select('id').single();
           if (error) throw error;
+          if (insA?.id) await sb.from('seller_contacts').upsert(
+            { ref_id: insA.id, kind: 'auction', wa, owner: user.id }, { onConflict: 'ref_id,kind' });
           await loadAuctionsDB();
           showToast('¡Subasta publicada! 🔨 Precio inicial ' + fmt(price) + ' · 3 días');
           showView('auctions');
@@ -1080,7 +1087,7 @@ function publishProduct() {
     auctions.push({
       id: Date.now(), title, icon: catIcons[cat] || '📦',
       cur: Math.round(price), bids: 0, buy: Math.round(price * 1.35),
-      seller: sellerName, loc, endAt: Date.now() + 3 * 24 * 60 * 60 * 1000, mine: true
+      seller: sellerName, loc, wa, endAt: Date.now() + 3 * 24 * 60 * 60 * 1000, mine: true
     });
     saveAuctions();
     showToast('¡Subasta publicada! 🔨 Precio inicial ' + fmt(price) + ' · 3 días');
@@ -1100,6 +1107,8 @@ function publishProduct() {
             location: loc, image_url: sellImgData || ex.img || null
           }).eq('id', ex.sbId);
           if (error) throw error;
+          await sb.from('seller_contacts').upsert(
+            { ref_id: ex.sbId, kind: 'product', wa, owner: user.id }, { onConflict: 'ref_id,kind' });
           sellEditId = null;
           await loadProductsDB();
           showToast('Anuncio actualizado ✓');
@@ -1124,11 +1133,14 @@ function publishProduct() {
   if (typeof sb !== 'undefined' && sb && user?.id) {
     (async () => {
       try {
-        const { error } = await sb.from('products').insert({
+        const { data: ins, error } = await sb.from('products').insert({
           user_id: user.id, seller_name: sellerName, title, description: desc,
           price, category: cat, condition: cond, location: loc, image_url: sellImgData || null
-        });
+        }).select('id').single();
         if (error) throw error;
+        // Guardar el WhatsApp del vendedor en tabla protegida (solo verificados lo leen)
+        if (ins?.id) await sb.from('seller_contacts').upsert(
+          { ref_id: ins.id, kind: 'product', wa, owner: user.id }, { onConflict: 'ref_id,kind' });
         await loadProductsDB();
         loadPlatformStats();
         showToast('¡Anuncio publicado! 🎉 Ya lo ven todos los usuarios');
@@ -1175,6 +1187,7 @@ function deleteAd(id) {
       try {
         const { error } = await sb.from('products').delete().eq('id', prod.sbId);
         if (error) throw error;
+        await sb.from('seller_contacts').delete().eq('ref_id', prod.sbId).eq('kind', 'product');
         await loadProductsDB();
         loadPlatformStats();
         showToast('Anuncio eliminado');
@@ -3142,17 +3155,52 @@ function sendMessage() {
 }
 let pendingContact = null;   // producto pendiente de contactar tras iniciar sesión
 // Contacto con el vendedor por WhatsApp (modelo clasificados — sin compra en línea en esta fase)
-function contactSellerWhatsApp(itemOrId, isAuction) {
+async function contactSellerWhatsApp(itemOrId, isAuction) {
   let obj = itemOrId;
   if (typeof itemOrId === 'number' || typeof itemOrId === 'string') {
     obj = products.find(p => p.id == itemOrId) || (typeof auctions !== 'undefined' && auctions.find(a => a.id == itemOrId));
   }
   if (!obj) return;
-  const num = String(obj.wa || (typeof DEMO_WA !== 'undefined' ? DEMO_WA : '')).replace(/\D/g, '');
-  if (!num) { showToast('Este vendedor no dejó un número de contacto'); return; }
+
+  // ── Gate: SOLO usuarios verificados pueden contactar al vendedor ──
+  if (!user) {
+    if (typeof openAuth === 'function') openAuth('login');
+    if (typeof showAlert === 'function') showAlert('info', 'Inicia sesión y verifica tu identidad para contactar al vendedor.');
+    return;
+  }
+  if (!userState.verified) {
+    showToast('🪪 Verifica tu identidad para contactar al vendedor');
+    openVerification('contact');
+    return;
+  }
+
   const price = (obj.price != null) ? obj.price : obj.cur;
   const msg = `Hola 👋, vi tu ${isAuction ? 'subasta' : 'anuncio'} en MercadoRD: *${obj.title}*` +
               (price != null ? ` (RD$${Number(price).toLocaleString('es-DO')})` : '') + '. ¿Sigue disponible?';
+
+  // Anuncio en BD: el número vive en seller_contacts; la RLS solo lo entrega a
+  // usuarios verificados (no se puede cosechar ni saltar el filtro desde el cliente).
+  const dbRef = isAuction ? (obj.db ? obj.id : null) : (obj._db ? obj.sbId : null);
+  if (dbRef && typeof sb !== 'undefined' && sb) {
+    const w = window.open('', '_blank');   // abrir sincrónico para evitar bloqueo de pop-ups
+    try {
+      const { data, error } = await sb.from('seller_contacts').select('wa')
+        .eq('ref_id', dbRef).eq('kind', isAuction ? 'auction' : 'product').maybeSingle();
+      const num = (!error && data) ? String(data.wa || '').replace(/\D/g, '') : '';
+      if (num) {
+        const url = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+        if (w) w.location = url; else window.open(url, '_blank', 'noopener');
+      } else {
+        if (w) w.close();
+        showToast('Este vendedor no dejó un número de contacto');
+      }
+    } catch (e) { if (w) w.close(); showToast('No se pudo obtener el contacto del vendedor'); }
+    return;
+  }
+
+  // Anuncio local/demo (este navegador): el número está en el objeto
+  const num = String(obj.wa || '').replace(/\D/g, '');
+  if (!num) { showToast('Este vendedor no dejó un número de contacto'); return; }
   window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
 }
 

@@ -3,10 +3,6 @@
 //  Archivo: js/data.js
 // ═══════════════════════════════════════════════════
 
-// WhatsApp de contacto para los anuncios de ejemplo (formato internacional sin +).
-// 👉 Cambia este número por un WhatsApp real para probar el botón "Contactar" en los productos demo.
-const DEMO_WA = '18095551234';
-
 // Catálogo demo vaciado (2026-06-22) por decisión del usuario: el sitio arranca limpio
 // y solo muestra anuncios reales que publiquen los usuarios (tabla `products` de Supabase,
 // cargada por loadProductsDB). Para reponer ejemplos, volver a llenar este array.
