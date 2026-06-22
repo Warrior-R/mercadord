@@ -940,8 +940,8 @@ function renderSellForm() {
         </div>
         <div class="photo-area" id="sellPhotoArea" onclick="document.getElementById('sellPhotoInput').click()" tabindex="0" role="button" aria-label="Subir foto del producto (JPG, PNG o WEBP, máximo 5MB)">
           <div style="font-size:30px;margin-bottom:8px" id="sellPhotoIcon">📷</div>
-          <strong id="sellPhotoLabel">Subir foto principal</strong>
-          <div style="font-size:12px;margin-top:4px">JPG, PNG · 5MB máx (opcional)</div>
+          <strong id="sellPhotoLabel">Subir foto principal *</strong>
+          <div style="font-size:12px;margin-top:4px">JPG, PNG · 5MB máx · obligatoria</div>
           <img id="sellPhotoPreview" style="display:none;max-height:140px;border-radius:8px;margin-top:10px" alt="Vista previa">
         </div>
         <input type="file" id="sellPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleSellPhoto(this)">
@@ -1098,6 +1098,9 @@ function publishProduct() {
     showView('auctions');
     return;
   }
+
+  // La foto principal es obligatoria para anuncios (las subastas usan icono).
+  if (!sellImgData) { showToast('Sube una foto principal del anuncio'); return; }
 
   // Edición: actualiza el anuncio existente in-place (conserva id, createdAt y posición)
   if (sellEditId != null) {
