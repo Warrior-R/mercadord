@@ -130,7 +130,7 @@ function muniOptions(provCodeOrName, sel) {
     if (p) code = p.code;
   }
   const list = (typeof RD_MUNICIPIOS !== 'undefined' && RD_MUNICIPIOS[code]) || [];
-  return ['<option value="">Municipio (opcional)…</option>']
+  return ['<option value="">Selecciona municipio…</option>']
     .concat(list.map(m => `<option${m === sel ? ' selected' : ''}>${esc(m)}</option>`)).join('');
 }
 
@@ -923,19 +923,19 @@ function renderSellForm() {
           <div class="fg2"><label for="sellCond">Condición *</label>
             <select id="sellCond"><option value="new">Nuevo</option><option value="used">Usado – Como nuevo</option><option value="used2">Usado – Buen estado</option><option value="refurb">Reacondicionado</option></select>
           </div>
-          <div class="fg2"><label for="sellType">Tipo de anuncio</label>
+          <div class="fg2"><label for="sellType">Tipo de anuncio *</label>
             <select id="sellType"><option>Precio fijo</option><option>Subasta</option><option>Mejor oferta</option></select>
           </div>
           <div class="fg2"><label for="sellWa">WhatsApp de contacto *</label><input type="tel" id="sellWa" value="${sellEdit?.wa || ''}" placeholder="809-000-0000" inputmode="tel"></div>
-          <div class="fg2"><label for="sellProv">Provincia</label>
+          <div class="fg2"><label for="sellProv">Provincia *</label>
             <select id="sellProv" onchange="var m=document.getElementById('sellMuni');if(m)m.innerHTML=muniOptions(this.value)">${provOptions(sellEdit?.loc || 'SD', true)}</select>
           </div>
-          <div class="fg2"><label for="sellMuni">Municipio</label>
+          <div class="fg2"><label for="sellMuni">Municipio *</label>
             <select id="sellMuni">${muniOptions(sellEdit?.loc || 'SD', sellEdit?.muni)}</select>
           </div>
         </div>
         <div class="fg2" style="margin-bottom:14px">
-          <label for="sellDesc">Descripción</label>
+          <label for="sellDesc">Descripción *</label>
           <textarea id="sellDesc" placeholder="Describe el producto, estado, qué incluye..." maxlength="1000">${esc(sellEdit?.desc || '')}</textarea>
         </div>
         <div class="photo-area" id="sellPhotoArea" onclick="document.getElementById('sellPhotoInput').click()" tabindex="0" role="button" aria-label="Subir foto del producto (JPG, PNG o WEBP, máximo 5MB)">
@@ -1054,6 +1054,10 @@ function publishProduct() {
   if (title.length < 4)        { showToast('El título debe tener al menos 4 caracteres'); return; }
   if (!Number.isFinite(price) || price < 1) { showToast('Ingresa un precio válido (entero, mínimo RD$1)'); return; }
   if (!wa || wa.length < 10)   { showToast('Ingresa un WhatsApp de contacto válido (ej. 809-000-0000)'); return; }
+  if (!cat)                    { showToast('Selecciona una categoría'); return; }
+  if (!loc)                    { showToast('Selecciona la provincia'); return; }
+  if (!muni)                   { showToast('Selecciona el municipio'); return; }
+  if (desc.length < 10)        { showToast('Agrega una descripción (mínimo 10 caracteres)'); return; }
 
   const catIcons = { electronics:'📱', vehicles:'🚗', fashion:'👗', home2:'🏠', sports:'⚽', services:'🔧', agro:'🌿' };
   const sellerName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendedor';
