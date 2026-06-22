@@ -3,6 +3,10 @@
 //  Archivo: js/data.js
 // ═══════════════════════════════════════════════════
 
+// WhatsApp de contacto para los anuncios de ejemplo (formato internacional sin +).
+// 👉 Cambia este número por un WhatsApp real para probar el botón "Contactar" en los productos demo.
+const DEMO_WA = '18095551234';
+
 const products = [
   { id:1,  title:"iPhone 14 Pro Max 256GB",          price:68500,  old:75000,   icon:"📱", cat:"electronics", cond:"used", loc:"SD",  rating:4.8, reviews:312, seller:"TechShop RD",  badge:"hot",  img:"assets/products/1.jpg" },
   { id:2,  title:"Samsung 65\" QLED 4K Smart TV",    price:45000,  old:55000,   icon:"📺", cat:"electronics", cond:"new",  loc:"SD",  rating:4.7, reviews:89,  seller:"ElectroMax",   badge:"new",  img:"assets/products/2.jpg" },

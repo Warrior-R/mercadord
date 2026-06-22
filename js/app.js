@@ -313,7 +313,7 @@ function doRender() {
             </div>
             <div class="product-footer">
               <div class="rating">★ ${p.rating} <span style="color:var(--text2)">(${p.reviews})</span></div>
-              <button class="add-cart" onclick="event.stopPropagation();addCart(${p.id})">+ Carrito</button>
+              <button class="add-cart" style="background:#25D366" onclick="event.stopPropagation();contactSellerWhatsApp(${p.id})">💬 Contactar</button>
             </div>
           </div>
         </div>`).join('')}
@@ -353,9 +353,8 @@ function showDetail(id) {
       <div class="detail-meta">
         <span>📍 ${locLabel}</span>
         <span>📦 ${condLabel}</span>
-        <span>🚚 Envío a todo RD · RD$350</span>
-        <span>🔄 Devolución 15 días</span>
-        <span>🔒 Compra protegida</span>
+        <span>🤝 Trato directo con el vendedor</span>
+        <span>💬 Coordina entrega y pago por WhatsApp</span>
       </div>
 
       <div class="detail-buybox">
@@ -365,22 +364,14 @@ function showDetail(id) {
           <button class="btn-buy"   onclick="editAd(${p.id})">✏️ Editar anuncio</button>
           <button class="btn-cart2" onclick="deleteAd(${p.id})" style="border-color:var(--red);color:var(--red)">🗑️ Eliminar</button>
         </div>` : `
-        <div class="qty-stepper">
-          <span style="font-size:13px;color:var(--text2)">Cantidad</span>
-          <button type="button" onclick="detQtyStep(-1)" aria-label="Restar">−</button>
-          <input type="number" id="detQty" value="1" min="1" max="99" inputmode="numeric">
-          <button type="button" onclick="detQtyStep(1)" aria-label="Sumar">+</button>
-        </div>
         <div class="detail-actions">
-          <button class="btn-buy"   onclick="buyNowN(${p.id})">Comprar ahora</button>
-          <button class="btn-cart2" onclick="addCartN(${p.id})">Añadir al carrito</button>
-          <button class="btn-cart2" onclick="tryOffer(${p.id})" style="border-color:var(--primary);color:var(--primary)">💰 Hacer oferta</button>
-          <button class="btn-fav2"  onclick="toggleFav(${p.id},this)" aria-label="Favorito">${favs.has(p.id) ? '❤️' : '♡'}</button>
+          <button class="btn-buy" style="background:#25D366" onclick="contactSellerWhatsApp(${p.id})">💬 Contactar por WhatsApp</button>
+          <button class="btn-fav2" onclick="toggleFav(${p.id},this)" aria-label="Favorito">${favs.has(p.id) ? '❤️' : '♡'}</button>
         </div>`}
       </div>
 
       <div class="detail-desc">
-        ${esc(p.desc || 'Producto disponible para entrega en todo el país. Garantía incluida. Acepta tarjeta y efectivo contra entrega.')}
+        ${esc(p.desc || 'Producto disponible. Contacta al vendedor por WhatsApp para más detalles, precio final y coordinación de entrega.')}
       </div>
 
       <h3 class="co-sec">📋 Características del artículo</h3>
@@ -732,10 +723,8 @@ async function tryBuyNow(id) {
       const { data, error } = await sb.rpc('buy_now', { p_auction: a.id });
       if (error) throw error;
       a.sold = true; a.status = 'sold'; a.endAt = Date.now();
-      if (!cart.some(c => String(c.id) === 'auc-' + a.id)) cart.push({ id: 'auc-' + a.id, title: a.title + ' (¡Cómpralo ya!)', price: Number(data.price), icon: a.icon, img: null, qty: 1 });
-      saveCart(); updateCartBadge();
-      showToast('⚡ ¡Cómpralo ya! La subasta se cerró para ti');
-      showView('checkout');
+      showToast('⚡ ¡Ganaste! Contacta al vendedor para coordinar la entrega');
+      contactSellerWhatsApp(a, true);
     } catch (e) {
       const m = String((e && e.message) || e || '');
       if (m.includes('AUCTION_CLOSED')) { showToast('Esta subasta ya cerró'); await loadAuctionsDB(); }
@@ -749,11 +738,8 @@ async function tryBuyNow(id) {
   a.sold = true;
   a.endAt = Date.now();
   saveAuctions();
-  cart.push({ id: 90000 + (typeof a.id === 'number' ? a.id : 0), title: a.title + ' (¡Cómpralo ya!)', price: a.buy, icon: a.icon, img: null, qty: 1 });
-  saveCart();
-  updateCartBadge();
-  showToast('⚡ ¡Cómpralo ya! La subasta se cerró para ti');
-  showView('checkout');
+  showToast('⚡ ¡Ganaste! Contacta al vendedor para coordinar la entrega');
+  contactSellerWhatsApp(a, true);
 }
 
 // ══════════════════════════════════════════════════
@@ -865,7 +851,7 @@ function renderFavs() {
               </div>
               <div class="product-footer">
                 <div class="rating">★ ${p.rating} <span style="color:var(--text2)">(${p.reviews})</span></div>
-                <button class="add-cart" onclick="event.stopPropagation();addCart(${p.id})">+ Carrito</button>
+                <button class="add-cart" style="background:#25D366" onclick="event.stopPropagation();contactSellerWhatsApp(${p.id})">💬 Contactar</button>
               </div>
             </div>
           </div>`).join('')}
@@ -940,6 +926,7 @@ function renderSellForm() {
           <div class="fg2"><label for="sellType">Tipo de anuncio</label>
             <select id="sellType"><option>Precio fijo</option><option>Subasta</option><option>Mejor oferta</option></select>
           </div>
+          <div class="fg2"><label for="sellWa">WhatsApp de contacto *</label><input type="tel" id="sellWa" value="${sellEdit?.wa || ''}" placeholder="809-000-0000" inputmode="tel"></div>
           <div class="fg2"><label for="sellProv">Provincia</label>
             <select id="sellProv" onchange="var m=document.getElementById('sellMuni');if(m)m.innerHTML=muniOptions(this.value)">${provOptions(sellEdit?.loc || 'SD', true)}</select>
           </div>
@@ -1055,10 +1042,13 @@ function publishProduct() {
   const cond  = document.getElementById('sellCond').value.startsWith('used') ? 'used' : document.getElementById('sellCond').value === 'refurb' ? 'refurb' : 'new';
   const loc   = document.getElementById('sellProv').value;
   const muni  = document.getElementById('sellMuni') ? document.getElementById('sellMuni').value : '';
+  const waRaw = (document.getElementById('sellWa') ? document.getElementById('sellWa').value : '').replace(/\D/g, '');
+  const wa    = waRaw ? (waRaw.length === 10 ? '1' + waRaw : waRaw) : '';
   const desc  = document.getElementById('sellDesc').value.trim();
 
   if (title.length < 4)        { showToast('El título debe tener al menos 4 caracteres'); return; }
   if (!Number.isFinite(price) || price < 1) { showToast('Ingresa un precio válido (entero, mínimo RD$1)'); return; }
+  if (!wa || wa.length < 10)   { showToast('Ingresa un WhatsApp de contacto válido (ej. 809-000-0000)'); return; }
 
   const catIcons = { electronics:'📱', vehicles:'🚗', fashion:'👗', home2:'🏠', sports:'⚽', services:'🔧', agro:'🌿' };
   const sellerName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Vendedor';
@@ -1119,7 +1109,7 @@ function publishProduct() {
       return;
     }
     // Local (demo)
-    const patch = { title, price, icon: catIcons[cat] || '📦', img: sellImgData, cat, cond, loc, muni, desc };
+    const patch = { title, price, icon: catIcons[cat] || '📦', img: sellImgData, cat, cond, loc, muni, wa, desc };
     const u  = userProducts.find(p => p.id === sellEditId);
     if (ex) Object.assign(ex, patch);
     if (u && u !== ex) Object.assign(u, patch);
@@ -1153,7 +1143,7 @@ function publishProduct() {
     title, price, old: null,
     icon: catIcons[cat] || '📦',
     img: sellImgData,
-    cat, cond, loc, muni, desc,
+    cat, cond, loc, muni, wa, desc,
     rating: 0, reviews: 0,
     seller: sellerName,
     badge: 'new',
@@ -1531,8 +1521,7 @@ function renderAccount() {
            ['⚙️','Configuración',"showView('settings')"],
            ['🚚','Direcciones',"showView('addresses')"],
            ['🔔','Notificaciones',"showView('notifs')"],
-           ['💳','Métodos de pago',"openInfo('payments')"],
-           ['🛡️','Protección al comprador',"openInfo('protection')"],
+           ['🛡️','Consejos de seguridad',"openInfo('protection')"],
            ['🔒','Seguridad y 2FA',"showView('security')"],
            ['❓','Centro de ayuda',"openInfo('help')"]].map(([i, l, fn]) => `
           <div class="menu-item" onclick="${fn}">
@@ -1561,7 +1550,8 @@ function addCart(id, silent) {
 }
 
 function updateCartBadge() {
-  document.getElementById('cartCount').textContent = cart.reduce((s, c) => s + c.qty, 0);
+  const el = document.getElementById('cartCount');
+  if (el) el.textContent = cart.reduce((s, c) => s + c.qty, 0);
 }
 
 function renderCart() {
@@ -2644,7 +2634,7 @@ function renderAuctionDetail(a) {
       </div>
       ${iWon ? `
         <div class="verification-info-box" style="margin:6px 0 14px">🏆 <strong>¡Ganaste esta subasta!</strong> Completa el pago para coordinar la entrega.</div>
-        <button class="btn-buy" style="width:100%;margin-bottom:6px" onclick="payAuction('${a.id}')">Pagar ${fmt(a.cur)} y coordinar entrega</button>` : ''}
+        <button class="btn-buy" style="width:100%;margin-bottom:6px;background:#25D366" onclick="payAuction('${a.id}')">💬 Contactar al vendedor (WhatsApp)</button>` : ''}
       ${!over && !a.mine ? `
         <div class="detail-actions">
           ${a.buy ? `<button class="btn-buy" onclick="tryBuyNow('${a.id}')">⚡ ¡Cómpralo ya! ${fmt(a.buy)}</button>` : ''}
@@ -2671,10 +2661,7 @@ function renderAuctionDetail(a) {
 function payAuction(id) {
   const a = auctionDetailData;
   if (!a || a.id != id) return;
-  if (!cart.some(c => String(c.id) === 'auc-' + a.id)) cart.push({ id: 'auc-' + a.id, title: a.title + ' (subasta ganada)', price: a.cur, icon: a.icon, img: null, qty: 1 });
-  saveCart(); updateCartBadge();
-  showToast('🏆 Artículo ganado añadido al carrito');
-  requireAuth('checkout');
+  contactSellerWhatsApp(a, true);
 }
 
 function copyAuctionLink() {
@@ -3111,6 +3098,21 @@ function sendMessage() {
   }, 1200);
 }
 let pendingContact = null;   // producto pendiente de contactar tras iniciar sesión
+// Contacto con el vendedor por WhatsApp (modelo clasificados — sin compra en línea en esta fase)
+function contactSellerWhatsApp(itemOrId, isAuction) {
+  let obj = itemOrId;
+  if (typeof itemOrId === 'number' || typeof itemOrId === 'string') {
+    obj = products.find(p => p.id == itemOrId) || (typeof auctions !== 'undefined' && auctions.find(a => a.id == itemOrId));
+  }
+  if (!obj) return;
+  const num = String(obj.wa || (typeof DEMO_WA !== 'undefined' ? DEMO_WA : '')).replace(/\D/g, '');
+  if (!num) { showToast('Este vendedor no dejó un número de contacto'); return; }
+  const price = (obj.price != null) ? obj.price : obj.cur;
+  const msg = `Hola 👋, vi tu ${isAuction ? 'subasta' : 'anuncio'} en MercadoRD: *${obj.title}*` +
+              (price != null ? ` (RD$${Number(price).toLocaleString('es-DO')})` : '') + '. ¿Sigue disponible?';
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+}
+
 function contactSellerById(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
@@ -3409,7 +3411,7 @@ function productCardHTML(p) {
         <div><span class="product-price">${fmt(p.price)}</span>${p.old ? `<span class="product-price-old">${fmt(p.old)}</span><span class="product-discount">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : ''}</div>
         <div class="product-footer">
           <div class="rating">★ ${p.rating} <span style="color:var(--text2)">(${p.reviews})</span></div>
-          <button class="add-cart" onclick="event.stopPropagation();addCart(${p.id})">+ Carrito</button>
+          <button class="add-cart" style="background:#25D366" onclick="event.stopPropagation();contactSellerWhatsApp(${p.id})">💬 Contactar</button>
         </div>
       </div>
     </div>`;
