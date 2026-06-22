@@ -7,30 +7,10 @@
 // 👉 Cambia este número por un WhatsApp real para probar el botón "Contactar" en los productos demo.
 const DEMO_WA = '18095551234';
 
-const products = [
-  { id:1,  title:"iPhone 14 Pro Max 256GB",          price:68500,  old:75000,   icon:"📱", cat:"electronics", cond:"used", loc:"SD",  rating:4.8, reviews:312, seller:"TechShop RD",  badge:"hot",  img:"assets/products/1.jpg" },
-  { id:2,  title:"Samsung 65\" QLED 4K Smart TV",    price:45000,  old:55000,   icon:"📺", cat:"electronics", cond:"new",  loc:"SD",  rating:4.7, reviews:89,  seller:"ElectroMax",   badge:"new",  img:"assets/products/2.jpg" },
-  { id:3,  title:"MacBook Pro M3 14\" 512GB",         price:125000, old:null,    icon:"💻", cat:"electronics", cond:"new",  loc:"STI", rating:4.9, reviews:56,  seller:"AppleRD",      badge:"new",  img:"assets/products/3.jpg" },
-  { id:4,  title:"Toyota Corolla 2019 Automático",    price:890000, old:null,    icon:"🚗", cat:"vehicles",    cond:"used", loc:"SD",  rating:4.5, reviews:23,  seller:"AutosElite",   badge:null,   img:"assets/products/4.jpg" },
-  { id:5,  title:"Vestido Casual Verano Colores",     price:1800,   old:2500,    icon:"👗", cat:"fashion",     cond:"new",  loc:"SD",  rating:4.3, reviews:145, seller:"ModaRD",       badge:"deal", img:"assets/products/5.jpg" },
-  { id:6,  title:"Aire Acondicionado 18000 BTU",      price:28000,  old:33000,   icon:"❄️", cat:"home2",       cond:"new",  loc:"PP",  rating:4.6, reviews:78,  seller:"ClimaxRD",     badge:null,   img:"assets/products/6.jpg" },
-  { id:7,  title:"Bicicleta MTB 27.5\" 21v",          price:12500,  old:null,    icon:"🚲", cat:"sports",      cond:"new",  loc:"STI", rating:4.4, reviews:34,  seller:"DeportesSD",   badge:null,   img:"assets/products/7.jpg" },
-  { id:8,  title:"Silla Gamer Ergonómica Pro RGB",    price:9800,   old:12000,   icon:"🪑", cat:"home2",       cond:"new",  loc:"SD",  rating:4.7, reviews:201, seller:"GamerZone",    badge:"deal", img:"assets/products/8.jpg" },
-  { id:9,  title:"Nevera Samsung 20 Pies Inox",       price:38500,  old:null,    icon:"🧊", cat:"home2",       cond:"new",  loc:"SD",  rating:4.8, reviews:167, seller:"ElectroMax",   badge:null,   img:"assets/products/9.jpg" },
-  { id:10, title:"Nike Air Max 270 Original",          price:5500,   old:7200,    icon:"👟", cat:"fashion",     cond:"new",  loc:"SD",  rating:4.5, reviews:289, seller:"ShoesRD",      badge:"deal", img:"assets/products/10.jpg" },
-  { id:11, title:"PlayStation 5 + 2 Juegos",          price:42000,  old:45000,   icon:"🎮", cat:"electronics", cond:"new",  loc:"STI", rating:4.9, reviews:543, seller:"GameStoreRD",  badge:"hot",  img:"assets/products/11.jpg" },
-  { id:12, title:"Terreno 200m² Zona Turística",      price:1800000,old:null,    icon:"🏗️", cat:"services",    cond:"new",  loc:"PP",  rating:5.0, reviews:8,   seller:"InmoBienes",   badge:null,   img:"assets/products/12.jpg" },
-  { id:13, title:"Lavadora LG 20 Lbs Carga Frontal",  price:22000,  old:26000,   icon:"🫧", cat:"home2",       cond:"new",  loc:"SD",  rating:4.6, reviews:112, seller:"ElectroMax",   badge:"deal", img:"assets/products/13.jpg" },
-  { id:14, title:"Honda Civic 2020 EX Turbo",         price:1150000,old:null,    icon:"🚙", cat:"vehicles",    cond:"used", loc:"STI", rating:4.7, reviews:15,  seller:"AutosElite",   badge:null,   img:"assets/products/14.jpg" },
-  { id:15, title:"JBL Boombox 3 Speaker",             price:18500,  old:22000,   icon:"🔊", cat:"electronics", cond:"new",  loc:"SD",  rating:4.8, reviews:234, seller:"AudioRD",      badge:"hot",  img:"assets/products/15.jpg" },
-  { id:16, title:"Generador Yamaha 3000W Inverter",   price:65000,  old:72000,   icon:"⚡", cat:"home2",       cond:"new",  loc:"SD",  rating:4.9, reviews:189, seller:"GeneraRD",     badge:"hot",  img:"assets/products/16.jpg" },
-  { id:17, title:"Café Orgánico en Grano 5 lb",       price:1450,   old:1800,    icon:"☕", cat:"agro",        cond:"new",  loc:"STI", rating:4.8, reviews:96,  seller:"Finca Don Pedro",  badge:"deal", img:"assets/products/17.jpg" },
-  { id:18, title:"Aguacates Hass — Caja 20 unidades", price:1200,   old:null,    icon:"🥑", cat:"agro",        cond:"new",  loc:"LR",  rating:4.6, reviews:54,  seller:"AgroFresco RD",    badge:null,   img:"assets/products/18.jpg" },
-  { id:19, title:"Saco de Arroz Selecto 125 lb",      price:3900,   old:4300,    icon:"🌾", cat:"agro",        cond:"new",  loc:"SD",  rating:4.7, reviews:71,  seller:"AgroFresco RD",    badge:"deal", img:"assets/products/19.jpg" },
-  { id:20, title:"Servicio de Plomería a Domicilio",  price:1500,   old:null,    icon:"🔧", cat:"services",    cond:"new",  loc:"SD",  rating:4.9, reviews:142, seller:"PlomeRD",          badge:"hot",  img:"assets/products/20.jpg" },
-  { id:21, title:"Mudanzas y Fletes (camión + 2 ayudantes)", price:4500, old:null, icon:"🚚", cat:"services",  cond:"new",  loc:"SD",  rating:4.5, reviews:88,  seller:"MudanzasExpress",  badge:null,   img:"assets/products/21.jpg" },
-  { id:22, title:"Instalación de Aires Acondicionados", price:2500, old:3000,    icon:"❄️", cat:"services",    cond:"new",  loc:"STI", rating:4.8, reviews:67,  seller:"ClimaTec RD",      badge:"deal", img:"assets/products/22.jpg" },
-];
+// Catálogo demo vaciado (2026-06-22) por decisión del usuario: el sitio arranca limpio
+// y solo muestra anuncios reales que publiquen los usuarios (tabla `products` de Supabase,
+// cargada por loadProductsDB). Para reponer ejemplos, volver a llenar este array.
+const products = [];
 
 // ═══════════════════════════════════════════════════
 //  Las 32 provincias de República Dominicana + municipios
@@ -106,15 +86,10 @@ const RD_MUNICIPIOS = {
   VA:  ['Mao','Esperanza','Laguna Salada']
 };
 
-// endsMin: minutos restantes al primer arranque (luego se persiste el fin real)
-// buy: precio "¡Cómpralo ya!" — compra inmediata que cierra la subasta (estilo eBay)
-const auctions = [
-  { id:101, title:"Toyota Hilux 2020 4x4 Diesel",     icon:"🛻", cur:650000, bids:18, endsMin:154,  buy:850000, seller:"AutosRD",   loc:"SD"  },
-  { id:102, title:"MacBook Air M2 256GB",              icon:"💻", cur:58000,  bids:31, endsMin:312,  buy:78000,  seller:"TechShop",  loc:"STI" },
-  { id:103, title:"Generador Eléctrico 8KW",           icon:"⚡", cur:35000,  bids:9,  endsMin:1560, buy:52000,  seller:"GeneraRD",  loc:"SD"  },
-  { id:104, title:"Colección Relojes Vintage Suizos",  icon:"⌚", cur:22000,  bids:14, endsMin:230,  buy:36000,  seller:"LujoRD",    loc:"SD"  },
-  { id:105, title:"iPhone 15 Pro Max 1TB",             icon:"📱", cur:85000,  bids:42, endsMin:45,   buy:108000, seller:"AppleRD",   loc:"STI" },
-];
+// Array de subastas vaciado (2026-06-22): las subastas reales viven en la tabla `auctions`
+// de Supabase y loadAuctionsDB() reemplaza este array al cargar. Sin fallback demo el sitio
+// arranca sin subastas hasta que los usuarios publiquen las suyas.
+const auctions = [];
 
 const legalContent = {
   terms: {

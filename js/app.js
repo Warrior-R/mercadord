@@ -1690,6 +1690,21 @@ function renderCarousel() {
   const indicators = document.getElementById('carouselIndicators');
   if (!content) return;
 
+  // Ocultar toda la banda "Descubre ahora" solo si NO hay nada destacable en ninguna
+  // pestaña (sin productos y sin subastas vivas). Evita un carrusel vacío con flechas/puntos
+  // y se reactiva sola al haber datos. Si solo la pestaña activa está vacía, se conservan
+  // las pestañas con un aviso breve (no atrapar al usuario).
+  const anyContent = (typeof products !== 'undefined' && products.length > 0) ||
+                     (typeof auctions !== 'undefined' && auctions.some(isLiveAuction));
+  const section = document.getElementById('carouselSection');
+  if (section) section.style.display = anyContent ? '' : 'none';
+  if (!anyContent) { content.innerHTML = ''; if (indicators) indicators.innerHTML = ''; return; }
+  if (!data.length) {
+    content.innerHTML = '<div style="padding:22px 16px;color:var(--text2);font-size:13px">Nada destacado en esta sección por ahora.</div>';
+    if (indicators) indicators.innerHTML = '';
+    return;
+  }
+
   content.innerHTML = data.map(item => {
     if (carouselState.tab === 'auctions') {
       return `
