@@ -11,10 +11,28 @@ const VERIFY = Deno.env.get('TWILIO_VERIFY_SERVICE_SID')!
 const SUPA_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+const ALLOWED_ORIGINS = new Set([
+  'https://mercadord.net',
+  'https://www.mercadord.net',
+])
+function corsFor(origin: string) {
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://mercadord.net',
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
+}
+
+// Anti toll-fraud: tope por IP y cooldown por número (memoria del isolate).
+const IP_HITS = new Map<string, { n: number; t: number }>()
+const SENT = new Map<string, number>()
+function ipLimit(ip: string, max = 5, windowMs = 600_000): boolean {
+  const now = Date.now()
+  const e = IP_HITS.get(ip)
+  if (!e || now - e.t > windowMs) { IP_HITS.set(ip, { n: 1, t: now }); return true }
+  if (e.n >= max) return false
+  e.n++; return true
 }
 
 // Normaliza a E.164. RD usa +1; 10 dígitos locales -> +1XXXXXXXXXX
@@ -40,11 +58,13 @@ async function twilio(path: string, body: Record<string, string>) {
   return { status: res.status, data }
 }
 
-function json(obj: unknown, status = 200) {
-  return new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
-}
+// json() se define dentro del handler (cierra sobre el cors por-origen).
 
 Deno.serve(async (req) => {
+  const cors = corsFor(req.headers.get('origin') || '')
+  const json = (obj: unknown, status = 200) =>
+    new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
     const { action, phone, code } = await req.json()
@@ -52,10 +72,19 @@ Deno.serve(async (req) => {
     if (!to || to.length < 8) return json({ ok: false, error: 'phone_invalid' }, 200)
 
     if (action === 'send') {
+      // Solo Norteamérica (+1: RD/US/CA). Corta destinos premium internacionales (toll-fraud).
+      if (!/^\+1\d{10}$/.test(to)) return json({ ok: false, error: 'phone_unsupported' }, 200)
+      // Tope por IP + cooldown de 60s por número.
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+      if (!ipLimit(ip)) return json({ ok: false, error: 'rate_limited' }, 429)
+      if (Date.now() - (SENT.get(to) || 0) < 60_000) return json({ ok: false, error: 'cooldown' }, 429)
+      SENT.set(to, Date.now())
+
       const r = await twilio('Verifications', { To: to, Channel: 'sms' })
       if (r.status >= 400) {
-        // 60200/60203 = número inválido; 60410 = bloqueado; trial = solo verified caller IDs
-        return json({ ok: false, error: r.data?.message || 'send_failed', tw: r.data?.code || r.status }, 200)
+        // El detalle de Twilio se queda en el log del servidor, no se filtra al cliente.
+        console.error('twilio send failed', r.status, r.data?.code, r.data?.message)
+        return json({ ok: false, error: 'send_failed' }, 200)
       }
       return json({ ok: true, status: r.data?.status || 'pending' })
     }
@@ -85,6 +114,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: false, error: 'action_invalid' }, 200)
   } catch (e) {
-    return json({ ok: false, error: String((e as Error)?.message || e) }, 200)
+    console.error('phone-verify error:', e)
+    return json({ ok: false, error: 'internal_error' }, 200)
   }
 })

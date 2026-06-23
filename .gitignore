@@ -32,3 +32,13 @@ npm-debug.log*
 temp/
 
 .secrets/
+
+# Supabase CLI (internals regenerables — nunca versionar)
+supabase/.temp/
+supabase/.branches/
+
+# Workspace de IDE
+*.code-workspace
+
+# Home antigua (código muerto, no desplegar)
+/index_original.html

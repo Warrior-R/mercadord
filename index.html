@@ -40,15 +40,15 @@
 <link rel="dns-prefetch" href="https://flsixfuzvbapwnfepmwr.supabase.co">
 
 <!-- Estilos -->
-<link rel="stylesheet" href="css/styles.css?v=20260622i">
-<link rel="stylesheet" href="css/auth.css?v=20260622i">
-<link rel="stylesheet" href="css/footer.css?v=20260622i">
-<link rel="stylesheet" href="css/subsections.css?v=20260622i">
-<link rel="stylesheet" href="css/carousel.css?v=20260622i">
-<link rel="stylesheet" href="css/verification.css?v=20260622i">
-<link rel="stylesheet" href="css/auctions.css?v=20260622i">
-<link rel="stylesheet" href="css/account.css?v=20260622i">
-<link rel="stylesheet" href="css/chatbot.css?v=20260622i">
+<link rel="stylesheet" href="css/styles.css?v=20260622j">
+<link rel="stylesheet" href="css/auth.css?v=20260622j">
+<link rel="stylesheet" href="css/footer.css?v=20260622j">
+<link rel="stylesheet" href="css/subsections.css?v=20260622j">
+<link rel="stylesheet" href="css/carousel.css?v=20260622j">
+<link rel="stylesheet" href="css/verification.css?v=20260622j">
+<link rel="stylesheet" href="css/auctions.css?v=20260622j">
+<link rel="stylesheet" href="css/account.css?v=20260622j">
+<link rel="stylesheet" href="css/chatbot.css?v=20260622j">
 
 <!-- Supabase SDK (defer: no bloquea el renderizado; en modo demo no se usa) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -95,19 +95,8 @@
       <div class="tbadge">🪪 Verificación KYC</div>
      </div>
     </div>
-    <div class="auth-step" id="ls2">
-     <div class="vc"><div class="vc-icon">🔐</div><div class="vc-title">Verificación en dos pasos</div><div class="vc-desc">Ingresa el código de 6 dígitos enviado a tu dispositivo.</div></div>
-     <div class="otp-row" role="group" aria-label="Código de verificación de 6 dígitos">
-      <input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" aria-label="Dígito 1 del código" id="lo0" oninput="onext(this,1,'l')" onkeydown="oback(event,this,null,'l')">
-      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 2 del código" id="lo1" oninput="onext(this,2,'l')" onkeydown="oback(event,this,0,'l')">
-      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 3 del código" id="lo2" oninput="onext(this,3,'l')" onkeydown="oback(event,this,1,'l')">
-      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 4 del código" id="lo3" oninput="onext(this,4,'l')" onkeydown="oback(event,this,2,'l')">
-      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 5 del código" id="lo4" oninput="onext(this,5,'l')" onkeydown="oback(event,this,3,'l')">
-      <input class="otp-d" maxlength="1" inputmode="numeric" aria-label="Dígito 6 del código" id="lo5" oninput="onext(this,-1,'l')" onkeydown="oback(event,this,4,'l')">
-     </div>
-     <div class="resend-t">Reenviar en <span id="otpC">60</span>s</div>
-     <button class="auth-btn btn-pri" style="margin-top:14px" onclick="verify2fa()">Verificar código</button>
-    </div>
+    <!-- (Retirado) Pantalla "ls2" de 2FA: no validaba el código contra el servidor y era
+         inalcanzable en el flujo de login. Implementar Supabase Auth MFA si se quiere 2FA real. -->
     <div class="auth-step" id="ls3">
      <div class="vc"><div class="vc-icon">📧</div><div class="vc-title">Recuperar contraseña</div><div class="vc-desc">Te enviaremos un enlace para restablecer tu contraseña.</div></div>
      <div class="fg"><label>Correo electrónico</label><input type="email" id="resetE" placeholder="tu@email.com"></div>
@@ -201,7 +190,7 @@
       <div class="vc-title">Verificación de identidad</div>
       <div class="vc-desc">Requerido para vender. Protege a los compradores de estafas.</div>
      </div>
-     <div class="cedula-warn">⚠️ Datos cifrados con AES-256. MercadoRD no comparte tu cédula con terceros.</div>
+     <div class="cedula-warn">⚠️ Tus datos viajan por conexión segura (HTTPS) y MercadoRD no comparte tu cédula con terceros.</div>
      <div class="fg"><label>Cédula de identidad</label><input type="text" id="rCed" placeholder="000-0000000-0" maxlength="13" oninput="fmtCed(this)"><div class="ferr" id="rCedE"></div></div>
      <div class="fg"><label>Fecha de nacimiento</label><input type="date" id="rDob"><div class="ferr" id="rDobE"></div></div>
      <div class="fg"><label>Provincia</label>
@@ -1057,11 +1046,11 @@
 <!-- ══════════════════════════════════════════════════
      SCRIPTS (orden importante)
 ════════════════════════════════════════════════════ -->
-<script defer src="js/storage.js?v=20260622i"></script>
-<script defer src="js/data.js?v=20260622i"></script>
-<script defer src="js/auth.js?v=20260622i"></script>
-<script defer src="js/app.js?v=20260622i"></script>
-<script defer src="js/chatbot.js?v=20260622i"></script>
+<script defer src="js/storage.js?v=20260622j"></script>
+<script defer src="js/data.js?v=20260622j"></script>
+<script defer src="js/auth.js?v=20260622j"></script>
+<script defer src="js/app.js?v=20260622j"></script>
+<script defer src="js/chatbot.js?v=20260622j"></script>
 
 </body>
 </html>

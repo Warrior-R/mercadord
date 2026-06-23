@@ -127,9 +127,9 @@ const legalContent = {
     title: '🔒 Política de privacidad',
     body: `
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Datos que recopilamos</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Nombre, correo, teléfono, cédula (cifrada), historial de compras/ventas y datos de navegación para mejorar tu experiencia.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Nombre, correo, teléfono, cédula, historial de compras/ventas y datos de navegación para mejorar tu experiencia.</p>
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Seguridad</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Cifrado AES-256. Contraseñas con bcrypt. Cumplimos la Ley 172-13 de Protección de Datos de RD. Nunca vendemos tu información.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Tus datos viajan por conexión cifrada (HTTPS/TLS). Las contraseñas se protegen con bcrypt (Supabase Auth). Cumplimos la Ley 172-13 de Protección de Datos de RD. Nunca vendemos tu información.</p>
       <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Conforme a Ley 172-13 · Última actualización: enero 2025</p>`
   },
   cookies: {

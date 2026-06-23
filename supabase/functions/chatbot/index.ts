@@ -19,17 +19,28 @@ import Anthropic from 'npm:@anthropic-ai/sdk';
 
 const MODEL = 'claude-sonnet-4-6';
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = new Set([
+  'https://mercadord.net',
+  'https://www.mercadord.net',
+]);
+function corsFor(origin: string) {
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://mercadord.net',
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json' },
-  });
+// Rate-limit por IP (ventana deslizante en memoria del isolate). Es el control
+// que de verdad frena el abuso por curl: el CORS solo aplica en el navegador.
+const RL_HITS = new Map<string, { n: number; t: number }>();
+function rateLimit(ip: string, max = 8, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const e = RL_HITS.get(ip);
+  if (!e || now - e.t > windowMs) { RL_HITS.set(ip, { n: 1, t: now }); return true; }
+  if (e.n >= max) return false;
+  e.n++; return true;
 }
 
 const admin = createClient(
@@ -90,8 +101,18 @@ const REPORT_TOOL = {
 const TIPOS = ['fraude', 'spam', 'sospechoso', 'otro'];
 
 Deno.serve(async (req) => {
+  const cors = corsFor(req.headers.get('origin') || '');
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
+
+  // Anti-abuso: tope por IP para no quemar la API key de Anthropic.
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+  if (!rateLimit(ip)) {
+    return json({ reply: 'Estás enviando mensajes muy rápido. Espera un momento e intenta de nuevo 🙏' }, 429);
+  }
 
   // Acepta el nombre estándar o el que el usuario puso en Secrets (chat_bot_mercadord).
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || Deno.env.get('chat_bot_mercadord');

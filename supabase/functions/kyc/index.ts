@@ -68,7 +68,8 @@ Deno.serve(async (req) => {
     if (!secret) return json({ error: 'Webhook secret no configurado' }, 500);
 
     const now = Math.floor(Date.now() / 1000);
-    if (Math.abs(now - parseInt(tsHeader, 10)) > 300) {
+    const ts = parseInt(tsHeader, 10);
+    if (!Number.isFinite(ts) || Math.abs(now - ts) > 300) {
       return json({ error: 'Timestamp fuera de ventana' }, 401);
     }
 
@@ -83,6 +84,10 @@ Deno.serve(async (req) => {
     const userId = evt.vendor_data as string | undefined;
     const status = evt.status as string | undefined;
     const sessionId = evt.session_id as string | undefined;
+
+    // Defensa en profundidad: vendor_data debe ser un UUID (id de usuario).
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (userId && !UUID_RE.test(userId)) return json({ error: 'vendor_data inválido' }, 400);
 
     if (userId && status) {
       if (status === 'Approved') {
@@ -131,13 +136,24 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   if (body.action !== 'create-session') return json({ error: 'Acción desconocida' }, 400);
 
+  // Anti-abuso: no crear muchas sesiones de verificación en paralelo (costo Didit).
+  const { count } = await admin.from('verifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id).eq('status', 'pending')
+    .gte('created_at', new Date(Date.now() - 10 * 60_000).toISOString());
+  if ((count ?? 0) >= 3) {
+    return json({ error: 'Ya tienes una verificación en proceso. Espera unos minutos e intenta de nuevo.' }, 429);
+  }
+
   const resp = await fetch(DIDIT_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
     body: JSON.stringify({
       workflow_id: workflowId,
       vendor_data: user.id,
-      callback: typeof body.callback === 'string' && body.callback.startsWith('http')
+      callback: (typeof body.callback === 'string' &&
+                 ['https://mercadord.net', 'https://www.mercadord.net']
+                   .some((o) => body.callback.startsWith(o)))
         ? body.callback
         : 'https://mercadord.net',
     }),

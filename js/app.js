@@ -1454,17 +1454,9 @@ async function confirmOrder() {
   orders.push(order);
   saveOrders();
 
-  // Respaldo: si había sesión pero el RPC no estaba disponible (ventana de despliegue),
-  // registrar el pedido por inserción directa para no perder el historial server-side.
-  if (typeof sb !== 'undefined' && sb && user?.id && !serverOk) {
-    try {
-      await sb.from('orders').insert({
-        code: order.id, buyer_id: user.id, items: order.items,
-        subtotal: oSub, shipping: oShip, itbis: oItbis, total: oTotal,
-        buyer_info: order.buyer, payment: method, status: order.status
-      });
-    } catch (e) { console.warn('No se pudo guardar el pedido en el servidor:', e.message || e); }
-  }
+  // (Seguridad) Se eliminó el respaldo de inserción directa a `orders`: confiaba en los
+  // totales calculados en el cliente (subtotal/itbis/total). El pedido server-side se crea
+  // únicamente vía la RPC create_order(), que recalcula los precios desde la tabla products.
 
   cart = [];
   saveCart();

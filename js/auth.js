@@ -444,12 +444,9 @@ async function loginGoogle() {
 }
 
 // ─── 2FA ───
-function verify2fa() {
-  const c = getOTP('l');
-  if (c.length < 6) { showAlert('fail','Ingresa los 6 dígitos.'); return; }
-  showToast('2FA verificado ✓');
-  closeAuth();
-}
+// (Retirado) El antiguo verify2fa() + pantalla "ls2" no validaban el código contra
+// ningún servidor —era teatro de seguridad— y la pantalla era inalcanzable en el flujo
+// de login. Para 2FA real, implementar Supabase Auth MFA (sb.auth.mfa.*).
 
 // ─── Reset password ───
 async function doReset() {
@@ -731,6 +728,9 @@ async function doLogout() {
   userState.isAdmin = false;
   userState.verificationStatus = 'none';
   saveUserState();
+  // Privacidad: no dejar PII del usuario anterior en este navegador (sesión, libreta de
+  // direcciones, preferencias de perfil y mensajería) para el siguiente que inicie sesión.
+  MRD.del(K.USER); MRD.del(K.ADDRESSES); MRD.del(K.PROFILE); MRD.del(K.MESSAGES);
   refreshHeader();
   // En modo real el toast lo emite el handler de SIGNED_OUT
   if (DEMO || !sb) showToast('Sesión cerrada ✓');
