@@ -1722,10 +1722,14 @@ async function sendContactForm() {
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
   try {
     const { data, error } = await sb.functions.invoke('contact', { body: { dept, name, email, subject, message, website } });
-    if (error || !data || !data.ok) {
-      const e = data && data.error;
+    // supabase-js convierte respuestas no-2xx (429/503/…) en `error` con data=null;
+    // el cuerpo JSON viene en error.context (igual patrón que js/chatbot.js).
+    let payload = data;
+    if (error) { try { payload = await error.context.json(); } catch (_) { payload = null; } }
+    if (!payload || !payload.ok) {
+      const e = payload && payload.error;
       setMsg(e === 'rate_limited'  ? 'Enviaste varios mensajes seguidos. Espera unos minutos.'
-           : (data && data.notConfigured) ? 'El formulario no está disponible por ahora. Escríbenos por WhatsApp.'
+           : (payload && payload.notConfigured) ? 'El formulario no está disponible por ahora. Escríbenos por WhatsApp.'
            : 'No se pudo enviar. Intenta de nuevo.', false);
       return;
     }

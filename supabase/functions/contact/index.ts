@@ -50,6 +50,16 @@ function rateLimit(ip: string, max = 3, windowMs = 600_000): boolean {
   e.n++; return true;
 }
 
+// Tope GLOBAL por ventana: techo de la cuota de Resend aunque un atacante rote o
+// falsifique el X-Forwarded-For (el tope por IP por sí solo es evadible).
+let G = { n: 0, t: 0 };
+function globalCap(max = 60, windowMs = 600_000): boolean {
+  const now = Date.now();
+  if (now - G.t > windowMs) { G = { n: 1, t: now }; return true; }
+  if (G.n >= max) return false;
+  G.n++; return true;
+}
+
 // Escape HTML para no inyectar markup en el cuerpo del correo.
 function esc(s: string): string {
   return String(s ?? '')
@@ -64,9 +74,6 @@ Deno.serve(async (req) => {
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
-
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
-  if (!rateLimit(ip)) return json({ error: 'rate_limited' }, 429);
 
   const key  = Deno.env.get('RESEND_API_KEY');
   const to   = Deno.env.get('CONTACT_TO');
@@ -89,6 +96,12 @@ Deno.serve(async (req) => {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'email_invalid' }, 400);
   if (message.length < 5) return json({ error: 'message_empty' }, 400);
+
+  // Anti-abuso: gating JUSTO antes de enviar — así solo cuenta envíos reales
+  // (no los bots atrapados por el honeypot ni las requests inválidas). Tope por
+  // IP + tope global como techo duro de la cuota de Resend.
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+  if (!rateLimit(ip) || !globalCap()) return json({ error: 'rate_limited' }, 429);
 
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#1a1a2e">
@@ -114,11 +127,11 @@ Deno.serve(async (req) => {
       }),
     });
     if (!r.ok) {
-      console.error('resend contact failed', r.status, await r.text().catch(() => ''));
+      console.error('resend contact failed status', r.status);
       return json({ error: 'send_failed' }, 502);
     }
   } catch (e) {
-    console.error('contact error:', e);
+    console.error('contact error:', (e as Error)?.name, (e as Error)?.message);
     return json({ error: 'send_failed' }, 502);
   }
 
