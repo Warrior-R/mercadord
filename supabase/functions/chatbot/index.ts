@@ -93,7 +93,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  // Acepta el nombre estándar o el que el usuario puso en Secrets (chat_bot_mercadord).
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || Deno.env.get('chat_bot_mercadord');
   if (!apiKey) {
     // El widget enseña este mensaje hasta que configures la API key.
     return json(
