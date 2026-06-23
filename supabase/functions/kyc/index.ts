@@ -89,32 +89,65 @@ Deno.serve(async (req) => {
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (userId && !UUID_RE.test(userId)) return json({ error: 'vendor_data inválido' }, 400);
 
+    // Idempotencia defensiva: Didit puede reentregar el mismo evento. Si este
+    // (session_id, status) YA se procesó con éxito antes, salimos sin reaplicar.
+    // IMPORTANTE: el marcador se escribe DESPUÉS de aplicar el UPDATE con éxito
+    // (más abajo), nunca antes — así un apply fallido NO bloquea la reentrega
+    // legítima. Si la tabla aún no existe, el error NO bloquea la verificación.
+    if (sessionId && status) {
+      const { data: prev, error: prevErr } = await admin
+        .from('webhook_events')
+        .select('id')
+        .eq('source', 'didit').eq('session_id', sessionId).eq('status', status)
+        .maybeSingle();
+      if (prevErr) console.error('webhook_events lookup (no bloqueante)', prevErr);
+      else if (prev) return json({ ok: true, deduped: true });
+    }
+
+    let applyOk = true;
     if (userId && status) {
       if (status === 'Approved') {
-        await admin.from('profiles')
+        const { error: pErr } = await admin.from('profiles')
           .update({ is_verified: true, verification_status: 'verified' })
           .eq('id', userId);
+        if (pErr) { applyOk = false; console.error('profiles update (Approved)', pErr); }
         if (sessionId) {
-          await admin.from('verifications')
+          const { error: vErr } = await admin.from('verifications')
             .update({ status: 'verified', verified_at: new Date().toISOString() })
             .eq('user_id', userId).eq('doc_number', sessionId);
+          if (vErr) { applyOk = false; console.error('verifications update (Approved)', vErr); }
         }
       } else if (status === 'Declined') {
-        await admin.from('profiles')
+        const { error: pErr } = await admin.from('profiles')
           .update({ is_verified: false, verification_status: 'rejected' })
           .eq('id', userId);
+        if (pErr) { applyOk = false; console.error('profiles update (Declined)', pErr); }
         if (sessionId) {
-          await admin.from('verifications')
+          const { error: vErr } = await admin.from('verifications')
             .update({ status: 'rejected' })
             .eq('user_id', userId).eq('doc_number', sessionId);
+          if (vErr) { applyOk = false; console.error('verifications update (Declined)', vErr); }
         }
       } else if (['Abandoned', 'Expired', 'KYC Expired'].includes(status)) {
         // Sesión no terminada: liberar el estado para permitir reintento
-        await admin.from('profiles')
+        const { error: pErr } = await admin.from('profiles')
           .update({ verification_status: 'none' })
           .eq('id', userId).eq('is_verified', false);
+        if (pErr) { applyOk = false; console.error('profiles update (release)', pErr); }
       }
       // 'In Review' / 'In Progress' → se mantiene 'pending'
+    }
+
+    // Marcar el evento como procesado SOLO si el apply fue correcto. Si falló,
+    // no dejamos marcador para que la reentrega de Didit pueda re-aplicarlo.
+    // El 23505 (carrera de dos reentregas a la vez) también implica ya-hecho.
+    if (applyOk && sessionId && status) {
+      const { error: markErr } = await admin
+        .from('webhook_events')
+        .insert({ source: 'didit', session_id: sessionId, status });
+      if (markErr && markErr.code !== '23505') {
+        console.error('webhook_events insert (no bloqueante)', markErr);
+      }
     }
     return json({ ok: true });
   }

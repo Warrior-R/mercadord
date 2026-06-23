@@ -691,6 +691,12 @@ async function placeBid() {
         closeBid(); showToast('La subasta ya cerró'); await loadAuctionsDB();
       } else if (m.includes('OWN_AUCTION')) {
         fe('bidErr', 'No puedes pujar en tu propia subasta.');
+      } else if (m.includes('KYC_REQUIRED')) {
+        closeBid(); showToast('🪪 Verifica tu identidad para pujar'); openVerification('bid');
+      } else if (m.includes('USE_BUY_NOW')) {
+        fe('bidErr', 'Esa puja alcanza el precio de ¡Cómpralo ya! — usa el botón ¡Cómpralo ya! para llevártelo.');
+      } else if (m.includes('BID_TOO_HIGH')) {
+        fe('bidErr', 'Tu puja es demasiado alta. Ingresa un monto más razonable.');
       } else if (m.includes('AUTH_REQUIRED')) {
         closeBid(); showToast('Inicia sesión de nuevo para pujar'); openAuth('login');
       } else {
@@ -737,6 +743,7 @@ async function tryBuyNow(id) {
     } catch (e) {
       const m = String((e && e.message) || e || '');
       if (m.includes('AUCTION_CLOSED')) { showToast('Esta subasta ya cerró'); await loadAuctionsDB(); }
+      else if (m.includes('KYC_REQUIRED')) { showToast('🪪 Verifica tu identidad para comprar'); openVerification('bid'); }
       else if (m.includes('AUTH_REQUIRED')) { openAuth('login'); }
       else showToast('No se pudo completar la compra');
     }
@@ -1559,8 +1566,42 @@ function renderAccount() {
         <div class="menu-item" onclick="doLogout()" style="color:var(--red)">
           <div class="menu-item-left"><span>🚪</span><span>Cerrar sesión</span></div>
         </div>
+        <div class="menu-item" onclick="deleteMyAccount()" style="color:var(--red)">
+          <div class="menu-item-left"><span>🗑️</span><span>Eliminar cuenta</span></div>
+        </div>
       </div>
     </div>`;
+}
+
+// ─── Eliminar cuenta permanentemente (Ley 172-13, derecho de supresión) ───
+// Doble confirmación, borra la cuenta en el servidor (Edge Function
+// delete-account, que usa el on delete cascade del esquema) y limpia
+// todo rastro local antes de recargar.
+async function deleteMyAccount() {
+  if (typeof sb === 'undefined' || !sb || !user) {
+    showToast('Inicia sesión de nuevo para eliminar tu cuenta');
+    return;
+  }
+  if (!confirm('¿Eliminar tu cuenta de MercadoRD de forma PERMANENTE?\n\nSe borrarán tu perfil, tus anuncios, tus pedidos, tus favoritos y tu verificación de identidad. Esta acción NO se puede deshacer.')) return;
+  if (!confirm('Última confirmación: esto es irreversible.\n\n¿Seguro que quieres eliminar tu cuenta?')) return;
+
+  showToast('⏳ Eliminando tu cuenta…');
+  try {
+    const { data, error } = await sb.functions.invoke('delete-account');
+    if (error || !data || !data.ok) {
+      showToast((data && data.error) || 'No se pudo eliminar la cuenta. Intenta de nuevo.');
+      return;
+    }
+  } catch (e) {
+    showToast('No se pudo eliminar la cuenta. Verifica tu conexión e intenta de nuevo.');
+    return;
+  }
+
+  // Cuenta borrada en el servidor: limpiar todo rastro local de este navegador.
+  try { Object.values(K).forEach(k => MRD.del(k)); } catch (e) {}
+  try { await sb.auth.signOut(); } catch (e) {}
+  showToast('Tu cuenta fue eliminada. ¡Gracias por usar MercadoRD!');
+  location.reload();
 }
 
 // ══════════════════════════════════════════════════

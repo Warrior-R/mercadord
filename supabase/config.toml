@@ -1,0 +1,51 @@
+# ═══════════════════════════════════════════════════
+#  MercadoRD — Configuración versionada de Supabase (CLI)
+#  Archivo: supabase/config.toml
+#
+#  ⚠️ FUENTE DE VERDAD: el comportamiento EN PRODUCCIÓN lo define el
+#     Dashboard de Supabase (Authentication → Sign In / Providers → Password).
+#     Este config.toml queda como copia revisable en git; NO refleja toda la
+#     configuración del proyecto (faltan site_url, redirect URLs, provider de
+#     Google, plantillas de email, etc., que SÍ están puestos en el dashboard).
+#
+#  🚫 NO EJECUTES `supabase config push` CON ESTE ARCHIVO TAL CUAL.
+#     Es un config PARCIAL. `config push` envía la config.toml LOCAL al
+#     proyecto enlazado (supabase/.temp/linked-project.json → flsixfuzvbapwnfepmwr).
+#     Como aquí solo se declara [auth] con dos claves, un push puede
+#     RESTABLECER a los valores por defecto de la CLI los ajustes que NO están
+#     escritos aquí (site_url, additional_redirect_urls, enable_signup,
+#     [auth.external.google], plantillas de correo…) y ROMPER el login real,
+#     Google OAuth y la confirmación por email que hoy funcionan en producción.
+#     Si algún día quieres usar la CLI como fuente de verdad, primero exporta
+#     la configuración COMPLETA del proyecto a este archivo y revísala entera.
+#
+#  Alcance: documentar la política de contraseñas para que quede versionada
+#  junto al resto del esquema. Verificado contra la CLI de Supabase v2.107.0.
+# ═══════════════════════════════════════════════════
+
+# project_id: ref del proyecto enlazado (coincide con .temp/linked-project.json).
+project_id = "flsixfuzvbapwnfepmwr"
+
+[auth]
+# Longitud mínima de contraseña. Coincide con la validación del cliente
+# (js/auth.js: pw.length < 8 en rs1next, doCreateAccount y doSetNewPassword).
+minimum_password_length = 8
+
+# Complejidad requerida. Valores REALMENTE soportados por la CLI de Supabase
+# (v2.107.0, verificado con `supabase init`):
+#   ""                                    (default — SIN requisitos; cadena vacía)
+#   "letters_digits"                      (al menos una letra + un dígito)
+#   "lower_upper_letters_digits"          (minúscula + MAYÚSCULA + dígito)
+#   "lower_upper_letters_digits_symbols"  (+ símbolo)
+# (No existe "lower_upper" ni "no_required": el "sin requisitos" es "".)
+#
+# ⚠️ DESAJUSTE A REVISAR (solo si este toml pasa a ser fuente de verdad vía CLI):
+#    el cliente hoy exige longitud ≥ 8 + una MAYÚSCULA + un DÍGITO; NO comprueba
+#    minúscula. Con "lower_upper_letters_digits" el servidor rechazaría
+#    contraseñas sin minúscula que el cliente sí dejó pasar. Opciones:
+#      (a) añadir el chequeo de minúscula en js/auth.js (recomendado); o
+#      (b) usar "letters_digits" (letra + dígito), el enum más cercano a la
+#          regla actual del cliente; o
+#      (c) replicar EXACTO (MAYÚSCULA + dígito sin minúscula) no es posible con
+#          el enum → quédate con la política del dashboard o un Auth Hook.
+password_requirements = "lower_upper_letters_digits"
