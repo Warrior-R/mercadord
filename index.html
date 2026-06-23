@@ -40,14 +40,14 @@
 <link rel="dns-prefetch" href="https://flsixfuzvbapwnfepmwr.supabase.co">
 
 <!-- Estilos -->
-<link rel="stylesheet" href="css/styles.css?v=20260622g">
-<link rel="stylesheet" href="css/auth.css?v=20260622g">
-<link rel="stylesheet" href="css/footer.css?v=20260622g">
-<link rel="stylesheet" href="css/subsections.css?v=20260622g">
-<link rel="stylesheet" href="css/carousel.css?v=20260622g">
-<link rel="stylesheet" href="css/verification.css?v=20260622g">
-<link rel="stylesheet" href="css/auctions.css?v=20260622g">
-<link rel="stylesheet" href="css/account.css?v=20260622g">
+<link rel="stylesheet" href="css/styles.css?v=20260622h">
+<link rel="stylesheet" href="css/auth.css?v=20260622h">
+<link rel="stylesheet" href="css/footer.css?v=20260622h">
+<link rel="stylesheet" href="css/subsections.css?v=20260622h">
+<link rel="stylesheet" href="css/carousel.css?v=20260622h">
+<link rel="stylesheet" href="css/verification.css?v=20260622h">
+<link rel="stylesheet" href="css/auctions.css?v=20260622h">
+<link rel="stylesheet" href="css/account.css?v=20260622h">
 
 <!-- Supabase SDK (defer: no bloquea el renderizado; en modo demo no se usa) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -890,16 +890,6 @@
   <div class="footer-brand">
    <div class="footer-logo">Mercado<span>RD</span></div>
    <p>El marketplace #1 de República Dominicana. Compra, vende y subasta de forma segura con vendedores verificados en las 32 provincias del país.</p>
-   <div class="footer-trust">
-    <div class="ftrust-item"><span>🔒</span><span>Compras protegidas con cifrado SSL 256-bit</span></div>
-    <div class="ftrust-item"><span>🛡️</span><span>Garantía MercadoRD en todas las compras</span></div>
-    <div class="ftrust-item"><span>✅</span><span>Vendedores verificados con cédula RD</span></div>
-    <div class="ftrust-item"><span>📦</span><span>Envíos a las 32 provincias del país</span></div>
-   </div>
-   <div class="footer-apps">
-    <a class="app-btn" onclick="showToast('App iOS — próximamente 🍎')"><span class="app-icon">🍎</span><div><div style="font-size:9px;opacity:.7">Descargar en</div><div style="font-weight:600">App Store</div></div></a>
-    <a class="app-btn" onclick="showToast('App Android — próximamente 🤖')"><span class="app-icon">🤖</span><div><div style="font-size:9px;opacity:.7">Descargar en</div><div style="font-weight:600">Google Play</div></div></a>
-   </div>
   </div>
 
   <div class="footer-col">
@@ -911,7 +901,6 @@
     <li><a onclick="openBuyers()"><span class="flink-icon">🔥</span>Subastas activas</a></li>
     <li><a onclick="openBuyers()"><span class="flink-icon">🛡️</span>Protección al comprador</a></li>
     <li><a onclick="openBuyers()"><span class="flink-icon">❓</span>¿Cómo comprar?</a></li>
-    <li><a onclick="openBuyers()"><span class="flink-icon">🚚</span>Seguimiento de envío</a></li>
    </ul>
   </div>
 
@@ -922,7 +911,6 @@
     <li><a onclick="openSellers()"><span class="flink-icon">📊</span>Seller Center</a></li>
     <li><a onclick="openSellers()"><span class="flink-icon">📈</span>Panel de ventas</a></li>
     <li><a onclick="openSellers()"><span class="flink-icon">❓</span>¿Cómo vender?</a></li>
-    <li><a onclick="openSellers()"><span class="flink-icon">💰</span>Tarifas y comisiones</a></li>
     <li><a onclick="openSellers()"><span class="flink-icon">⭐</span>Vendedor Premium</a></li>
     <li><a onclick="openSellers()"><span class="flink-icon">📣</span>Publicidad en MercadoRD</a></li>
     <li><a onclick="openSellers()"><span class="flink-icon">📋</span>Reglas del vendedor</a></li>
@@ -933,9 +921,6 @@
    <h4 onclick="openAbout()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏪 MercadoRD</h4>
    <ul>
     <li><a onclick="openAbout()"><span class="flink-icon">🇩🇴</span>Quiénes somos</a></li>
-    <li><a onclick="openAbout()"><span class="flink-icon">📰</span>Sala de prensa</a></li>
-    <li><a onclick="openAbout()"><span class="flink-icon">💼</span>Trabaja con nosotros</a></li>
-    <li><a onclick="openAbout()"><span class="flink-icon">🔄</span>MercadoRD Retorno</a></li>
     <li><a onclick="openAbout()"><span class="flink-icon">👥</span>Comunidad</a></li>
     <li><a onclick="openAbout()"><span class="flink-icon">✍️</span>Blog y consejos</a></li>
     <li><a onclick="openAbout()"><span class="flink-icon">🤝</span>Programa de afiliados</a></li>
@@ -983,7 +968,6 @@
   <a class="footer-badge-link" onclick="requireAuth('sell')"><span class="fbl-icon">🏷️</span><div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Vendedor</div><div style="font-size:11px;opacity:.7">Gestiona tus anuncios y ventas</div></div></a>
   <a class="footer-badge-link" onclick="requireAuth('account')"><span class="fbl-icon">🛒</span><div><div style="font-weight:700;font-size:13px;color:#fff">Sitio de Comprador</div><div style="font-size:11px;opacity:.7">Historial, favoritos y pedidos</div></div></a>
   <a class="footer-badge-link" onclick="requireAuth('seller')"><span class="fbl-icon">📊</span><div><div style="font-weight:700;font-size:13px;color:#fff">Seller Center</div><div style="font-size:11px;opacity:.7">Panel de métricas y campañas</div></div></a>
-  <a class="footer-badge-link" onclick="openLegal('returns')"><span class="fbl-icon">🔄</span><div><div style="font-weight:700;font-size:13px;color:#fff">MercadoRD Retorno</div><div style="font-size:11px;opacity:.7">Devoluciones fáciles en 15 días</div></div></a>
   <a class="footer-badge-link" onclick="openInfo('community')"><span class="fbl-icon">👥</span><div><div style="font-weight:700;font-size:13px;color:#fff">Comunidad</div><div style="font-size:11px;opacity:.7">Foros, tips y grupos de compras</div></div></a>
   <a class="footer-badge-link" onclick="openInfo('ads')"><span class="fbl-icon">📣</span><div><div style="font-weight:700;font-size:13px;color:#fff">Anúnciate aquí</div><div style="font-size:11px;opacity:.7">Publica gratis y llega a todo el país</div></div></a>
  </div>
@@ -993,15 +977,13 @@
  <div class="footer-bottom">
   <div>
    <div class="footer-bottom-left">
-    © 2026 <strong>MercadoRD S.R.L.</strong> · RNC: 1-30-12345-6 · Santo Domingo, República Dominicana 🇩🇴<br>
+    © 2026 <strong>MercadoRD S.R.L.</strong> · Santo Domingo, República Dominicana 🇩🇴<br>
     Todos los derechos reservados. MercadoRD es una marca registrada en la República Dominicana.
    </div>
    <div class="footer-country">
     <span>🌐 Español (RD)</span>
     <span style="opacity:.3">|</span>
     <span>💵 Peso Dominicano (DOP)</span>
-    <span style="opacity:.3">|</span>
-    <span>🏛️ Regulado por PROCONSUMIDOR</span>
    </div>
   </div>
   <div>
@@ -1074,10 +1056,10 @@
 <!-- ══════════════════════════════════════════════════
      SCRIPTS (orden importante)
 ════════════════════════════════════════════════════ -->
-<script defer src="js/storage.js?v=20260622g"></script>
-<script defer src="js/data.js?v=20260622g"></script>
-<script defer src="js/auth.js?v=20260622g"></script>
-<script defer src="js/app.js?v=20260622g"></script>
+<script defer src="js/storage.js?v=20260622h"></script>
+<script defer src="js/data.js?v=20260622h"></script>
+<script defer src="js/auth.js?v=20260622h"></script>
+<script defer src="js/app.js?v=20260622h"></script>
 
 </body>
 </html>
