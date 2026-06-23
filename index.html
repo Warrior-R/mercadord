@@ -40,15 +40,15 @@
 <link rel="dns-prefetch" href="https://flsixfuzvbapwnfepmwr.supabase.co">
 
 <!-- Estilos -->
-<link rel="stylesheet" href="css/styles.css?v=20260622k">
-<link rel="stylesheet" href="css/auth.css?v=20260622k">
-<link rel="stylesheet" href="css/footer.css?v=20260622k">
-<link rel="stylesheet" href="css/subsections.css?v=20260622k">
-<link rel="stylesheet" href="css/carousel.css?v=20260622k">
-<link rel="stylesheet" href="css/verification.css?v=20260622k">
-<link rel="stylesheet" href="css/auctions.css?v=20260622k">
-<link rel="stylesheet" href="css/account.css?v=20260622k">
-<link rel="stylesheet" href="css/chatbot.css?v=20260622k">
+<link rel="stylesheet" href="css/styles.css?v=20260622l">
+<link rel="stylesheet" href="css/auth.css?v=20260622l">
+<link rel="stylesheet" href="css/footer.css?v=20260622l">
+<link rel="stylesheet" href="css/subsections.css?v=20260622l">
+<link rel="stylesheet" href="css/carousel.css?v=20260622l">
+<link rel="stylesheet" href="css/verification.css?v=20260622l">
+<link rel="stylesheet" href="css/auctions.css?v=20260622l">
+<link rel="stylesheet" href="css/account.css?v=20260622l">
+<link rel="stylesheet" href="css/chatbot.css?v=20260622l">
 
 <!-- Supabase SDK (defer: no bloquea el renderizado; en modo demo no se usa) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -95,8 +95,17 @@
       <div class="tbadge">🪪 Verificación KYC</div>
      </div>
     </div>
-    <!-- (Retirado) Pantalla "ls2" de 2FA: no validaba el código contra el servidor y era
-         inalcanzable en el flujo de login. Implementar Supabase Auth MFA si se quiere 2FA real. -->
+    <!-- Reto 2FA (TOTP) en el login — Supabase Auth MFA -->
+    <div class="auth-step" id="ls2">
+     <div class="vc"><div class="vc-icon">🔐</div><div class="vc-title">Verificación en dos pasos</div><div class="vc-desc">Ingresa el código de 6 dígitos de tu app autenticadora (Google Authenticator, Authy…).</div></div>
+     <div class="fg">
+      <input type="text" id="mfaLoginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"
+             style="text-align:center;letter-spacing:10px;font-size:24px" onkeydown="if(event.key==='Enter')verifyMfaLogin()">
+      <div class="ferr" id="mfaLoginE"></div>
+     </div>
+     <button class="auth-btn btn-pri" id="mfaLoginBtn" style="margin-top:8px" onclick="verifyMfaLogin()">Verificar</button>
+     <div style="text-align:center;margin-top:12px"><span class="alink" onclick="cancelMfaLogin()">← Cancelar</span></div>
+    </div>
     <div class="auth-step" id="ls3">
      <div class="vc"><div class="vc-icon">📧</div><div class="vc-title">Recuperar contraseña</div><div class="vc-desc">Te enviaremos un enlace para restablecer tu contraseña.</div></div>
      <div class="fg"><label>Correo electrónico</label><input type="email" id="resetE" placeholder="tu@email.com"></div>
@@ -1031,6 +1040,32 @@
  </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL ENROLAMIENTO 2FA (TOTP)
+════════════════════════════════════════════════════ -->
+<div class="auth-overlay" id="mfaEnrollOverlay" style="display:none">
+ <div class="auth-box" style="max-width:420px">
+  <div class="auth-header" style="position:relative">
+   <button class="auth-close" onclick="cancelMfaEnroll()" aria-label="Cerrar">✕</button>
+   <div class="auth-logo" style="font-size:18px">🛡️ Activar verificación en dos pasos</div>
+   <div class="auth-subtitle">Escanéalo con tu app autenticadora</div>
+  </div>
+  <div class="auth-body">
+   <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Abre Google Authenticator, Authy o similar, escanea el QR y luego ingresa el código de 6 dígitos que te muestre.</p>
+   <div id="mfaEnrollQr" style="display:flex;justify-content:center;margin-bottom:12px"></div>
+   <p style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:4px">¿No puedes escanear? Ingresa esta clave manualmente:</p>
+   <div id="mfaEnrollSecret" style="font-family:monospace;font-size:13px;text-align:center;word-break:break-all;background:#f8f9fc;border-radius:8px;padding:10px;margin-bottom:14px"></div>
+   <div class="fg">
+    <label>Código de la app</label>
+    <input type="text" id="mfaEnrollCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"
+           style="text-align:center;letter-spacing:10px;font-size:22px" onkeydown="if(event.key==='Enter')confirmMfaEnroll()">
+    <div class="ferr" id="mfaEnrollE"></div>
+   </div>
+   <button class="auth-btn btn-pri" id="mfaEnrollBtn" style="margin-top:8px" onclick="confirmMfaEnroll()">Activar 2FA</button>
+  </div>
+ </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1046,11 +1081,11 @@
 <!-- ══════════════════════════════════════════════════
      SCRIPTS (orden importante)
 ════════════════════════════════════════════════════ -->
-<script defer src="js/storage.js?v=20260622k"></script>
-<script defer src="js/data.js?v=20260622k"></script>
-<script defer src="js/auth.js?v=20260622k"></script>
-<script defer src="js/app.js?v=20260622k"></script>
-<script defer src="js/chatbot.js?v=20260622k"></script>
+<script defer src="js/storage.js?v=20260622l"></script>
+<script defer src="js/data.js?v=20260622l"></script>
+<script defer src="js/auth.js?v=20260622l"></script>
+<script defer src="js/app.js?v=20260622l"></script>
+<script defer src="js/chatbot.js?v=20260622l"></script>
 
 </body>
 </html>

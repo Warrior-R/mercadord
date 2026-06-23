@@ -23,6 +23,8 @@ let pending  = null;                   // vista a abrir tras login
 let attempts = 0;
 let lockTs   = 0;
 let demoOTP  = null;
+let mfaPending = false;        // ¿el login está esperando el 2º factor (TOTP)?
+let mfaLoginFactorId = null;   // factor TOTP a desafiar en el login
 
 function persistUser() { user ? MRD.set(K.USER, user) : MRD.del(K.USER); }
 
@@ -100,6 +102,17 @@ async function handleAuthEvent(ev, session) {
     showToast('Tu sesión expiró — inicia sesión de nuevo');
   }
 
+  // ── 2FA (TOTP): si el usuario tiene un factor y la sesión sigue en AAL1,
+  //    exigir el segundo factor ANTES de saludar/cerrar el modal. ──
+  if (user && !DEMO && sb && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) {
+    let aal = null;
+    try { aal = (await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data; } catch (_) {}
+    if (aal && aal.currentLevel === 'aal1' && aal.nextLevel === 'aal2') {
+      promptMfaLogin();
+      return; // no saludar ni cerrar hasta verificar el segundo factor
+    }
+  }
+
   // Bienvenida + vista pendiente. Tras el redirect de Google la sesión llega
   // en INITIAL_SESSION; en login con contraseña (sin recarga) llega SIGNED_IN.
   const modalOpen   = document.getElementById('authOverlay').style.display === 'flex';
@@ -175,6 +188,7 @@ function closeAuth() {
 // Cierre manual (✕ u overlay): además descarta la vista pendiente para que
 // un login posterior no navegue a donde el usuario ya no quería ir.
 function cancelAuth() {
+  if (mfaPending) { cancelMfaLogin(); return; }  // cerrar durante el 2FA = cancelar el login
   pending = null;
   closeAuth();
 }
@@ -209,6 +223,8 @@ function requireAuth(v) {
 
 // ─── Cambiar tab login/registro ───
 function switchTab(t) {
+  // Si hay un reto 2FA en curso, cambiar de pestaña = abandonar el login (signOut).
+  if (mfaPending) { cancelMfaLogin(); return; }
   clearAlert();
   const isL = t === 'login';
   document.getElementById('tabLogin').classList.toggle('active', isL);
@@ -443,10 +459,63 @@ async function loginGoogle() {
   }
 }
 
-// ─── 2FA ───
-// (Retirado) El antiguo verify2fa() + pantalla "ls2" no validaban el código contra
-// ningún servidor —era teatro de seguridad— y la pantalla era inalcanzable en el flujo
-// de login. Para 2FA real, implementar Supabase Auth MFA (sb.auth.mfa.*).
+// ─── 2FA real (Supabase Auth MFA — TOTP / app autenticadora) ───
+// Tras signInWithPassword, si el usuario tiene un factor TOTP la sesión queda
+// en AAL1; handleAuthEvent detecta nextLevel='aal2' y llama aquí para exigir
+// el código de 6 dígitos antes de dejarlo entrar.
+async function promptMfaLogin() {
+  try {
+    const { data } = await sb.auth.mfa.listFactors();
+    const totp = (data?.totp || []).find(f => f.status === 'verified') || (data?.totp || [])[0];
+    mfaLoginFactorId = totp?.id || null;
+  } catch (_) { mfaLoginFactorId = null; }
+  document.getElementById('authOverlay').style.display = 'flex';
+  switchTab('login');          // mfaPending aún es false aquí (no hay recursión)
+  mfaPending = true;
+  gotoStep('l', 2);
+  clearAlert();
+  const inp = document.getElementById('mfaLoginCode');
+  if (inp) { inp.value = ''; setTimeout(() => { try { inp.focus(); } catch (_) {} }, 60); }
+}
+
+async function verifyMfaLogin() {
+  fe('mfaLoginE', '');
+  const code = (document.getElementById('mfaLoginCode').value || '').replace(/\D/g, '');
+  if (code.length !== 6) { fe('mfaLoginE', 'Ingresa el código de 6 dígitos.'); return; }
+  if (!mfaLoginFactorId) { showAlert('fail', 'No se encontró tu método 2FA. Inicia sesión de nuevo.'); return; }
+  const btn = document.getElementById('mfaLoginBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Verificando…'; }
+  try {
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: mfaLoginFactorId, code });
+    if (error) { fe('mfaLoginE', 'Código incorrecto o expirado. Intenta de nuevo.'); return; }
+    // Verificado → sesión AAL2. handleAuthEvent ya cargó el perfil en AAL1;
+    // aquí solo saludamos, cerramos y abrimos la vista pendiente.
+    mfaPending = false;
+    mfaLoginFactorId = null;
+    greeted = true;
+    pending = pending || sessionStorage.getItem('mrd_pending') || null;
+    sessionStorage.removeItem('mrd_pending');
+    sessionStorage.removeItem('mrd_oauth');
+    if (typeof onUserChanged === 'function') onUserChanged();
+    refreshHeader();
+    showToast(`¡Bienvenido/a ${displayName()}! 👋`);
+    closeAuth();
+    if (pending) { const v = pending; pending = null; requireAuth(v); }
+  } catch (e) {
+    fe('mfaLoginE', 'No se pudo verificar. Intenta de nuevo.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Verificar'; }
+  }
+}
+
+// Cancelar el reto a medio login NO debe dejar la sesión en AAL1: cerramos
+// sesión y volvemos al paso 1.
+async function cancelMfaLogin() {
+  mfaPending = false;
+  mfaLoginFactorId = null;
+  try { if (sb) await sb.auth.signOut(); } catch (_) {}
+  gotoStep('l', 1);
+}
 
 // ─── Reset password ───
 async function doReset() {

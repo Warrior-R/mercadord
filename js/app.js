@@ -3117,8 +3117,7 @@ function renderSecurity() {
       </div>
       <div class="sec-card">
         <div class="sec-head">🛡️ Verificación en dos pasos (2FA)</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Agrega una capa extra de seguridad con un código por SMS al iniciar sesión.</p>
-        <button class="mrd-btn-ghost" onclick="showToast('2FA por SMS — se activa junto con la verificación de teléfono')">Configurar 2FA</button>
+        <div id="mfaCard"><p style="font-size:13px;color:var(--text2)">Cargando…</p></div>
       </div>
       <div class="sec-card">
         <div class="sec-head">💻 Sesión activa</div>
@@ -3126,6 +3125,7 @@ function renderSecurity() {
         <button class="mrd-link mrd-link-danger" onclick="doLogout()">Cerrar sesión en este dispositivo</button>
       </div>
     </div>`;
+  refreshMfaCard();
 }
 async function changePassword() {
   fe('secPwdE', '');
@@ -3139,6 +3139,108 @@ async function changePassword() {
   }
   document.getElementById('secPwd').value = '';
   showToast('Contraseña actualizada ✓');
+}
+
+// ─── 2FA real (Supabase Auth MFA — TOTP / app autenticadora) ───
+let mfaEnrollFactorId = null;
+
+// Refresca la tarjeta de 2FA según haya o no un factor TOTP verificado.
+async function refreshMfaCard() {
+  const el = document.getElementById('mfaCard');
+  if (!el) return;
+  if (typeof sb === 'undefined' || !sb || !user) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text2)">Inicia sesión para configurar la verificación en dos pasos.</p>';
+    return;
+  }
+  let active = false;
+  try {
+    const { data } = await sb.auth.mfa.listFactors();
+    active = ((data && data.totp) || []).some(f => f.status === 'verified');
+  } catch (e) {}
+  if (active) {
+    el.innerHTML = `
+      <p style="font-size:13px;color:#16a34a;margin-bottom:10px">✅ 2FA activado con app autenticadora.</p>
+      <button class="mrd-link mrd-link-danger" onclick="disableMfa()">Desactivar 2FA</button>`;
+  } else {
+    el.innerHTML = `
+      <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Protege tu cuenta con una app autenticadora (Google Authenticator, Authy…). Te pedirá un código de 6 dígitos al iniciar sesión.</p>
+      <button class="mrd-btn-ghost" onclick="startMfaEnroll()">Activar 2FA</button>`;
+  }
+}
+
+// Inicia el enrolamiento: pide a Supabase un factor TOTP y muestra QR + secreto.
+async function startMfaEnroll() {
+  if (typeof sb === 'undefined' || !sb || !user) { showToast('Inicia sesión para activar 2FA'); return; }
+  showToast('⏳ Preparando 2FA…');
+  let data, error;
+  try { ({ data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'MercadoRD ' + Date.now() })); }
+  catch (e) { error = e; }
+  if (error || !data) {
+    showToast('No se pudo iniciar 2FA. Verifica que TOTP esté habilitado en Supabase.');
+    return;
+  }
+  mfaEnrollFactorId = data.id;
+  const qr = (data.totp && data.totp.qr_code) || '';
+  const secret = (data.totp && data.totp.secret) || '';
+  const qrEl = document.getElementById('mfaEnrollQr');
+  if (qrEl) qrEl.innerHTML = (typeof qr === 'string' && qr.trim().startsWith('<svg'))
+    ? qr
+    : `<img src="${esc(qr)}" alt="Código QR 2FA" style="width:184px;height:184px">`;
+  const secEl = document.getElementById('mfaEnrollSecret');
+  if (secEl) secEl.textContent = secret;
+  const codeEl = document.getElementById('mfaEnrollCode');
+  if (codeEl) codeEl.value = '';
+  fe('mfaEnrollE', '');
+  const ov = document.getElementById('mfaEnrollOverlay');
+  if (ov) ov.style.display = 'flex';
+}
+
+// Confirma el enrolamiento verificando el primer código de la app.
+async function confirmMfaEnroll() {
+  fe('mfaEnrollE', '');
+  const code = (document.getElementById('mfaEnrollCode').value || '').replace(/\D/g, '');
+  if (code.length !== 6) { fe('mfaEnrollE', 'Ingresa el código de 6 dígitos de tu app.'); return; }
+  if (!mfaEnrollFactorId) { fe('mfaEnrollE', 'Reinicia la activación.'); return; }
+  const btn = document.getElementById('mfaEnrollBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Verificando…'; }
+  try {
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: mfaEnrollFactorId, code });
+    if (error) { fe('mfaEnrollE', 'Código incorrecto. Revisa la hora de tu teléfono e intenta de nuevo.'); return; }
+    mfaEnrollFactorId = null;
+    closeMfaEnroll();
+    showToast('✅ 2FA activado. Te pediremos un código al iniciar sesión.');
+    refreshMfaCard();
+  } catch (e) {
+    fe('mfaEnrollE', 'No se pudo verificar. Intenta de nuevo.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Activar 2FA'; }
+  }
+}
+
+function closeMfaEnroll() {
+  const ov = document.getElementById('mfaEnrollOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+// Cerrar sin confirmar: quitar el factor pendiente para no dejarlo a medias.
+async function cancelMfaEnroll() {
+  if (mfaEnrollFactorId && typeof sb !== 'undefined' && sb) {
+    try { await sb.auth.mfa.unenroll({ factorId: mfaEnrollFactorId }); } catch (e) {}
+  }
+  mfaEnrollFactorId = null;
+  closeMfaEnroll();
+}
+
+// Desactiva 2FA quitando los factores TOTP (puede requerir sesión AAL2).
+async function disableMfa() {
+  if (!confirm('¿Desactivar la verificación en dos pasos? Tu cuenta quedará protegida solo con la contraseña.')) return;
+  try {
+    const { data } = await sb.auth.mfa.listFactors();
+    const factors = (data && data.totp) || [];
+    for (const f of factors) { await sb.auth.mfa.unenroll({ factorId: f.id }); }
+    showToast('2FA desactivado.');
+  } catch (e) { showToast('No se pudo desactivar (puede requerir volver a iniciar sesión).'); }
+  refreshMfaCard();
 }
 
 // ─── Mensajería comprador-vendedor ───
