@@ -85,6 +85,7 @@ async function handleAuthEvent(ev, session) {
     await loadProfile();
   } else if (ev === 'SIGNED_OUT' || ev === 'INITIAL_SESSION') {
     userState.verified = false;
+    userState.isAdmin = false;
     userState.verificationStatus = 'none';
   }
   saveUserState();
@@ -123,7 +124,7 @@ async function loadProfile() {
   try {
     const { data, error } = await sb
       .from('profiles')
-      .select('is_verified, verification_status, full_name')
+      .select('is_verified, verification_status, full_name, is_admin')
       .eq('id', user.id)
       .maybeSingle();
     if (error) throw error;
@@ -131,6 +132,7 @@ async function loadProfile() {
       // Solo cuenta la aprobación real (proveedor KYC o admin): el estado
       // 'pending' NO desbloquea vender/pujar.
       userState.verified = !!data.is_verified;
+      userState.isAdmin = !!data.is_admin;
       userState.verificationStatus = data.verification_status || 'none';
       if (data.full_name && !user.user_metadata?.full_name) {
         user.user_metadata = { ...(user.user_metadata || {}), full_name: data.full_name };
@@ -726,6 +728,7 @@ async function doLogout() {
   // La verificación de identidad es de la cuenta, no del navegador:
   // no debe heredarla el siguiente usuario que inicie sesión aquí.
   userState.verified = false;
+  userState.isAdmin = false;
   userState.verificationStatus = 'none';
   saveUserState();
   refreshHeader();

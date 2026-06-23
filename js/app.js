@@ -10,6 +10,7 @@ let pmax  = 200000;
 let acat  = 'all';
 let stxt  = '';
 let cview = 'home';
+let adBanners = [];   // banners de patrocinadores activos (declarado arriba: doRender lo usa en el arranque)
 let sortMode = 'relevance';
 let fconds = new Set();   // filtro condición (vacío = todas)
 let flocs  = new Set();   // filtro ubicación (vacío = todas)
@@ -277,15 +278,18 @@ function doRender() {
   if (sortMode === 'newest')    fp = [...fp].sort((a,b) => b.id - a.id);
   if (sortMode === 'deals')     fp = [...fp].sort((a,b) => (b.old ? 1 : 0) - (a.old ? 1 : 0));
   if (sortMode === 'near')      fp = [...fp].sort((a,b) => (a.loc === 'SD' ? 0 : 1) - (b.loc === 'SD' ? 0 : 1));
+  // Anuncios DESTACADOS (patrocinados) siempre primero, conservando el orden previo dentro de cada grupo
+  fp = [...fp].sort((a,b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
 
+  const topBanner = (typeof bannerHTML === 'function') ? bannerHTML('top') : '';
   if (!fp.length) {
-    area.innerHTML = '<div class="no-results"><div>🔍</div><p>No se encontraron productos.</p></div>';
+    area.innerHTML = topBanner + '<div class="no-results"><div>🔍</div><p>No se encontraron productos.</p></div>';
     return;
   }
 
   const sortLabels = { relevance:'Relevancia', priceAsc:'Menor precio', priceDesc:'Mayor precio', rating:'Mejor calificados' };
 
-  area.innerHTML = `
+  area.innerHTML = topBanner + `
     <div class="section-header">
       <div class="section-title">${fp.length} producto${fp.length !== 1 ? 's' : ''}</div>
       <select class="sort-select" onchange="setSort(this)" aria-label="Ordenar productos">
@@ -296,9 +300,11 @@ function doRender() {
       ${fp.map(p => `
         <div class="product-card" onclick="showDetail(${p.id})">
           <div class="product-img">
-            ${p.badge === 'new'  ? '<div class="badge badge-new">NUEVO</div>' : ''}
-            ${p.badge === 'hot'  ? '<div class="badge badge-hot">🔥 HOT</div>' : ''}
-            ${p.badge === 'deal' ? '<div class="badge badge-deal">OFERTA</div>' : ''}
+            ${p.featured
+              ? '<div class="badge badge-feat">⭐ Patrocinado</div>'
+              : (p.badge === 'new'  ? '<div class="badge badge-new">NUEVO</div>'
+               : p.badge === 'hot'  ? '<div class="badge badge-hot">🔥 HOT</div>'
+               : p.badge === 'deal' ? '<div class="badge badge-deal">OFERTA</div>' : '')}
             <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)" role="button" aria-label="Añadir a favoritos">
               ${favs.has(p.id) ? '❤️' : '♡'}
             </div>
@@ -487,6 +493,9 @@ function showView(v) {
 
   } else if (v === 'account') {
     renderAccount();
+
+  } else if (v === 'admin') {
+    renderAdmin();
 
   } else if (v === 'favs') {
     renderFavs();
@@ -1538,6 +1547,11 @@ function renderAccount() {
           <div class="menu-item-left"><span>🪪</span><span>Verificar mi identidad ahora</span></div>
           <span style="color:var(--text2)">›</span>
         </div>` : ''}
+        ${userState.isAdmin ? `
+        <div class="menu-item" onclick="showView('admin')" style="color:#b8860b;font-weight:700">
+          <div class="menu-item-left"><span>📣</span><span>Publicidad (admin)</span></div>
+          <span style="color:var(--text2)">›</span>
+        </div>` : ''}
         ${[['📥','Mis ventas',"showView('sales')"],
            ['💬','Mensajes',"showView('messages')"],
            ['⚙️','Configuración',"showView('settings')"],
@@ -2414,6 +2428,13 @@ async function loadProductsDB() {
         createdAt: r.created_at
       });
     });
+    // Marcar anuncios DESTACADOS (tabla admin-only featured_products; vigentes)
+    try {
+      const nowIso = new Date().toISOString();
+      const { data: feats } = await sb.from('featured_products').select('product_id, until');
+      const featSet = new Set((feats || []).filter(f => !f.until || f.until > nowIso).map(f => f.product_id));
+      products.forEach(p => { if (p._db) p.featured = featSet.has(p.sbId); });
+    } catch (e) {}
     if (typeof cview !== 'undefined' && cview === 'home') {
       if (typeof doRender === 'function') doRender();
       if (typeof renderCarousel === 'function') renderCarousel();
@@ -2840,6 +2861,8 @@ function startStatsAutoRefresh() {
 function onUserChanged() {
   if (typeof sb === 'undefined' || !sb) return;
   startStatsAutoRefresh();
+  loadBanners();
+  if (typeof initAdsense === 'function') initAdsense();
   loadAuctionsDB();
   loadProductsDB();
   subscribeAuctions();
@@ -3220,6 +3243,126 @@ function contactSellerById(id) {
   document.getElementById('heroBanner').style.display = 'none';
   closeSubsection();
   openThread(t.id);
+}
+
+// ══════════════════════════════════════════════════
+// PUBLICIDAD: banners de patrocinadores + anuncios destacados + admin
+// (adBanners se declara arriba en el bloque de estado para evitar TDZ en doRender)
+// ══════════════════════════════════════════════════
+function isAdmin() { return !!(typeof userState !== 'undefined' && userState.isAdmin); }
+
+// Carga los banners ACTIVOS (lectura pública) y los pinta en sus zonas.
+async function loadBanners() {
+  if (typeof sb === 'undefined' || !sb) { adBanners = []; renderFooterBanners(); return; }
+  try {
+    const { data } = await sb.from('ad_banners').select('*').eq('active', true).order('sort', { ascending: true });
+    adBanners = data || [];
+  } catch (e) { adBanners = []; }
+  renderFooterBanners();
+  if (typeof cview !== 'undefined' && cview === 'home' && typeof doRender === 'function') doRender();
+}
+
+// HTML de los banners de un slot. rel="sponsored nofollow noopener" + tag "Publicidad".
+function bannerHTML(slot) {
+  const list = adBanners.filter(b => b.slot === slot);
+  if (!list.length) return '';
+  return `<div class="ad-banners ad-${esc(slot)}">` + list.map(b => `
+    <a class="ad-banner" href="${esc(b.link_url)}" target="_blank" rel="noopener nofollow sponsored" title="${esc(b.title || 'Patrocinado')}">
+      <img src="${esc(b.image_url)}" alt="${esc(b.title || 'Publicidad')}" loading="lazy">
+      <span class="ad-tag">Publicidad</span>
+    </a>`).join('') + '</div>';
+}
+function renderFooterBanners() {
+  const el = document.getElementById('adFooter');
+  if (el) el.innerHTML = bannerHTML('footer');
+}
+
+// ── Panel de administración (solo el dueño) ──
+async function renderAdmin() {
+  if (!isAdmin()) { showToast('Solo administradores'); showView('home'); return; }
+  cview = 'admin';
+  const ca = document.getElementById('contentArea');
+  if (!ca) return;
+  let banners = [], feats = new Set();
+  try { const { data } = await sb.from('ad_banners').select('*').order('created_at', { ascending: false }); banners = data || []; } catch (e) {}
+  try { const { data } = await sb.from('featured_products').select('product_id'); (data || []).forEach(f => feats.add(f.product_id)); } catch (e) {}
+  const dbProducts = products.filter(p => p._db);
+  ca.innerHTML = `
+    <div class="admin-panel">
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">📣 Publicidad (admin)</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Gestiona banners de patrocinadores y anuncios destacados. Solo tú ves esto.</p>
+
+      <section class="admin-card">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">🖼️ Banners de patrocinadores</h3>
+        <div class="fg2"><label for="abSlot">Posición</label>
+          <select id="abSlot"><option value="top">Arriba del listado (home)</option><option value="footer">Pie de página</option></select></div>
+        <div class="fg2"><label for="abTitle">Nombre del patrocinador (interno)</label><input id="abTitle" placeholder="Ferretería XYZ"></div>
+        <div class="fg2"><label for="abImg">URL de la imagen *</label><input id="abImg" placeholder="https://…/banner.jpg" inputmode="url"></div>
+        <div class="fg2"><label for="abLink">Enlace al hacer clic *</label><input id="abLink" placeholder="https://patrocinador.com" inputmode="url"></div>
+        <button class="submit-btn" style="margin-top:8px" onclick="addBanner()">+ Añadir banner</button>
+        <div style="margin-top:14px">${banners.length ? banners.map(bannerAdminRow).join('') : '<p style="font-size:13px;color:var(--text2)">Aún no hay banners.</p>'}</div>
+      </section>
+
+      <section class="admin-card" style="margin-top:16px">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">⭐ Anuncios destacados (patrocinados)</h3>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Los destacados aparecen primero y con la etiqueta "Patrocinado".</p>
+        ${dbProducts.length ? dbProducts.map(p => featAdminRow(p, feats.has(p.sbId))).join('') : '<p style="font-size:13px;color:var(--text2)">No hay anuncios reales todavía.</p>'}
+      </section>
+    </div>`;
+}
+function bannerAdminRow(b) {
+  return `<div class="admin-row">
+    <img src="${esc(b.image_url)}" alt="" style="height:34px;width:54px;object-fit:cover;border-radius:4px;background:#eee">
+    <span style="flex:1;font-size:13px">${esc(b.title || '(sin nombre)')} · <em>${esc(b.slot)}</em> · ${b.active ? '🟢 activo' : '⚪ inactivo'}</span>
+    <button class="admin-btn" onclick="toggleBanner('${esc(b.id)}', ${b.active ? 'false' : 'true'})">${b.active ? 'Desactivar' : 'Activar'}</button>
+    <button class="admin-btn admin-del" onclick="deleteBanner('${esc(b.id)}')">🗑️</button>
+  </div>`;
+}
+function featAdminRow(p, on) {
+  return `<div class="admin-row">
+    <span style="flex:1;font-size:13px">${esc(p.title)} — ${fmt(p.price)}</span>
+    <button class="admin-btn${on ? ' admin-on' : ''}" onclick="toggleFeatured('${esc(p.sbId)}', ${on ? 'false' : 'true'})">${on ? '★ Quitar' : '☆ Destacar'}</button>
+  </div>`;
+}
+async function addBanner() {
+  if (!isAdmin()) return;
+  const slot = document.getElementById('abSlot').value;
+  const title = document.getElementById('abTitle').value.trim();
+  const image_url = document.getElementById('abImg').value.trim();
+  const link_url = document.getElementById('abLink').value.trim();
+  if (!/^https:\/\//i.test(image_url)) { showToast('La imagen debe ser una URL https://'); return; }
+  if (!/^https?:\/\//i.test(link_url)) { showToast('El enlace debe ser una URL http(s)://'); return; }
+  try {
+    const { error } = await sb.from('ad_banners').insert({ slot, title: title || null, image_url, link_url });
+    if (error) throw error;
+    showToast('Banner añadido ✓'); await loadBanners(); renderAdmin();
+  } catch (e) { showToast('No se pudo añadir: ' + (e.message || e)); }
+}
+async function toggleBanner(id, active) {
+  try { const { error } = await sb.from('ad_banners').update({ active }).eq('id', id); if (error) throw error; await loadBanners(); renderAdmin(); }
+  catch (e) { showToast('Error: ' + (e.message || e)); }
+}
+async function deleteBanner(id) {
+  try { const { error } = await sb.from('ad_banners').delete().eq('id', id); if (error) throw error; await loadBanners(); renderAdmin(); }
+  catch (e) { showToast('Error: ' + (e.message || e)); }
+}
+async function toggleFeatured(sbId, on) {
+  try {
+    if (on) { const { error } = await sb.from('featured_products').upsert({ product_id: sbId }); if (error) throw error; }
+    else    { const { error } = await sb.from('featured_products').delete().eq('product_id', sbId); if (error) throw error; }
+    showToast(on ? 'Anuncio destacado ✓' : 'Destacado quitado'); await loadProductsDB(); renderAdmin();
+  } catch (e) { showToast('Error: ' + (e.message || e)); }
+}
+
+// ── AdSense: preparado pero INACTIVO hasta tener el client id aprobado por Google.
+//    Cuando lo tengas, pon aquí 'ca-pub-XXXXXXXXXXXXXXXX' y se cargará solo.
+const ADSENSE_CLIENT = '';
+function initAdsense() {
+  if (!ADSENSE_CLIENT || document.getElementById('adsbygoogle-js')) return;
+  const s = document.createElement('script');
+  s.id = 'adsbygoogle-js'; s.async = true; s.crossOrigin = 'anonymous';
+  s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADSENSE_CLIENT);
+  document.head.appendChild(s);
 }
 
 // ══════════════════════════════════════════════════

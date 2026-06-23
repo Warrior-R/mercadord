@@ -266,3 +266,18 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   .banner{padding-left:16px;padding-right:16px}
   .banner h1{font-size:20px}
 }
+
+/* ── Publicidad: banner destacado, banners de patrocinadores, panel admin ── */
+.badge-feat{background:linear-gradient(135deg,#f6b73c,#c8860b);color:#3a2a00;font-weight:800}
+.ad-banners{display:flex;flex-direction:column;gap:10px;margin:0 0 16px}
+.ad-banners.ad-footer{margin:0;padding:14px 16px 0}
+.ad-banner{position:relative;display:block;border-radius:10px;overflow:hidden;border:1px solid var(--border,#e5e7eb);background:#f3f4f6;line-height:0}
+.ad-banner img{width:100%;height:auto;max-height:140px;object-fit:cover;display:block}
+.ad-tag{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;line-height:1;padding:3px 6px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase}
+.admin-panel{max-width:760px;margin:0 auto;padding:4px 2px}
+.admin-card{background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px}
+.admin-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border,#eee)}
+.admin-btn{padding:6px 10px;font-size:12px;font-weight:600;border:1px solid var(--border,#ddd);border-radius:7px;background:#f7f7f8;cursor:pointer;white-space:nowrap}
+.admin-btn:hover{background:#eef0f3}
+.admin-btn.admin-on{background:#fff7e6;border-color:#e0b34d;color:#8a5a00}
+.admin-btn.admin-del{color:var(--red,#dc2626)}
