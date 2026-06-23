@@ -104,7 +104,7 @@ async function handleAuthEvent(ev, session) {
 
   // ── 2FA (TOTP): si el usuario tiene un factor y la sesión sigue en AAL1,
   //    exigir el segundo factor ANTES de saludar/cerrar el modal. ──
-  if (user && !DEMO && sb && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) {
+  if (user && !DEMO && sb && !mfaPending && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) {
     let aal = null;
     try { aal = (await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data; } catch (_) {}
     if (aal && aal.currentLevel === 'aal1' && aal.nextLevel === 'aal2') {
@@ -112,6 +112,8 @@ async function handleAuthEvent(ev, session) {
       return; // no saludar ni cerrar hasta verificar el segundo factor
     }
   }
+  // Si hay un reto 2FA en curso, no seguir con bienvenida/cierre por eventos duplicados.
+  if (mfaPending) return;
 
   // Bienvenida + vista pendiente. Tras el redirect de Google la sesión llega
   // en INITIAL_SESSION; en login con contraseña (sin recarga) llega SIGNED_IN.
@@ -464,16 +466,25 @@ async function loginGoogle() {
 // en AAL1; handleAuthEvent detecta nextLevel='aal2' y llama aquí para exigir
 // el código de 6 dígitos antes de dejarlo entrar.
 async function promptMfaLogin() {
+  // Re-entrante: el SDK puede emitir SIGNED_IN/INITIAL_SESSION más de una vez.
+  // Si ya estamos pidiendo el código, no repetir (evita cerrar el modal/sesión).
+  if (mfaPending) return;
+  mfaPending = true;           // marcar YA, antes de cualquier await, para cerrar la carrera
+  // Mostrar la pestaña de login SIN pasar por switchTab (su guard de mfaPending
+  // cancelaría el login). Se hace de forma directa y síncrona.
+  const ov = document.getElementById('authOverlay');
+  if (ov) ov.style.display = 'flex';
+  document.getElementById('tabLogin')?.classList.add('active');
+  document.getElementById('tabReg')?.classList.remove('active');
+  const lf = document.getElementById('loginFlow');    if (lf) lf.style.display = '';
+  const rf = document.getElementById('registerFlow'); if (rf) rf.style.display = 'none';
+  gotoStep('l', 2);
+  clearAlert();
   try {
     const { data } = await sb.auth.mfa.listFactors();
     const totp = (data?.totp || []).find(f => f.status === 'verified') || (data?.totp || [])[0];
     mfaLoginFactorId = totp?.id || null;
   } catch (_) { mfaLoginFactorId = null; }
-  document.getElementById('authOverlay').style.display = 'flex';
-  switchTab('login');          // mfaPending aún es false aquí (no hay recursión)
-  mfaPending = true;
-  gotoStep('l', 2);
-  clearAlert();
   const inp = document.getElementById('mfaLoginCode');
   if (inp) { inp.value = ''; setTimeout(() => { try { inp.focus(); } catch (_) {} }, 60); }
 }
