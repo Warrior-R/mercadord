@@ -156,7 +156,7 @@ const legalContent = {
   },
   accessibility: {
     title: '♿ Accesibilidad',
-    body: `<p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Seguimos pautas WCAG 2.1 nivel AA. Si encuentras alguna barrera, contáctanos en accesibilidad@mercadord.net y la resolvemos en 5 días hábiles.</p><p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
+    body: `<p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Seguimos pautas WCAG 2.1 nivel AA. Si encuentras alguna barrera, contáctanos en accesibilidad@mercadord.net y la resolvemos en 5 días hábiles. <span style="color:var(--primary);cursor:pointer;font-weight:600" onclick="openContactForm('accesibilidad')">✉️ Escríbenos</span></p><p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
   }
 };
 
@@ -262,7 +262,8 @@ const infoContent = {
       <h3 style="${H3}">Comunicados recientes</h3>
       <p style="${P}">📅 <strong>Jun 2026</strong> — MercadoRD lanza subastas en línea con pujas en tiempo real.<br>📅 <strong>May 2026</strong> — Nueva verificación de identidad con reconocimiento facial.<br>📅 <strong>Abr 2026</strong> — Alianza con empresas de mensajería para envíos a 32 provincias.</p>
       <h3 style="${H3}">Contacto de prensa</h3>
-      <p style="${P}">prensa@mercadord.net · Kit de marca y logos disponibles bajo solicitud.</p>`
+      <p style="${P}">prensa@mercadord.net · Kit de marca y logos disponibles bajo solicitud.</p>
+      <p style="${P}"><span style="color:var(--primary);cursor:pointer;font-weight:600" onclick="openContactForm('prensa')">✉️ Escríbenos a Prensa</span></p>`
   },
   jobs: {
     title: '💼 Trabaja con Nosotros',
@@ -271,7 +272,8 @@ const infoContent = {
       <p style="${P}">💻 Desarrollador Full-Stack (Santo Domingo / remoto)<br>🎨 Diseñador UX/UI (Santo Domingo)<br>🎧 Agente de Soporte al Cliente (Santiago)<br>📦 Coordinador de Logística (Santo Domingo Este)</p>
       <h3 style="${H3}">Beneficios</h3>
       <p style="${P}">Seguro médico complementario, horario flexible, capacitación continua y bonos por desempeño.</p>
-      <p style="${P}">Envía tu CV a <strong>talento@mercadord.net</strong></p>`
+      <p style="${P}">Envía tu CV a <strong>talento@mercadord.net</strong></p>
+      <p style="${P}"><span style="color:var(--primary);cursor:pointer;font-weight:600" onclick="openContactForm('talento')">✉️ Envíanos tu CV / escríbenos</span></p>`
   },
   community: {
     title: '👥 Comunidad MercadoRD',
@@ -302,7 +304,8 @@ const infoContent = {
       <p style="${P}">📈 +120K productos activos · +45K vendedores verificados · +800K compradores registrados · Presencia en 32 provincias.</p>
       <h3 style="${H3}">Modelo de negocio</h3>
       <p style="${P}">Ingresos por comisión de venta (5%), suscripciones Premium, publicidad interna y servicios de logística — el modelo probado de los grandes marketplaces.</p>
-      <p style="${P}">Contacto: <strong>inversion@mercadord.net</strong></p>`
+      <p style="${P}">Contacto: <strong>inversion@mercadord.net</strong></p>
+      <p style="${P}"><span style="color:var(--primary);cursor:pointer;font-weight:600" onclick="openContactForm('inversion')">✉️ Escríbenos a Inversionistas</span></p>`
   },
   help: {
     title: '❓ Centro de Ayuda',

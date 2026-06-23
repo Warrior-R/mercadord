@@ -1692,6 +1692,53 @@ function openSellers() { openSubPage('sellersSection'); }
 function openAbout()   { openSubPage('aboutSection'); }
 function openContact() { openSubPage('contactSection'); }
 
+// ─── Formulario de contacto (Resend, vía Edge Function `contact`) ───
+// Hace funcionales los correos publicados (soporte/accesibilidad/prensa/talento/
+// inversión): el mensaje se envía por Resend a un buzón real con Reply-To del usuario.
+function openContactForm(dept) {
+  const sel = document.getElementById('cfDept');
+  if (sel && dept) sel.value = dept;
+  const m = document.getElementById('cfMsg'); if (m) m.textContent = '';
+  const ov = document.getElementById('contactFormOverlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeContactForm() {
+  const ov = document.getElementById('contactFormOverlay');
+  if (ov) ov.style.display = 'none';
+}
+async function sendContactForm() {
+  const dept    = document.getElementById('cfDept')?.value || 'soporte';
+  const name    = (document.getElementById('cfName')?.value || '').trim();
+  const email   = (document.getElementById('cfEmail')?.value || '').trim();
+  const subject = (document.getElementById('cfSubject')?.value || '').trim();
+  const message = (document.getElementById('cfMessage')?.value || '').trim();
+  const website = document.getElementById('cfWebsite')?.value || ''; // honeypot
+  const msg = document.getElementById('cfMsg');
+  const setMsg = (t, ok) => { if (msg) { msg.textContent = t; msg.style.color = ok ? '#16a34a' : 'var(--accent)'; } };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setMsg('Ingresa un correo válido para responderte.', false); return; }
+  if (message.length < 5) { setMsg('Escribe tu mensaje.', false); return; }
+  if (typeof sb === 'undefined' || !sb) { setMsg('No se pudo conectar. Intenta más tarde.', false); return; }
+  const btn = document.getElementById('cfSend');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    const { data, error } = await sb.functions.invoke('contact', { body: { dept, name, email, subject, message, website } });
+    if (error || !data || !data.ok) {
+      const e = data && data.error;
+      setMsg(e === 'rate_limited'  ? 'Enviaste varios mensajes seguidos. Espera unos minutos.'
+           : (data && data.notConfigured) ? 'El formulario no está disponible por ahora. Escríbenos por WhatsApp.'
+           : 'No se pudo enviar. Intenta de nuevo.', false);
+      return;
+    }
+    setMsg('✅ ¡Mensaje enviado! Te responderemos al correo indicado.', true);
+    ['cfName', 'cfSubject', 'cfMessage'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    setTimeout(closeContactForm, 1800);
+  } catch (e) {
+    setMsg('No se pudo enviar. Verifica tu conexión e intenta de nuevo.', false);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar mensaje'; }
+  }
+}
+
 // Muestra el contenido de una de las secciones del footer como página propia (no modal)
 function openSubPage(id) {
   const sec = document.getElementById(id);
