@@ -3283,14 +3283,22 @@ async function renderAdmin() {
   cview = 'admin';
   const ca = document.getElementById('contentArea');
   if (!ca) return;
-  let banners = [], feats = new Set();
+  let banners = [], feats = new Set(), reports = [];
   try { const { data } = await sb.from('ad_banners').select('*').order('created_at', { ascending: false }); banners = data || []; } catch (e) {}
   try { const { data } = await sb.from('featured_products').select('product_id'); (data || []).forEach(f => feats.add(f.product_id)); } catch (e) {}
+  try { const { data } = await sb.from('reports').select('*').order('created_at', { ascending: false }).limit(100); reports = data || []; } catch (e) {}
   const dbProducts = products.filter(p => p._db);
+  const pendCount = reports.filter(r => r.status === 'pendiente').length;
   ca.innerHTML = `
     <div class="admin-panel">
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">📣 Publicidad (admin)</h2>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Gestiona banners de patrocinadores y anuncios destacados. Solo tú ves esto.</p>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:4px">🛠️ Panel de administración</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Reportes de usuarios, banners y anuncios destacados. Solo tú ves esto.</p>
+
+      <section class="admin-card" style="margin-bottom:16px">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">🛡️ Reportes de usuarios ${pendCount ? `<span style="background:var(--accent);color:#fff;font-size:11px;padding:1px 7px;border-radius:9px;margin-left:4px">${pendCount} pendiente${pendCount > 1 ? 's' : ''}</span>` : ''}</h3>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Reportes de fraude, spam o perfiles sospechosos enviados por el asistente.</p>
+        ${reports.length ? reports.map(reportAdminRow).join('') : '<p style="font-size:13px;color:var(--text2)">No hay reportes todavía. 🎉</p>'}
+      </section>
 
       <section class="admin-card">
         <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">🖼️ Banners de patrocinadores</h3>
@@ -3323,6 +3331,42 @@ function featAdminRow(p, on) {
     <span style="flex:1;font-size:13px">${esc(p.title)} — ${fmt(p.price)}</span>
     <button class="admin-btn${on ? ' admin-on' : ''}" onclick="toggleFeatured('${esc(p.sbId)}', ${on ? 'false' : 'true'})">${on ? '★ Quitar' : '☆ Destacar'}</button>
   </div>`;
+}
+// ── Reportes (fraude / spam / sospechoso) ──
+const REPORT_TYPE_LABEL = { fraude: '🚨 Fraude', spam: '📛 Spam', sospechoso: '⚠️ Sospechoso', otro: '📄 Otro' };
+const REPORT_STATUS_LABEL = { pendiente: '🟠 Pendiente', revisando: '🔵 Revisando', resuelto: '🟢 Resuelto', descartado: '⚪ Descartado' };
+function reportAdminRow(r) {
+  let when = '';
+  try { when = new Date(r.created_at).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' }); } catch (_) { when = r.created_at || ''; }
+  const who = r.reporter_email ? esc(r.reporter_email) : 'anónimo';
+  const desc = (r.description || '').length > 240 ? r.description.slice(0, 240) + '…' : (r.description || '');
+  const ctx = r.context ? `<div style="font-size:11px;color:var(--text2);margin-top:5px;white-space:pre-wrap;border-left:2px solid var(--border);padding-left:7px">${esc(r.context)}</div>` : '';
+  return `<div class="admin-row" style="flex-direction:column;align-items:stretch;gap:6px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <strong style="font-size:13px">${REPORT_TYPE_LABEL[r.report_type] || '📄 Otro'}</strong>
+      <span style="font-size:12px;color:var(--text2)">→ ${esc(r.target || '(sin objetivo)')}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text2)">${esc(REPORT_STATUS_LABEL[r.status] || r.status)}</span>
+    </div>
+    <div style="font-size:13px;color:var(--text)">${esc(desc)}</div>
+    ${ctx}
+    <div style="font-size:11px;color:var(--text2)">Por ${who} · ${esc(when)}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="admin-btn" onclick="setReportStatus('${esc(r.id)}','revisando')">Revisando</button>
+      <button class="admin-btn admin-on" onclick="setReportStatus('${esc(r.id)}','resuelto')">Resuelto</button>
+      <button class="admin-btn admin-del" onclick="setReportStatus('${esc(r.id)}','descartado')">Descartar</button>
+    </div>
+  </div>`;
+}
+async function setReportStatus(id, status) {
+  if (!isAdmin()) return;
+  const patch = { status };
+  if (status === 'resuelto' || status === 'descartado') patch.resolved_at = new Date().toISOString();
+  try {
+    const { error } = await sb.from('reports').update(patch).eq('id', id);
+    if (error) throw error;
+    showToast('Reporte actualizado ✓');
+    renderAdmin();
+  } catch (e) { showToast('Error: ' + (e.message || e)); }
 }
 async function addBanner() {
   if (!isAdmin()) return;

@@ -1,0 +1,147 @@
+/* ══════════════════════════════════════════════════
+   MercadoRD — Widget del Asistente IA (chatbot)
+   Botón flotante + panel de chat. Usa las variables de styles.css.
+   ══════════════════════════════════════════════════ */
+
+#mrdChatBtn {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1400;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: var(--primary, #003087);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  box-shadow: 0 6px 20px rgba(0, 48, 135, .35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .18s, box-shadow .18s;
+}
+#mrdChatBtn:hover { transform: scale(1.06); box-shadow: 0 8px 26px rgba(0, 48, 135, .45); }
+#mrdChatBtn:active { transform: scale(.97); }
+#mrdChatBtn .mrd-chat-badge {
+  position: absolute;
+  top: -2px; right: -2px;
+  min-width: 18px; height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--accent, #e43e2b);
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: none;
+  align-items: center; justify-content: center;
+}
+
+#mrdChatPanel {
+  position: fixed;
+  right: 24px;
+  bottom: 92px;
+  z-index: 1400;
+  width: 370px;
+  max-width: calc(100vw - 32px);
+  height: 540px;
+  max-height: calc(100vh - 130px);
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #dde3ee);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(20, 30, 60, .28);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Sora', sans-serif;
+}
+#mrdChatPanel.open { display: flex; animation: mrdChatIn .18s ease-out; }
+@keyframes mrdChatIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.mrd-chat-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  background: var(--primary, #003087);
+  color: #fff;
+}
+.mrd-chat-head .mrd-chat-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255, 255, 255, .18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.mrd-chat-head .mrd-chat-title { flex: 1; line-height: 1.2; }
+.mrd-chat-head .mrd-chat-title strong { font-size: 14px; font-weight: 700; display: block; }
+.mrd-chat-head .mrd-chat-title span { font-size: 11px; opacity: .85; }
+.mrd-chat-head .mrd-chat-close {
+  background: none; border: none; color: #fff; cursor: pointer;
+  font-size: 22px; line-height: 1; padding: 2px 6px; border-radius: 6px;
+}
+.mrd-chat-head .mrd-chat-close:hover { background: rgba(255, 255, 255, .15); }
+
+.mrd-chat-msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  background: var(--bg, #f4f6f9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mrd-msg { max-width: 84%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+.mrd-msg.bot { align-self: flex-start; background: #fff; color: var(--text, #1a1a2e); border: 1px solid var(--border, #dde3ee); border-bottom-left-radius: 4px; }
+.mrd-msg.user { align-self: flex-end; background: var(--primary, #003087); color: #fff; border-bottom-right-radius: 4px; }
+.mrd-msg.note { align-self: center; background: #e8f5ee; color: var(--green, #0a8a4a); border: 1px solid #bfe6cf; font-size: 12px; font-weight: 600; border-radius: 10px; }
+
+.mrd-chat-typing { align-self: flex-start; display: flex; gap: 4px; padding: 11px 14px; background: #fff; border: 1px solid var(--border, #dde3ee); border-radius: 14px; border-bottom-left-radius: 4px; }
+.mrd-chat-typing span { width: 7px; height: 7px; border-radius: 50%; background: #b9c2d4; animation: mrdBlink 1.3s infinite both; }
+.mrd-chat-typing span:nth-child(2) { animation-delay: .2s; }
+.mrd-chat-typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes mrdBlink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+
+.mrd-chat-suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; background: var(--bg, #f4f6f9); }
+.mrd-chat-suggest button {
+  font-family: 'Sora', sans-serif;
+  font-size: 12px; font-weight: 600;
+  padding: 7px 11px; border-radius: 16px;
+  border: 1px solid var(--border, #dde3ee);
+  background: #fff; color: var(--primary, #003087); cursor: pointer;
+}
+.mrd-chat-suggest button:hover { background: #eef3fb; }
+
+.mrd-chat-input {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border, #dde3ee);
+  background: var(--card, #fff);
+}
+.mrd-chat-input textarea {
+  flex: 1; resize: none; max-height: 96px; min-height: 22px;
+  border: 1px solid var(--border, #dde3ee); border-radius: 10px;
+  padding: 9px 12px; font-size: 13.5px; font-family: 'Sora', sans-serif;
+  outline: none; color: var(--text, #1a1a2e); line-height: 1.4;
+}
+.mrd-chat-input textarea:focus { border-color: var(--primary, #003087); }
+.mrd-chat-input .mrd-chat-send {
+  flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 10px;
+  border: none; cursor: pointer;
+  background: var(--accent, #e43e2b); color: #fff;
+  font-size: 17px; display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.mrd-chat-send:hover { background: #c0321f; }
+.mrd-chat-send:disabled { opacity: .5; cursor: default; }
+
+/* Móvil: subir el botón sobre la bottom-nav y panel casi a pantalla completa */
+@media (max-width: 700px) {
+  #mrdChatBtn { right: 16px; bottom: 78px; width: 54px; height: 54px; font-size: 24px; }
+  #mrdChatPanel {
+    right: 8px; left: 8px;
+    bottom: 8px;
+    width: auto;
+    height: calc(100vh - 90px);
+    max-height: none;
+  }
+}
