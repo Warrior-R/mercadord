@@ -9,6 +9,7 @@ import { categoryByKey } from "@/lib/categories";
 import { SITE_URL } from "@/lib/site";
 import { isProductFeatured } from "@/lib/featured";
 import { listMyFavoriteIds } from "@/lib/favorites";
+import { getSellerReputation } from "@/lib/reviews";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ContactSeller } from "@/components/contact-seller";
@@ -61,11 +62,32 @@ export default async function ProductPage({ params, searchParams }: Params) {
   if (!product) notFound();
 
   const cat = categoryByKey(product.category);
-  const [featured, favoriteIds] = await Promise.all([
+  const [featured, favoriteIds, reputation] = await Promise.all([
     isProductFeatured(product.id),
     listMyFavoriteIds(),
+    product.user_id ? getSellerReputation(product.user_id) : Promise.resolve(null),
   ]);
   const isFavorited = favoriteIds.has(product.id);
+
+  // El vendedor (con su reputación REAL si existe) va en la oferta.
+  const seller =
+    product.seller_name || reputation
+      ? {
+          "@type": "Person",
+          name: product.seller_name ?? "Vendedor",
+          ...(reputation && reputation.review_count > 0
+            ? {
+                aggregateRating: {
+                  "@type": "AggregateRating",
+                  ratingValue: reputation.avg_rating,
+                  reviewCount: reputation.review_count,
+                  bestRating: 5,
+                  worstRating: 1,
+                },
+              }
+            : {}),
+        }
+      : undefined;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -79,6 +101,7 @@ export default async function ProductPage({ params, searchParams }: Params) {
       price: product.price,
       priceCurrency: "DOP",
       availability: "https://schema.org/InStock",
+      ...(seller ? { seller } : {}),
     },
   };
 
