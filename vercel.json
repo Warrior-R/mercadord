@@ -1,6 +1,10 @@
 {
   "buildCommand": "echo 'Static site'",
   "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/producto/:id", "destination": "/api/producto?id=:id" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
