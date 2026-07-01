@@ -11,7 +11,7 @@ let stxt  = '';
 let cview = 'home';
 let adBanners = [];   // banners de patrocinadores activos (declarado arriba: doRender lo usa en el arranque)
 // ─── Router por RUTAS limpias (/subastas, /producto/<uuid>) + botón Atrás. Estado arriba para evitar TDZ. ───
-let _routing = false, _lastRoute = null, _booting = true, _pendingProduct = null;
+let _routing = false, _lastRoute = null, _booting = true, _pendingProduct = null, _productsLoaded = false;
 const VIEW_TO_SLUG = { home:'', auctions:'subastas', sell:'vender', account:'cuenta', favs:'favoritos', myads:'mis-anuncios', sales:'mis-ventas', orders:'mis-compras', messages:'mensajes', addresses:'direcciones', settings:'configuracion', notifs:'notificaciones', security:'seguridad', admin:'publicidad', seller:'vendedor' };
 const SLUG_TO_VIEW = Object.fromEntries(Object.entries(VIEW_TO_SLUG).map(([v, s]) => [s, v]));
 // Categorías con URL propia (/categoria/<slug>) + etiqueta visible
@@ -2224,6 +2224,7 @@ async function loadProductsDB() {
       const featSet = new Set((feats || []).filter(f => !f.until || f.until > nowIso).map(f => f.product_id));
       products.forEach(p => { if (p._db) p.featured = featSet.has(p.sbId); });
     } catch (e) {}
+    _productsLoaded = true;   // catálogo cargado: habilita el 404 real de productos inexistentes
     // Deep-link a /producto/<uuid> que llegó antes de cargar el catálogo: resolverlo ahora.
     if (typeof resolvePendingProduct === 'function') resolvePendingProduct();
     if (typeof cview !== 'undefined' && cview === 'home') {
@@ -2547,6 +2548,7 @@ function checkAuctionHash() {
 // El hash #fv= (modo QR móvil del KYC) se respeta y no se toca.
 function pushRoute(path) {
   if (_routing || _booting) return;
+  setNoindex(false);   // navegar a una página válida quita el noindex de una 404 previa
   const p = '/' + (path || '');
   if (location.pathname === p) { _lastRoute = p; return; }  // ya estamos ahí
   try { history.pushState(null, '', p); } catch (e) {}
@@ -2559,6 +2561,38 @@ function replaceRoute(path) {
   try { history.replaceState(null, '', p); } catch (e) {}
   _lastRoute = location.pathname;
 }
+
+// Añade/quita <meta name="robots" content="noindex"> dinámico (para no indexar 404 ni URLs inexistentes)
+function setNoindex(on) {
+  let m = document.querySelector('meta[name="robots"][data-dyn]');
+  if (on) {
+    if (!m) { m = document.createElement('meta'); m.setAttribute('name', 'robots'); m.setAttribute('data-dyn', ''); document.head.appendChild(m); }
+    m.setAttribute('content', 'noindex, follow');
+  } else if (m) { m.remove(); }
+}
+
+// Vista 404: URL que no corresponde a ninguna ruta, o anuncio inexistente/eliminado.
+function showNotFound() {
+  cview = '404';
+  const hb = document.getElementById('heroBanner'); if (hb) hb.style.display = 'none';
+  const cs = document.querySelector('.carousel-section'); if (cs) cs.style.display = 'none';
+  if (typeof closeSubsection === 'function') closeSubsection();
+  document.title = 'Página no encontrada — MercadoRD';
+  setNoindex(true);
+  const ca = document.getElementById('contentArea');
+  if (!ca) return;
+  ca.innerHTML = `
+    <div class="no-results" style="padding:64px 24px">
+      <div style="font-size:64px">🧭</div>
+      <h2 style="font-size:22px;font-weight:700;color:var(--text);margin:10px 0 6px">Página no encontrada</h2>
+      <p style="max-width:460px;margin:0 auto 22px">La dirección <strong>${esc(location.pathname)}</strong> no existe o el anuncio ya no está disponible.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="submit-btn" style="width:auto;padding:12px 24px" onclick="goHome()">Ir al inicio</button>
+        <button class="submit-btn" style="width:auto;padding:12px 24px;background:var(--primary)" onclick="showView('auctions')">Ver subastas</button>
+      </div>
+    </div>`;
+  if (typeof a11yTagInteractive === 'function') a11yTagInteractive(ca);
+}
 // /producto/<uuid>: resolver el anuncio; si aún no cargó de la BD, dejarlo pendiente.
 function openProductRoute(key) {
   // La URL puede ser slug-uuid o id pelado: quedarnos con el UUID final si existe.
@@ -2566,15 +2600,17 @@ function openProductRoute(key) {
   const k = um ? um[1] : key;
   const prod = products.find(p => p.sbId === k || String(p.id) === k);
   if (prod) { _pendingProduct = null; showDetail(prod.id); }
-  else { _pendingProduct = k; goHome(); }
+  else if (_productsLoaded) { _pendingProduct = null; showNotFound(); }  // catálogo cargado y no existe → 404
+  else { _pendingProduct = k; goHome(); }   // aún no carga: resolvePendingProduct decide al terminar
 }
 function resolvePendingProduct() {
   if (!_pendingProduct) return;
   const prod = products.find(p => p.sbId === _pendingProduct || String(p.id) === _pendingProduct);
-  if (!prod) return;
-  _pendingProduct = null;
   const prev = _routing; _routing = true;
-  try { showDetail(prod.id); } finally { _routing = prev; }
+  try {
+    if (prod) { _pendingProduct = null; showDetail(prod.id); }
+    else if (_productsLoaded) { _pendingProduct = null; showNotFound(); }  // ya cargó el catálogo y no existe → 404
+  } finally { _routing = prev; }
 }
 function routeFromPath() {
   if (location.hash.indexOf('#fv=') === 0) return;       // modo QR móvil: no tocar
@@ -2588,11 +2624,11 @@ function routeFromPath() {
     if (path === '/' || path === '') goHome();
     else if ((m = path.match(/^\/producto\/(.+?)\/?$/)))  openProductRoute(m[1]);
     else if ((m = path.match(/^\/subasta\/(.+?)\/?$/)))   openAuctionById(m[1]);
-    else if ((m = path.match(/^\/categoria\/(.+?)\/?$/)))  { const c = SLUG_TO_CAT[m[1]]; c ? applyCat(c) : goHome(); }
+    else if ((m = path.match(/^\/categoria\/(.+?)\/?$/)))  { const c = SLUG_TO_CAT[m[1]]; c ? applyCat(c) : showNotFound(); }
     else if (path === '/buscar') { const q = new URLSearchParams(location.search).get('q') || ''; const si = document.getElementById('searchInput'); if (si) si.value = q; stxt = q; acat = 'all'; showHomeListing(); document.title = q ? ('Buscar: ' + q + ' — MercadoRD') : 'MercadoRD'; }
-    else if ((m = path.match(/^\/legal\/(.+?)\/?$/)))     { const k = m[1]; (typeof legalContent !== 'undefined' && legalContent[k]) ? openLegal(k) : goHome(); }
-    else if ((m = path.match(/^\/info\/(.+?)\/?$/)))      { const k = m[1]; (typeof infoContent !== 'undefined' && infoContent[k]) ? openInfo(k) : goHome(); }
-    else { const v = SLUG_TO_VIEW[path.replace(/^\//, '').replace(/\/$/, '')]; if (!v) { goHome(); } else if (GATED.has(v)) { requireAuth(v); } else { showView(v); } }
+    else if ((m = path.match(/^\/legal\/(.+?)\/?$/)))     { const k = m[1]; (typeof legalContent !== 'undefined' && legalContent[k]) ? openLegal(k) : showNotFound(); }
+    else if ((m = path.match(/^\/info\/(.+?)\/?$/)))      { const k = m[1]; (typeof infoContent !== 'undefined' && infoContent[k]) ? openInfo(k) : showNotFound(); }
+    else { const v = SLUG_TO_VIEW[path.replace(/^\//, '').replace(/\/$/, '')]; if (!v) { showNotFound(); } else if (GATED.has(v)) { requireAuth(v); } else { showView(v); } }
   } catch (e) { console.warn('router', e); }
   finally { _routing = false; }
 }

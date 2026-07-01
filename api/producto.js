@@ -114,10 +114,11 @@ module.exports = async (req, res) => {
     html = html.replace('</head>', jsonld);
   } else {
     html = html.replace(/<title>[^<]*<\/title>/i, `<title>Anuncio no encontrado | MercadoRD</title>`);
+    html = html.replace('</head>', '<meta name="robots" content="noindex">\n</head>');
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=120, stale-while-revalidate=600');
-  res.statusCode = 200;
+  res.statusCode = p ? 200 : 404;   // 404 real si el anuncio no existe (mejor SEO que un 200)
   res.end(html);
 };
