@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
       // Placeholders usados por el seed de desarrollo.
       { protocol: "https", hostname: "picsum.photos" },
       { protocol: "https", hostname: "images.unsplash.com" },
+      // Imágenes de producto pegadas por vendedores (cualquier host https,
+      // como el img-src https: del sitio actual). TODO: subir a Storage.
+      { protocol: "https", hostname: "**" },
     ],
   },
 };

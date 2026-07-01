@@ -15,6 +15,12 @@ export function SiteHeader() {
         <div className="min-w-0 max-w-[620px] flex-1">
           <SearchBar />
         </div>
+        <Link
+          href="/vender"
+          className="hidden shrink-0 rounded-md bg-accent2 px-3 py-1.5 text-xs font-bold text-ink transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white md:inline-block"
+        >
+          + Vender
+        </Link>
         <UserMenu />
       </div>
     </header>
