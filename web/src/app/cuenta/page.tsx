@@ -4,12 +4,19 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { listProductsByUser } from "@/lib/products";
 import { signOut } from "@/lib/auth-actions";
+import { deleteProduct } from "@/lib/product-actions";
+import { productHref } from "@/lib/format";
 import { ProductCard } from "@/components/product-card";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Mi cuenta", robots: { index: false } };
 
-export default async function CuentaPage() {
+export default async function CuentaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ m?: string; error?: string }>;
+}) {
+  const { m, error } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,6 +60,17 @@ export default async function CuentaPage() {
         </div>
       </div>
 
+      {m === "deleted" && (
+        <p className="mt-4 rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+          Anuncio eliminado.
+        </p>
+      )}
+      {error && (
+        <p className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
       <section className="mt-8">
         <h2 className="mb-4 text-lg font-bold text-ink">
           Mis publicaciones ({myProducts.length})
@@ -73,8 +91,25 @@ export default async function CuentaPage() {
         ) : (
           <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {myProducts.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="flex flex-col gap-1.5">
                 <ProductCard product={p} />
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href={`${productHref(p)}/editar`}
+                    className="flex-1 rounded-lg border border-primary px-2 py-1.5 text-center text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
+                  >
+                    Editar
+                  </Link>
+                  <form action={deleteProduct} className="flex-1">
+                    <input type="hidden" name="id" value={p.id} />
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg border border-accent px-2 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent hover:text-white"
+                    >
+                      Eliminar
+                    </button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>

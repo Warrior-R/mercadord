@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { categoryBySlug } from "@/lib/categories";
 import { listProducts } from "@/lib/products";
+import { listMyFavoriteIds } from "@/lib/favorites";
 import { ProductCard } from "@/components/product-card";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,10 @@ export default async function CategoryPage({ params }: Params) {
   const cat = categoryBySlug(slug);
   if (!cat) notFound();
 
-  const products = await listProducts({ category: cat.key });
+  const [products, favoriteIds] = await Promise.all([
+    listProducts({ category: cat.key }),
+    listMyFavoriteIds(),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-5">
@@ -54,7 +58,11 @@ export default async function CategoryPage({ params }: Params) {
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {products.map((p) => (
             <li key={p.id}>
-              <ProductCard product={p} />
+              <ProductCard
+                product={p}
+                favorited={favoriteIds.has(p.id)}
+                backTo={`/categoria/${cat.slug}`}
+              />
             </li>
           ))}
         </ul>

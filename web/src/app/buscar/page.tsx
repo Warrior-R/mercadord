@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { parseFilters, hasActiveFilters } from "@/lib/filters";
 import { searchProducts } from "@/lib/products";
+import { listMyFavoriteIds } from "@/lib/favorites";
 import { ProductCard } from "@/components/product-card";
 import { FilterPanel } from "@/components/filter-panel";
 import { FiltersDrawer } from "@/components/filters-drawer";
@@ -22,7 +23,10 @@ type Props = {
 export default async function BuscarPage({ searchParams }: Props) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
-  const products = await searchProducts(filters);
+  const [products, favoriteIds] = await Promise.all([
+    searchProducts(filters),
+    listMyFavoriteIds(),
+  ]);
 
   const activeCount = [
     filters.category,
@@ -92,7 +96,11 @@ export default async function BuscarPage({ searchParams }: Props) {
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {products.map((p) => (
                 <li key={p.id}>
-                  <ProductCard product={p} />
+                  <ProductCard
+                    product={p}
+                    favorited={favoriteIds.has(p.id)}
+                    backTo="/buscar"
+                  />
                 </li>
               ))}
             </ul>

@@ -3,13 +3,19 @@ import Image from "next/image";
 import type { Product } from "@/lib/types";
 import { formatPrice, productHref } from "@/lib/format";
 import { categoryByKey } from "@/lib/categories";
+import { FavoriteButton } from "@/components/favorite-button";
 
 export function ProductCard({
   product,
   featured = false,
+  favorited,
+  backTo = "/",
 }: {
   product: Product;
   featured?: boolean;
+  /** Si se pasa (true/false) se muestra el corazón; si es undefined, no se muestra. */
+  favorited?: boolean;
+  backTo?: string;
 }) {
   const cat = categoryByKey(product.category);
   const discount =
@@ -18,10 +24,18 @@ export function ProductCard({
       : null;
 
   return (
-    <Link
-      href={productHref(product)}
-      className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-card transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(0,48,135,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-light"
-    >
+    <div className="relative">
+      {favorited !== undefined && (
+        <FavoriteButton
+          productId={product.id}
+          backTo={backTo}
+          favorited={favorited}
+        />
+      )}
+      <Link
+        href={productHref(product)}
+        className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-card transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(0,48,135,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-light"
+      >
       <div className="relative flex aspect-square items-center justify-center bg-tile">
         {featured && (
           <span className="absolute left-2 top-2 z-10 rounded-full bg-accent2 px-2 py-0.5 text-[10px] font-bold text-ink shadow">
@@ -63,6 +77,7 @@ export function ProductCard({
           <p className="mt-1 text-[11px] text-ink-soft">📍 {product.location}</p>
         )}
       </div>
-    </Link>
+      </Link>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listProducts } from "@/lib/products";
 import { listFeaturedIds } from "@/lib/featured";
+import { listMyFavoriteIds } from "@/lib/favorites";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
 
@@ -10,10 +11,12 @@ export default async function Home() {
   let products: Product[] = [];
   let loadError: string | null = null;
   let featuredIds = new Set<string>();
+  let favoriteIds = new Set<string>();
   try {
-    [products, featuredIds] = await Promise.all([
+    [products, featuredIds, favoriteIds] = await Promise.all([
       listProducts({ limit: 24 }),
       listFeaturedIds(),
+      listMyFavoriteIds(),
     ]);
   } catch (e) {
     loadError = e instanceof Error ? e.message : "error desconocido";
@@ -65,7 +68,11 @@ export default async function Home() {
           <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {featured.map((p) => (
               <li key={p.id}>
-                <ProductCard product={p} featured />
+                <ProductCard
+                  product={p}
+                  featured
+                  favorited={favoriteIds.has(p.id)}
+                />
               </li>
             ))}
           </ul>
@@ -96,7 +103,11 @@ export default async function Home() {
           <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((p) => (
               <li key={p.id}>
-                <ProductCard product={p} featured={featuredIds.has(p.id)} />
+                <ProductCard
+                  product={p}
+                  featured={featuredIds.has(p.id)}
+                  favorited={favoriteIds.has(p.id)}
+                />
               </li>
             ))}
           </ul>

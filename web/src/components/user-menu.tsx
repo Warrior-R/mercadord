@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth-actions";
+import { countUnreadNotifications } from "@/lib/notifications";
 
 export async function UserMenu() {
   const supabase = await createClient();
@@ -32,8 +33,31 @@ export async function UserMenu() {
     user.email ||
     "Mi cuenta";
 
+  const unread = await countUnreadNotifications();
+
   return (
     <div className="flex shrink-0 items-center gap-2">
+      <Link
+        href="/favoritos"
+        aria-label="Favoritos"
+        className="hidden text-lg text-white/90 hover:text-white sm:inline"
+      >
+        🤍
+      </Link>
+      <Link
+        href="/notificaciones"
+        aria-label={
+          unread > 0 ? `Notificaciones (${unread} sin leer)` : "Notificaciones"
+        }
+        className="relative text-lg text-white/90 hover:text-white"
+      >
+        🔔
+        {unread > 0 && (
+          <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </Link>
       <Link
         href="/mensajes"
         aria-label="Mensajes"

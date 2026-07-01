@@ -8,7 +8,10 @@ import { conditionLabel } from "@/lib/filters";
 import { categoryByKey } from "@/lib/categories";
 import { SITE_URL } from "@/lib/site";
 import { isProductFeatured } from "@/lib/featured";
+import { listMyFavoriteIds } from "@/lib/favorites";
+import { FavoriteButton } from "@/components/favorite-button";
 import { ContactSeller } from "@/components/contact-seller";
+import { OwnerControls } from "@/components/owner-controls";
 import { SellerReviews } from "@/components/seller-reviews";
 import { ReportListing } from "@/components/report-listing";
 import { AdminFeaturedToggle } from "@/components/admin-featured-toggle";
@@ -57,7 +60,11 @@ export default async function ProductPage({ params, searchParams }: Params) {
   if (!product) notFound();
 
   const cat = categoryByKey(product.category);
-  const featured = await isProductFeatured(product.id);
+  const [featured, favoriteIds] = await Promise.all([
+    isProductFeatured(product.id),
+    listMyFavoriteIds(),
+  ]);
+  const isFavorited = favoriteIds.has(product.id);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -145,7 +152,18 @@ export default async function ProductPage({ params, searchParams }: Params) {
             {product.seller_name && (
               <div className="flex gap-2">
                 <dt className="font-medium text-neutral-500">Vendedor:</dt>
-                <dd>{product.seller_name}</dd>
+                <dd>
+                  {product.user_id ? (
+                    <Link
+                      href={`/vendedor/${product.user_id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {product.seller_name}
+                    </Link>
+                  ) : (
+                    product.seller_name
+                  )}
+                </dd>
               </div>
             )}
           </dl>
@@ -161,6 +179,13 @@ export default async function ProductPage({ params, searchParams }: Params) {
             </div>
           )}
 
+          <FavoriteButton
+            productId={product.id}
+            backTo={`/producto/${slug}`}
+            favorited={isFavorited}
+            variant="inline"
+          />
+          <OwnerControls product={product} slug={slug} />
           <ContactSeller product={product} slug={slug} status={msg} />
           <SellerReviews product={product} slug={slug} status={rev} />
           <ReportListing product={product} slug={slug} status={rep} />

@@ -23,3 +23,18 @@ test("moderación admin sin sesión redirige a /entrar", async ({ page }) => {
   await page.goto("/admin/reportes");
   await expect(page).toHaveURL(/\/entrar/);
 });
+
+test("favoritos sin sesión redirige a /entrar", async ({ page }) => {
+  await page.goto("/favoritos");
+  await expect(page).toHaveURL(/\/entrar/);
+});
+
+test("notificaciones sin sesión redirige a /entrar", async ({ page }) => {
+  await page.goto("/notificaciones");
+  await expect(page).toHaveURL(/\/entrar/);
+});
+
+test("perfil de vendedor con id inválido devuelve 404", async ({ page }) => {
+  const res = await page.goto("/vendedor/no-es-uuid");
+  expect(res?.status()).toBe(404);
+});

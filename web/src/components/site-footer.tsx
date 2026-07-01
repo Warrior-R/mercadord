@@ -65,6 +65,16 @@ export function SiteFooter() {
                 Mi cuenta
               </Link>
             </li>
+            <li>
+              <Link href="/favoritos" className="hover:text-primary">
+                Favoritos
+              </Link>
+            </li>
+            <li>
+              <Link href="/notificaciones" className="hover:text-primary">
+                Notificaciones
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
