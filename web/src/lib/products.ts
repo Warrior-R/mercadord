@@ -3,7 +3,7 @@ import type { Product } from "@/lib/types";
 import type { SearchFilters } from "@/lib/filters";
 
 const COLUMNS =
-  "id,title,description,price,old_price,category,condition,location,image_url,seller_name,rating,reviews,created_at";
+  "id,user_id,title,description,price,old_price,category,condition,location,image_url,seller_name,rating,reviews,created_at";
 
 /** Búsqueda con texto libre + filtros (categoría, condición, precio, ubicación, orden). */
 export async function searchProducts(f: SearchFilters): Promise<Product[]> {

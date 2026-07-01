@@ -46,4 +46,12 @@ describe("validateProductInput", () => {
       [],
     );
   });
+
+  it("acepta WhatsApp opcional pero exige 10+ dígitos", () => {
+    expect(validateProductInput({ ...ok, whatsapp: null })).toEqual([]);
+    expect(validateProductInput({ ...ok, whatsapp: "809 555 1234" })).toEqual([]);
+    expect(validateProductInput({ ...ok, whatsapp: "123" })).toContain(
+      "El WhatsApp debe tener al menos 10 dígitos.",
+    );
+  });
 });

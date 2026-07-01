@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { slugify, idFromSlug, productHref, formatPrice } from "@/lib/format";
+import {
+  slugify,
+  idFromSlug,
+  productHref,
+  formatPrice,
+  whatsappLink,
+} from "@/lib/format";
 
 describe("slugify", () => {
   it("baja a minúsculas y usa guiones", () => {
@@ -39,5 +45,22 @@ describe("formatPrice", () => {
     const out = formatPrice(28500);
     expect(out).toContain("28,500");
     expect(out).toMatch(/RD\$|DOP/);
+  });
+});
+
+describe("whatsappLink", () => {
+  it("añade el código país 1 a un número de 10 dígitos", () => {
+    expect(whatsappLink("809 555 1234")).toBe("https://wa.me/18095551234");
+  });
+  it("respeta un número que ya trae código país", () => {
+    expect(whatsappLink("18095551234")).toBe("https://wa.me/18095551234");
+  });
+  it("incluye texto pre-rellenado", () => {
+    expect(whatsappLink("8095551234", "hola")).toBe(
+      "https://wa.me/18095551234?text=hola",
+    );
+  });
+  it("devuelve null si el número es muy corto", () => {
+    expect(whatsappLink("123")).toBeNull();
   });
 });

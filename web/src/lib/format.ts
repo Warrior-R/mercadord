@@ -25,6 +25,23 @@ export function productHref(product: { id: string; title: string }): string {
   return `/producto/${slugify(product.title)}-${product.id}`;
 }
 
+/** Deja solo dígitos de un teléfono. */
+export function phoneDigits(phone: string): string {
+  return phone.replace(/\D+/g, "");
+}
+
+/**
+ * Construye el enlace de WhatsApp (wa.me) desde un teléfono dominicano.
+ * Añade el código de país 1 si el número tiene 10 dígitos (809/829/849…).
+ */
+export function whatsappLink(phone: string, text?: string): string | null {
+  let digits = phoneDigits(phone);
+  if (digits.length === 10) digits = "1" + digits;
+  if (digits.length < 11) return null;
+  const q = text ? `?text=${encodeURIComponent(text)}` : "";
+  return `https://wa.me/${digits}${q}`;
+}
+
 const money = new Intl.NumberFormat("es-DO", {
   style: "currency",
   currency: "DOP",

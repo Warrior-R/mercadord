@@ -111,15 +111,30 @@ export default async function VenderPage({ searchParams }: Props) {
           </label>
         </div>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-ink">Ubicación</span>
-          <input
-            type="text"
-            name="location"
-            placeholder="Provincia o ciudad"
-            className={inputClass}
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-ink">Ubicación</span>
+            <input
+              type="text"
+              name="location"
+              placeholder="Provincia o ciudad"
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-ink">WhatsApp (opcional)</span>
+            <input
+              type="tel"
+              name="whatsapp"
+              inputMode="tel"
+              placeholder="809 000 0000"
+              className={inputClass}
+            />
+            <span className="text-xs text-ink-soft">
+              Se mostrará un botón para contactarte por WhatsApp.
+            </span>
+          </label>
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-ink">URL de imagen (https)</span>

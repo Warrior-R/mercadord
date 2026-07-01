@@ -7,10 +7,14 @@ import { idFromSlug, formatPrice } from "@/lib/format";
 import { conditionLabel } from "@/lib/filters";
 import { categoryByKey } from "@/lib/categories";
 import { SITE_URL } from "@/lib/site";
+import { ContactSeller } from "@/components/contact-seller";
 
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ slug: string }> };
+type Params = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ msg?: string }>;
+};
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
@@ -36,8 +40,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function ProductPage({ params }: Params) {
+export default async function ProductPage({ params, searchParams }: Params) {
   const { slug } = await params;
+  const { msg } = await searchParams;
   const id = idFromSlug(slug);
   const product = id ? await getProductById(id) : null;
   if (!product) notFound();
@@ -140,6 +145,8 @@ export default async function ProductPage({ params }: Params) {
               </p>
             </div>
           )}
+
+          <ContactSeller product={product} slug={slug} status={msg} />
         </div>
       </div>
     </div>

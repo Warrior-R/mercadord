@@ -35,6 +35,13 @@ export async function UserMenu() {
   return (
     <div className="flex shrink-0 items-center gap-2">
       <Link
+        href="/mensajes"
+        aria-label="Mensajes"
+        className="text-lg text-white/90 hover:text-white"
+      >
+        💬
+      </Link>
+      <Link
         href="/cuenta"
         className="hidden max-w-[140px] truncate text-sm text-white/90 hover:text-white sm:inline"
       >

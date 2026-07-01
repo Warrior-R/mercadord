@@ -27,8 +27,16 @@ export async function createProduct(formData: FormData) {
   const condition = String(formData.get("condition") ?? "");
   const location = String(formData.get("location") ?? "").trim() || null;
   const image_url = String(formData.get("image_url") ?? "").trim() || null;
+  const whatsapp = String(formData.get("whatsapp") ?? "").trim() || null;
 
-  const errors = validateProductInput({ title, price, category, condition, image_url });
+  const errors = validateProductInput({
+    title,
+    price,
+    category,
+    condition,
+    image_url,
+    whatsapp,
+  });
   if (errors.length) {
     redirect(`/vender?error=${encodeURIComponent(errors.join(" "))}`);
   }
@@ -38,20 +46,24 @@ export async function createProduct(formData: FormData) {
     user.email ||
     "Vendedor";
 
+  const insertData: Record<string, unknown> = {
+    user_id: user.id,
+    title,
+    description,
+    price,
+    old_price,
+    category,
+    condition,
+    location,
+    image_url,
+    seller_name,
+  };
+  // Solo se incluye si se llenó, para no fallar antes de la migración F2.
+  if (whatsapp) insertData.whatsapp = whatsapp;
+
   const { data, error } = await supabase
     .from("products")
-    .insert({
-      user_id: user.id,
-      title,
-      description,
-      price,
-      old_price,
-      category,
-      condition,
-      location,
-      image_url,
-      seller_name,
-    })
+    .insert(insertData)
     .select("id,title")
     .single();
 

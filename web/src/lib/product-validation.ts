@@ -1,5 +1,6 @@
 import { CATEGORIES } from "@/lib/categories";
 import { CONDITIONS } from "@/lib/filters";
+import { phoneDigits } from "@/lib/format";
 
 /** Valida la entrada del formulario de publicación. Puro → testeable. */
 export function validateProductInput(input: {
@@ -8,6 +9,7 @@ export function validateProductInput(input: {
   category: string;
   condition: string;
   image_url: string | null;
+  whatsapp?: string | null;
 }): string[] {
   const errors: string[] = [];
   if (input.title.trim().length < 3) errors.push("El título es muy corto.");
@@ -19,5 +21,7 @@ export function validateProductInput(input: {
     errors.push("Selecciona una condición válida.");
   if (input.image_url && !/^https:\/\//i.test(input.image_url))
     errors.push("La imagen debe ser una URL https.");
+  if (input.whatsapp && phoneDigits(input.whatsapp).length < 10)
+    errors.push("El WhatsApp debe tener al menos 10 dígitos.");
   return errors;
 }
