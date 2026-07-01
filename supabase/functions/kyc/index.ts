@@ -16,17 +16,21 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const DIDIT_API = 'https://verification.didit.me/v3/session/';
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json' },
-  });
+// CORS restringido a los orígenes propios (antes '*'). La función ya exige JWT,
+// así que esto es defensa en profundidad. Refleja el Origin si está en la whitelist;
+// si no, cae al dominio principal (nunca devuelve un header roto).
+const ALLOWED_ORIGINS = new Set([
+  'https://mercadord.net',
+  'https://www.mercadord.net',
+  'https://mercadord.vercel.app',
+]);
+function corsFor(origin: string) {
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://mercadord.net',
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
 }
 
 const admin = createClient(
@@ -54,6 +58,10 @@ function timingSafeEq(a: string, b: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  const cors = corsFor(req.headers.get('origin') || '');
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
 
