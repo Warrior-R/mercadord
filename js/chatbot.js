@@ -126,7 +126,7 @@
     btn.id = 'mrdChatBtn';
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Abrir asistente de MercadoRD');
-    btn.innerHTML = '💬<span class="mrd-chat-badge" id="mrdChatBadge"></span>';
+    btn.textContent = '💬';
 
     const panel = document.createElement('div');
     panel.id = 'mrdChatPanel';

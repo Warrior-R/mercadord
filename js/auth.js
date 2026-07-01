@@ -20,8 +20,15 @@ let user = MRD.get(K.USER, null);     // restaura sesión al recargar
 const hadUserAtLoad = !!user;          // ¿había sesión persistida al abrir la página?
 let greeted  = false;                  // evita doble bienvenida (INITIAL_SESSION + SIGNED_IN)
 let pending  = null;                   // vista a abrir tras login
-let attempts = 0;
-let lockTs   = 0;
+// Anti-fuerza-bruta UX: persistir contador/bloqueo para que sobrevivan a la
+// recarga/pestaña nueva (el control real lo da el rate-limit server-side de
+// Supabase Auth). La clave idealmente vive en K (storage.js) como K.LOGINLOCK;
+// se usa el literal aquí para no depender de un cambio en otro archivo.
+const LOGINLOCK_KEY = (typeof K !== 'undefined' && K.LOGINLOCK) || 'mrd_loginlock';
+let _ll = MRD.get(LOGINLOCK_KEY, { attempts: 0, lockTs: 0 }) || { attempts: 0, lockTs: 0 };
+let attempts = _ll.attempts | 0;
+let lockTs   = _ll.lockTs   | 0;
+function persistLoginLock() { MRD.set(LOGINLOCK_KEY, { attempts, lockTs }); }
 let demoOTP  = null;
 let mfaPending = false;        // ¿el login está esperando el 2º factor (TOTP)?
 let mfaLoginFactorId = null;   // factor TOTP a desafiar en el login
@@ -130,7 +137,7 @@ async function handleAuthEvent(ev, session) {
     if (pending) { const v = pending; pending = null; requireAuth(v); }
   }
 
-  if (ev === 'SIGNED_OUT') showToast('Sesión cerrada. ¡Hasta pronto!');
+  if (ev === 'SIGNED_OUT') { greeted = false; pending = null; showToast('Sesión cerrada. ¡Hasta pronto!'); }
 }
 
 // ─── Perfil: el estado de verificación vive en la tabla `profiles` ───
@@ -143,16 +150,21 @@ async function loadProfile() {
       .eq('id', user.id)
       .maybeSingle();
     if (error) throw error;
+    // Solo cuenta la aprobación real (proveedor KYC o admin): el estado
+    // 'pending' NO desbloquea vender/pujar. Re-derivar SIEMPRE del servidor:
+    // si no hay dato del servidor, forzar false para que un valor viejo en
+    // localStorage (manipulable por el usuario) no persista como verificado/admin.
+    userState.verified = !!(data && data.is_verified);
+    userState.isAdmin  = !!(data && data.is_admin);
+    userState.verificationStatus = (data && data.verification_status) || 'none';
     if (data) {
-      // Solo cuenta la aprobación real (proveedor KYC o admin): el estado
-      // 'pending' NO desbloquea vender/pujar.
-      userState.verified = !!data.is_verified;
-      userState.isAdmin = !!data.is_admin;
-      userState.verificationStatus = data.verification_status || 'none';
       if (data.full_name && !user.user_metadata?.full_name) {
         user.user_metadata = { ...(user.user_metadata || {}), full_name: data.full_name };
         persistUser();
       }
+    } else {
+      userState.verified = false;
+      userState.isAdmin = false;
     }
   } catch (e) { console.warn('No se pudo cargar el perfil:', e.message || e); }
 }
@@ -186,6 +198,7 @@ function openAuth(tab) {
 }
 function closeAuth() {
   document.getElementById('authOverlay').style.display = 'none';
+  resetPwdEyes();
 }
 // Cierre manual (✕ u overlay): además descarta la vista pendiente para que
 // un login posterior no navegue a donde el usuario ya no quería ir.
@@ -228,6 +241,7 @@ function switchTab(t) {
   // Si hay un reto 2FA en curso, cambiar de pestaña = abandonar el login (signOut).
   if (mfaPending) { cancelMfaLogin(); return; }
   clearAlert();
+  resetPwdEyes();
   const isL = t === 'login';
   document.getElementById('tabLogin').classList.toggle('active', isL);
   document.getElementById('tabReg').classList.toggle('active', !isL);
@@ -287,6 +301,23 @@ function toggleEye(id, el) {
   el.textContent = shown ? '🙈' : '👁';
   el.setAttribute('aria-pressed', shown ? 'true' : 'false');
   el.setAttribute('aria-label', shown ? 'Ocultar contraseña' : 'Mostrar contraseña');
+}
+
+// Revertir a type='password' los campos de contraseña del modal (y su ícono/ARIA)
+// para no dejarlos revelados al reabrir/cambiar de pestaña. Solo afecta a los
+// inputs de contraseña conocidos, no a otros text inputs (p.ej. mfaLoginCode).
+function resetPwdEyes() {
+  ['lPwd', 'npPwd', 'rPwd', 'rPwd2'].forEach(id => {
+    const inp = document.getElementById(id);
+    if (!inp) return;
+    inp.type = 'password';
+    const eye = inp.parentElement && inp.parentElement.querySelector('.eye');
+    if (eye) {
+      eye.textContent = '👁';
+      eye.setAttribute('aria-pressed', 'false');
+      eye.setAttribute('aria-label', 'Mostrar contraseña');
+    }
+  });
 }
 
 // ─── Fortaleza de contraseña ───
@@ -396,6 +427,7 @@ async function doLogin() {
         throw error;
       }
       attempts = 0;
+      persistLoginLock();
       // handleAuthEvent se encarga del resto (header, toast, pending)
     } else {
       await new Promise(r => setTimeout(r, 600));
@@ -422,6 +454,7 @@ async function doLogin() {
     } else {
       showAlert('fail', `Correo o contraseña incorrectos. (${attempts}/5)`);
     }
+    persistLoginLock();
   } finally {
     btn.disabled = false;
     btn.innerHTML = 'Iniciar sesión';
@@ -811,6 +844,10 @@ async function doLogout() {
   // Privacidad: no dejar PII del usuario anterior en este navegador (sesión, libreta de
   // direcciones, preferencias de perfil y mensajería) para el siguiente que inicie sesión.
   MRD.del(K.USER); MRD.del(K.ADDRESSES); MRD.del(K.PROFILE); MRD.del(K.MESSAGES);
+  // No dejar carrito/favoritos/pedidos del usuario anterior (claves globales,
+  // no por-usuario). clearUserData vive en app.js; guard por si el orden de
+  // carga cambiara.
+  if (typeof clearUserData === 'function') clearUserData();
   refreshHeader();
   // En modo real el toast lo emite el handler de SIGNED_OUT
   if (DEMO || !sb) showToast('Sesión cerrada ✓');

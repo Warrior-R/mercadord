@@ -101,7 +101,7 @@ const legalContent = {
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Está prohibido publicar artículos ilegales, engañar a otros usuarios, usar bots, spam o prácticas fraudulentas. MercadoRD suspende cuentas que violen estas normas de forma permanente.</p>
 
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">4. Comisiones y tarifas</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">La publicación básica es gratuita. Se cobra 5% sobre ventas completadas. Los pagos están sujetos al ITBIS (18%). Consulta nuestro desglose de tarifas en la sección de Vendedores.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">La publicación básica es gratuita. MercadoRD no cobra comisión sobre las ventas: el pago se acuerda directamente entre comprador y vendedor. Ofrecemos servicios opcionales de pago (destacar anuncios, publicidad, suscripción Premium). Consulta el desglose en la sección de Vendedores.</p>
 
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">5. Propiedad intelectual</h3>
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Todos los derechos de marca, logo y contenido de MercadoRD son propiedad exclusiva. No puedes copiar, distribuir o modificar nuestro contenido sin autorización escrita previa.</p>
@@ -127,7 +127,7 @@ const legalContent = {
     title: '🔒 Política de privacidad',
     body: `
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Datos que recopilamos</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Nombre, correo, teléfono, cédula, historial de compras/ventas y datos de navegación para mejorar tu experiencia.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Nombre, correo, teléfono, cédula (verificación KYC), anuncios publicados, favoritos y datos de navegación para mejorar tu experiencia.</p>
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Seguridad</h3>
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Tus datos viajan por conexión cifrada (HTTPS/TLS). Las contraseñas se protegen con bcrypt (Supabase Auth). Cumplimos la Ley 172-13 de Protección de Datos de RD. Nunca vendemos tu información.</p>
       <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Conforme a Ley 172-13 · Última actualización: enero 2025</p>`
@@ -170,24 +170,22 @@ const infoContent = {
       <p style="${P}">Si algo no cuadra, repórtalo desde "Reportar fraude". Suspendemos de inmediato las cuentas sospechosas y colaboramos con el Departamento de Cibercrimen de la RD.</p>`
   },
   payments: {
-    title: '💳 Métodos de Pago',
+    title: '💳 Pago y entrega',
     body: `
-      <h3 style="${H3}">Paga con tarjeta</h3>
-      <p style="${P}">💳 <strong>Tarjeta de crédito o débito</strong> — Visa, Mastercard y American Express. El pago se procesa de forma segura al finalizar la compra, igual que en eBay.</p>
-      <h3 style="${H3}">Otras opciones</h3>
-      <p style="${P}">💵 <strong>Efectivo contra entrega</strong> — paga en efectivo al recibir tu pedido, en zonas con cobertura de mensajería.</p>
-      <h3 style="${H3}">Seguridad</h3>
-      <p style="${P}">Tus datos viajan cifrados con SSL de 256 bits. MercadoRD nunca almacena el número completo de tu tarjeta ni tu código CVV.</p>`
+      <h3 style="${H3}">Trato directo con el vendedor</h3>
+      <p style="${P}">El pago y la entrega se acuerdan directamente entre comprador y vendedor por WhatsApp (efectivo o transferencia). MercadoRD no procesa pagos ni cobra dentro de la plataforma.</p>
+      <h3 style="${H3}">Consejos de seguridad</h3>
+      <p style="${P}">Acuerda ver el producto en persona, en un lugar público. Verifica el artículo antes de pagar y desconfía de quien exige adelantos o de precios demasiado bajos.</p>`
   },
   howbuy: {
     title: '❓ ¿Cómo comprar en MercadoRD?',
     body: `
       <h3 style="${H3}">1. Encuentra tu producto</h3>
       <p style="${P}">Usa el buscador o navega por categorías. Filtra por precio, condición y ubicación.</p>
-      <h3 style="${H3}">2. Tres formas de comprar (como en eBay)</h3>
-      <p style="${P}">🛒 <strong>Precio fijo</strong> — añade al carrito y paga.<br>🔨 <strong>Subasta</strong> — haz tu puja y gana si eres el mejor postor al cierre.<br>💰 <strong>Mejor oferta</strong> — propón tu precio al vendedor y negocia.</p>
-      <h3 style="${H3}">3. Finaliza el pedido</h3>
-      <p style="${P}">Completa tus datos de entrega en el checkout. Recibirás un número de pedido (MRD-XXXX) para seguimiento en "Mis compras".</p>`
+      <h3 style="${H3}">2. Contacta al vendedor</h3>
+      <p style="${P}">Pulsa 💬 <strong>Contactar</strong> en el anuncio para escribir al vendedor por WhatsApp. Acuerda con él el precio final, la forma de pago y la entrega.</p>
+      <h3 style="${H3}">3. Verifica antes de pagar</h3>
+      <p style="${P}">Reúnete en un lugar público y concurrido, revisa el artículo en persona y paga solo cuando estés conforme. Desconfía de quien exija adelantos.</p>`
   },
   howsell: {
     title: '❓ ¿Cómo vender en MercadoRD?',
@@ -196,16 +194,14 @@ const infoContent = {
       <p style="${P}">Para vender necesitas cuenta con cédula RD o pasaporte verificado. Esto protege a los compradores y aumenta tus ventas.</p>
       <h3 style="${H3}">2. Publica tu anuncio</h3>
       <p style="${P}">Fotos claras, título descriptivo y precio competitivo. Elige el formato: precio fijo, subasta o acepta ofertas.</p>
-      <h3 style="${H3}">3. Vende y cobra</h3>
-      <p style="${P}">Coordina la entrega, y al confirmarse la recepción recibes tu dinero menos la comisión del 5%. Publicar es gratis.</p>`
+      <h3 style="${H3}">3. Recibe mensajes y cobra directamente</h3>
+      <p style="${P}">Los compradores te escriben por WhatsApp. Acuerdas precio y entrega, y cobras directamente al comprador. Publicar y contactar es gratis; sin comisiones.</p>`
   },
   fees: {
     title: '💰 Tarifas y Comisiones',
     body: `
-      <h3 style="${H3}">Publicar es GRATIS</h3>
-      <p style="${P}">Sin costo por publicar anuncios básicos. Solo pagas cuando vendes.</p>
-      <h3 style="${H3}">Comisión por venta</h3>
-      <p style="${P}">📌 <strong>5%</strong> sobre el precio final de venta (igual modelo que eBay).<br>📌 Subastas: 5% sobre la puja ganadora.<br>📌 ITBIS (18%) aplica sobre la comisión, no sobre tu producto.</p>
+      <h3 style="${H3}">Publicar y contactar es GRATIS</h3>
+      <p style="${P}">Publicar tus anuncios y contactar a vendedores no tiene costo. MercadoRD NO cobra comisión por venta: las transacciones se cierran directamente entre las partes (por ejemplo, por WhatsApp) y el pago y la entrega los acuerdan comprador y vendedor.</p>
       <h3 style="${H3}">Servicios opcionales</h3>
       <p style="${P}">⭐ Destacar anuncio: RD$250 / 7 días.<br>📣 Campaña publicitaria: desde RD$500.<br>👑 Vendedor Premium: RD$990/mes.</p>`
   },
@@ -222,7 +218,7 @@ const infoContent = {
     title: '📣 Publicidad en MercadoRD',
     body: `
       <h3 style="${H3}">Impulsa tus productos</h3>
-      <p style="${P}">Llega a más de 800K compradores activos. Tus anuncios aparecen primero en los resultados con la etiqueta "Patrocinado".</p>
+      <p style="${P}">Llega a una comunidad de compradores en crecimiento en las 32 provincias. Tus anuncios aparecen primero en los resultados con la etiqueta "Patrocinado".</p>
       <h3 style="${H3}">Modelos de campaña</h3>
       <p style="${P}">📌 <strong>CPC</strong> — pagas por clic, desde RD$5.<br>📌 <strong>Destacado</strong> — posición fija 7 días, RD$250.<br>📌 <strong>Banner de categoría</strong> — desde RD$2,500/semana.</p>
       <p style="${P}">Configura tus campañas desde el Seller Center.</p>`
@@ -281,20 +277,20 @@ const infoContent = {
       <p style="${P}">📸 <strong>Cómo fotografiar tus productos para vender más</strong> — luz natural, fondo neutro y 5 ángulos clave.<br>💰 <strong>Guía de precios: cuánto vale tu artículo usado</strong> — investiga, compara y ajusta.<br>🔨 <strong>Estrategias para ganar subastas</strong> — puja en los últimos minutos y define tu máximo.<br>🛡️ <strong>Evita estafas: 7 señales de alerta</strong> — precios irreales, prisa y pagos externos.</p>`
   },
   affiliates: {
-    title: '🤝 Programa de Afiliados',
+    title: '🤝 Programa de Referidos',
     body: `
-      <h3 style="${H3}">Gana promocionando MercadoRD</h3>
-      <p style="${P}">Comparte enlaces de productos y gana <strong>3% de comisión</strong> por cada venta generada desde tu enlace.</p>
+      <h3 style="${H3}">Invita y crece con MercadoRD</h3>
+      <p style="${P}">Comparte tu enlace de invitación y ayuda a más dominicanos a comprar y vender de forma segura. Recibe recompensas por cada persona que se registre y verifique su cuenta desde tu enlace.</p>
       <h3 style="${H3}">Cómo funciona</h3>
-      <p style="${P}">1. Regístrate como afiliado (gratis).<br>2. Genera tus enlaces únicos.<br>3. Compártelos en redes, blog o YouTube.<br>4. Cobra mensualmente vía transferencia (mínimo RD$1,000).</p>`
+      <p style="${P}">1. Regístrate en MercadoRD (gratis).<br>2. Comparte tu enlace de invitación.<br>3. Tus referidos se registran y verifican su identidad.<br>4. Acumula recompensas por cada cuenta verificada.</p>`
   },
   investors: {
     title: '📊 Para Inversionistas',
     body: `
       <h3 style="${H3}">MercadoRD en cifras</h3>
-      <p style="${P}">📈 +120K productos activos · +45K vendedores verificados · +800K compradores registrados · Presencia en 32 provincias.</p>
+      <p style="${P}">📈 Plataforma en fase de crecimiento con verificación de identidad obligatoria (KYC) · Presencia en las 32 provincias de RD.</p>
       <h3 style="${H3}">Modelo de negocio</h3>
-      <p style="${P}">Ingresos por comisión de venta (5%), suscripciones Premium, publicidad interna y servicios de logística — el modelo probado de los grandes marketplaces.</p>
+      <p style="${P}">Ingresos por suscripciones Premium, publicidad interna y servicios opcionales de destacado — el modelo probado de los grandes marketplaces.</p>
       <p style="${P}">Contacto: <strong>inversion@mercadord.net</strong></p>
       <p style="${P}"><span style="color:var(--primary);cursor:pointer;font-weight:600" onclick="openContactForm('inversion')">✉️ Escríbenos a Inversionistas</span></p>`
   },
@@ -302,11 +298,11 @@ const infoContent = {
     title: '❓ Centro de Ayuda',
     body: `
       <h3 style="${H3}">Preguntas frecuentes</h3>
-      <p style="${P}"><strong>¿Comprar tiene costo?</strong><br>No. Comprar es 100% gratis; solo pagas el producto + envío + ITBIS.</p>
+      <p style="${P}"><strong>¿Comprar tiene costo?</strong><br>No. Usar MercadoRD es gratis para el comprador. El precio, la forma de pago y la entrega se acuerdan directamente con el vendedor por WhatsApp.</p>
       <p style="${P}"><strong>¿Cómo funciona una subasta?</strong><br>Haz una puja igual o mayor a la mínima indicada. Si nadie te supera al cierre, ganas el artículo. También puedes usar "¡Cómpralo ya!" para llevártelo de inmediato.</p>
       <p style="${P}"><strong>¿Qué es "Mejor oferta"?</strong><br>Propón un precio al vendedor. Puede aceptar, rechazar o hacer una contraoferta.</p>
-      <p style="${P}"><strong>¿Cuándo recibo mi pedido?</strong><br>2-5 días hábiles en Santo Domingo y Santiago; 3-7 en el resto del país.</p>
-      <p style="${P}"><strong>¿Cómo reporto un problema?</strong><br>Desde "Mis compras" → selecciona el pedido → "Abrir reclamo", o escribe a soporte@mercadord.net.</p>
+      <p style="${P}"><strong>¿Cómo coordino la entrega?</strong><br>Contacta al vendedor por WhatsApp desde la publicación y acuerden lugar, fecha y forma de entrega.</p>
+      <p style="${P}"><strong>¿Cómo reporto un problema?</strong><br>Usa "Reportar fraude" en el pie de página, o escribe a soporte@mercadord.net.</p>
       <h3 style="${H3}">Chat en vivo</h3>
       <p style="${P}">💬 Disponible de 8am a 8pm. Escríbenos también por WhatsApp al +1 (809) 555-1234.</p>`
   }

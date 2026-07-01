@@ -85,6 +85,13 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
 
+// Neutraliza esquemas peligrosos (javascript:, data:, etc.) en URLs de terceros;
+// solo deja pasar http(s):// y en caso contrario devuelve '#'. Combinar con esc().
+function safeUrl(u) {
+  const s = String(u == null ? '' : u).trim();
+  return /^https?:\/\//i.test(s) ? s : '#';
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -435,29 +442,6 @@ function genReviews(p) {
   return out;
 }
 
-// Cantidad en el detalle
-function detQtyStep(d) {
-  const el = document.getElementById('detQty');
-  if (!el) return;
-  el.value = Math.min(99, Math.max(1, (parseInt(el.value || '1', 10) || 1) + d));
-}
-function detQty() {
-  return Math.min(99, Math.max(1, parseInt(document.getElementById('detQty')?.value || '1', 10) || 1));
-}
-function addCartN(id) {
-  const p = products.find(x => x.id === id);
-  if (p?.mine) { showToast('No puedes comprar tu propio anuncio'); return; }
-  const q = detQty();
-  for (let i = 0; i < q; i++) addCart(id, i < q - 1);
-}
-function buyNowN(id) {
-  const p = products.find(x => x.id === id);
-  if (p?.mine) { showToast('No puedes comprar tu propio anuncio'); return; }
-  const q = detQty();
-  for (let i = 0; i < q; i++) addCart(id, true);
-  requireAuth('checkout');
-}
-
 function backProd() {
   cview = 'home';
   restoreHome();
@@ -469,7 +453,7 @@ function showView(v) {
   if (v === 'bid') v = 'auctions';
   cview = v;
   document.getElementById('heroBanner').style.display = 'none';
-  const csv = document.querySelector('.carousel-section'); if (csv) csv.style.display = '';
+  const csv = document.querySelector('.carousel-section'); if (csv) csv.style.display = 'none';
   closeSubsection();
 
   if (v === 'auctions') {
@@ -477,9 +461,6 @@ function showView(v) {
 
   } else if (v === 'sell') {
     renderSellForm();
-
-  } else if (v === 'checkout') {
-    renderCheckout();
 
   } else if (v === 'orders') {
     renderOrders();
@@ -520,6 +501,10 @@ function showView(v) {
     // Si veníamos de "Contactar" sin sesión, reanudar abriendo el hilo del vendedor
     if (pendingContact != null) { const pc = pendingContact; pendingContact = null; contactSellerById(pc); }
     else renderMessages();
+
+  } else if (v === 'home') {
+    // Blindaje: goHome() restaura el hero y el carrusel que ocultamos arriba y re-renderiza el listado
+    goHome();
   }
 }
 
@@ -554,10 +539,10 @@ function renderAuctions() {
     const left = aucLeft(a);
     return `
       <div class="auction-card" onclick="openAuctionById('${a.id}')" style="cursor:pointer">
-        <div class="auction-img">${a.icon}</div>
+        <div class="auction-img">${esc(a.icon)}</div>
         <div class="auction-info">
           <div class="auction-title">${esc(a.title)} ${a.myBid ? '<span style="font-size:11px;background:#e6f4ea;color:var(--green,#0a8a4a);padding:2px 8px;border-radius:10px;font-weight:600">🏆 Vas ganando</span>' : ''}</div>
-          <div class="auction-meta">📍 ${esc(a.loc)} · <strong>${esc(a.seller)}</strong></div>
+          <div class="auction-meta">📍 ${esc(provName(a.loc))} · <strong>${esc(a.seller)}</strong></div>
           <div class="auction-bids">👥 <span class="auc-bids" data-id="${a.id}">${a.bids}</span> pujas · ⏰ <strong style="color:var(--accent)" class="auc-count" data-id="${a.id}">${left}</strong><span class="auc-leader" data-id="${a.id}">${a.leader && !a.mine && !a.myBid ? ` · 🏆 <b style="color:var(--green,#0a8a4a)">${esc(a.leader)}</b> va ganando` : ''}</span></div>
           <div class="auction-price-row">
             <div>
@@ -720,7 +705,7 @@ async function placeBid() {
   showToast(`🏆 ¡Eres el mejor postor con ${fmt(a.cur)}!`);
 }
 
-// ─── ¡Cómpralo ya! (cierra la subasta y va al checkout) ───
+// ─── ¡Cómpralo ya! (cierra la subasta y abre WhatsApp con el vendedor) ───
 async function tryBuyNow(id) {
   const a = auctions.find(x => x.id == id);
   if (!a) return;
@@ -806,7 +791,7 @@ function sendOffer() {
     body.innerHTML = `
       <div class="vc"><div class="vc-icon">🎉</div><div class="vc-title">¡Oferta aceptada!</div>
       <div class="vc-desc"><strong>${esc(p.seller)}</strong> aceptó tu oferta de <strong>${fmt(amt)}</strong>. El producto ya está en tu carrito con el precio negociado.</div></div>
-      <button class="auth-btn btn-pri" onclick="closeOffer();requireAuth('checkout')">Ir al checkout →</button>
+      <button class="auth-btn btn-pri" onclick="closeOffer()">Ir al checkout →</button>
       <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="closeOffer()">Seguir comprando</button>`;
   } else if (ratio >= 0.7) {
     const counter = Math.round(p.price * 0.95);
@@ -940,7 +925,7 @@ function renderSellForm() {
             <select id="sellCond"><option value="new">Nuevo</option><option value="used">Usado – Como nuevo</option><option value="used2">Usado – Buen estado</option><option value="refurb">Reacondicionado</option></select>
           </div>
           <div class="fg2"><label for="sellType">Tipo de anuncio *</label>
-            <select id="sellType"><option>Precio fijo</option><option>Subasta</option><option>Mejor oferta</option></select>
+            <select id="sellType"><option>Precio fijo</option><option>Subasta</option></select>
           </div>
           <div class="fg2"><label for="sellWa">WhatsApp de contacto *</label><input type="tel" id="sellWa" value="${sellEdit?.wa || ''}" placeholder="809-000-0000" inputmode="tel"></div>
           <div class="fg2"><label for="sellProv">Provincia *</label>
@@ -1243,7 +1228,7 @@ function renderMyAds() {
           <div class="auction-img" style="overflow:hidden">${prodImg(p)}</div>
           <div class="auction-info">
             <div class="auction-title">${esc(p.title)}</div>
-            <div class="auction-meta">📍 ${esc(p.loc)} · Publicado ${new Date(p.createdAt || Date.now()).toLocaleDateString('es-DO')}</div>
+            <div class="auction-meta">📍 ${esc(provName(p.loc))} · Publicado ${new Date(p.createdAt || Date.now()).toLocaleDateString('es-DO')}</div>
             <div class="auction-price-row">
               <div class="auction-price">${fmt(p.price)}</div>
               <div style="display:flex;gap:8px">
@@ -1535,7 +1520,6 @@ function renderAccount() {
         </div>
       </div>
       <div class="stats-grid">
-        <div class="stat-box" onclick="showView('orders')"><div style="font-size:24px;margin-bottom:4px">📦</div><div style="font-size:11px;color:var(--text2)">Compras</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${orders.length}</div></div>
         <div class="stat-box" onclick="showView('myads')"><div style="font-size:24px;margin-bottom:4px">🏷️</div><div style="font-size:11px;color:var(--text2)">Anuncios</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${products.filter(p=>p.mine).length}</div></div>
         <div class="stat-box" onclick="showView('sales')"><div style="font-size:24px;margin-bottom:4px">📥</div><div style="font-size:11px;color:var(--text2)">Ventas</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${sales.length}</div></div>
         <div class="stat-box" onclick="showView('favs')"><div style="font-size:24px;margin-bottom:4px">❤️</div><div style="font-size:11px;color:var(--text2)">Favoritos</div><div style="font-size:18px;font-weight:700;color:var(--primary)">${favs.size}</div></div>
@@ -1554,7 +1538,6 @@ function renderAccount() {
         ${[['📥','Mis ventas',"showView('sales')"],
            ['💬','Mensajes',"showView('messages')"],
            ['⚙️','Configuración',"showView('settings')"],
-           ['🚚','Direcciones',"showView('addresses')"],
            ['🔔','Notificaciones',"showView('notifs')"],
            ['🛡️','Consejos de seguridad',"openInfo('protection')"],
            ['🔒','Seguridad y 2FA',"showView('security')"],
@@ -1623,6 +1606,20 @@ function updateCartBadge() {
   if (el) el.textContent = cart.reduce((s, c) => s + c.qty, 0);
 }
 
+// Limpia datos locales del usuario anterior al cerrar sesión (claves globales por
+// dispositivo), para que no los herede quien inicie sesión después en el mismo
+// navegador. Llamado desde doLogout() en auth.js.
+function clearUserData() {
+  try {
+    cart = [];
+    favs = new Set();
+    MRD.del(K.CART); MRD.del(K.FAVS);
+    MRD.del(K.ADDRESSES); MRD.del(K.PROFILE); MRD.del(K.NOTIFPREFS); MRD.del(K.MESSAGES);
+    updateCartBadge();
+    if (typeof cview !== 'undefined' && cview === 'home' && typeof doRender === 'function') doRender();
+  } catch (e) { /* limpieza best-effort */ }
+}
+
 function renderCart() {
   const ie = document.getElementById('cartItems');
   const te = document.getElementById('cartTotal');
@@ -1655,7 +1652,7 @@ function renderCart() {
       <div class="total-row"><span>Envío</span><span>RD$350</span></div>
       <div class="total-row"><span>ITBIS 18%</span><span>${fmt(itbis)}</span></div>
       <div class="total-row final"><span>Total</span><span>${fmt(sub + 350 + itbis)}</span></div>
-      <button class="checkout-btn" onclick="requireAuth('checkout')">Proceder al pago →</button>
+      <button class="checkout-btn" onclick="toggleCart()">Proceder al pago →</button>
       <div class="payment-icons">💳 Tarjeta &nbsp; 💵 Efectivo contra entrega &nbsp; 🔒 Pago seguro</div>
     </div>`;
 }
@@ -2014,6 +2011,9 @@ function startDiditPolling() {
       const reason = verificationData.reason;
       if (reason === 'sell' || reason === 'bid') {
         setTimeout(() => { closeVerification(); showView(reason === 'bid' ? 'auctions' : 'sell'); }, 1800);
+      } else if (reason === 'contact') {
+        const tgt = verificationData.contactTarget, isAuc = verificationData.contactIsAuction;
+        setTimeout(() => { closeVerification(); contactSellerWhatsApp(tgt, isAuc); }, 1800);
       }
     } else if (userState.verificationStatus === 'rejected') {
       clearInterval(diditPoll);
@@ -2415,27 +2415,31 @@ async function submitVerification() {
   const reason = verificationData.reason;
   if (userState.verified && (reason === 'sell' || reason === 'bid')) {
     setTimeout(() => { closeVerification(); showView(reason === 'bid' ? 'auctions' : 'sell'); }, 1200);
+  } else if (userState.verified && reason === 'contact') {
+    const tgt = verificationData.contactTarget, isAuc = verificationData.contactIsAuction;
+    setTimeout(() => { closeVerification(); contactSellerWhatsApp(tgt, isAuc); }, 1200);
   }
 }
 
 // ─── Contenido legal: se muestra como sección propia (antes era ventana emergente) ───
 function openLegal(key) {
   const c = legalContent[key];
-  if (!c) return;
+  if (!c) { console.warn('openLegal: clave legal inexistente:', key); return; }
   showPage(c.body, c.title);
 }
 
 // ─── Contenido informativo: se muestra como sección propia (antes reutilizaba el modal legal) ───
 function openInfo(key) {
   const c = infoContent[key];
-  if (!c) return;
+  if (!c) { console.warn('openInfo: clave informativa inexistente:', key); return; }
   showPage(c.body, c.title);
 }
 
 // Cerrar modales de puja/oferta al hacer clic fuera
 ['bidOverlay', 'offerOverlay'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
-    if (e.target.id === id) e.target.style.display = 'none';
+    if (e.target.id !== id) return;
+    if (id === 'bidOverlay') closeBid(); else closeOffer();
   });
 });
 
@@ -2762,10 +2766,10 @@ function renderAuctionDetail(a) {
   document.getElementById('contentArea').innerHTML = `
     <button class="back-btn" onclick="leaveAuctionDetail()">← Subastas</button>
     <div class="detail-panel">
-      <div class="detail-img-area" style="font-size:84px;display:flex;align-items:center;justify-content:center">${a.icon}</div>
+      <div class="detail-img-area" style="font-size:84px;display:flex;align-items:center;justify-content:center">${esc(a.icon)}</div>
       <div class="detail-title">${esc(a.title)} ${badge}</div>
       <div class="detail-meta">
-        <span>📍 ${esc(a.loc)}</span>
+        <span>📍 ${esc(provName(a.loc))}</span>
         <span>🏪 ${esc(a.seller)}</span>
         <span>👥 ${a.bids} pujas</span>
         <span>⏰ ${over ? (a.status === 'sold' ? 'Comprada con ¡Cómpralo ya!' : 'Finalizada') : left}</span>
@@ -3387,6 +3391,8 @@ async function contactSellerWhatsApp(itemOrId, isAuction) {
   if (!userState.verified) {
     showToast('🪪 Verifica tu identidad para contactar al vendedor');
     openVerification('contact');
+    // openVerification reinicializa verificationData; guardar DESPUÉS el objetivo (solo el id, no la referencia)
+    if (typeof verificationData !== 'undefined' && verificationData) { verificationData.contactTarget = obj.id; verificationData.contactIsAuction = !!isAuction; }
     return;
   }
 
@@ -3453,8 +3459,8 @@ function bannerHTML(slot) {
   const list = adBanners.filter(b => b.slot === slot);
   if (!list.length) return '';
   return `<div class="ad-banners ad-${esc(slot)}">` + list.map(b => `
-    <a class="ad-banner" href="${esc(b.link_url)}" target="_blank" rel="noopener nofollow sponsored" title="${esc(b.title || 'Patrocinado')}">
-      <img src="${esc(b.image_url)}" alt="${esc(b.title || 'Publicidad')}" loading="lazy">
+    <a class="ad-banner" href="${esc(safeUrl(b.link_url))}" target="_blank" rel="noopener nofollow sponsored" title="${esc(b.title || 'Patrocinado')}">
+      <img src="${esc(safeUrl(b.image_url))}" alt="${esc(b.title || 'Publicidad')}" loading="lazy">
       <span class="ad-tag">Publicidad</span>
     </a>`).join('') + '</div>';
 }
@@ -3465,7 +3471,7 @@ function renderFooterBanners() {
 
 // ── Panel de administración (solo el dueño) ──
 async function renderAdmin() {
-  if (!isAdmin()) { showToast('Solo administradores'); showView('home'); return; }
+  if (!isAdmin()) { showToast('Solo administradores'); goHome(); return; }
   cview = 'admin';
   const ca = document.getElementById('contentArea');
   if (!ca) return;
@@ -3622,7 +3628,11 @@ document.addEventListener('keydown', e => {
   const legal = document.getElementById('legalOverlay');
   const auth  = document.getElementById('authOverlay');
   const cart  = document.getElementById('cartOverlay');
+  const mfa   = document.getElementById('mfaEnrollOverlay');
+  const cf    = document.getElementById('contactFormOverlay');
   const sub   = [...document.querySelectorAll('.subsection-overlay')].find(isOpen);
+  if (isOpen(mfa) && typeof cancelMfaEnroll === 'function') return cancelMfaEnroll();
+  if (isOpen(cf)  && typeof closeContactForm === 'function') return closeContactForm();
   if (isOpen(offer)) return closeOffer();
   if (isOpen(bid))   return closeBid();
   if (isOpen(ver) && typeof closeVerification === 'function') return closeVerification();
@@ -3671,7 +3681,8 @@ function a11yTagInteractive(root) {
 // Marcar diálogos para lectores de pantalla y hacer alcanzables por teclado los controles no nativos
 (function a11yEnhance() {
   [['authOverlay', 'Cuenta'], ['legalOverlay', 'Información'], ['verificationOverlay', 'Verificación de identidad'],
-   ['bidOverlay', 'Hacer una puja'], ['offerOverlay', 'Hacer una oferta'], ['cartOverlay', 'Carrito de compras']]
+   ['bidOverlay', 'Hacer una puja'], ['offerOverlay', 'Hacer una oferta'], ['cartOverlay', 'Carrito de compras'],
+   ['mfaEnrollOverlay', 'Activar verificación en dos pasos'], ['contactFormOverlay', 'Escríbenos']]
     .forEach(([id, label]) => {
       const el = document.getElementById(id);
       if (el) { el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', label); }
@@ -3700,7 +3711,7 @@ function a11yTagInteractive(root) {
 // Al cerrar: restaura el foco al elemento que lo abrió. Centralizado vía
 // MutationObserver para no tener que tocar cada función open/close.
 (function modalFocusManager() {
-  const overlays = ['authOverlay', 'verificationOverlay', 'bidOverlay', 'offerOverlay', 'cartOverlay', 'legalOverlay']
+  const overlays = ['authOverlay', 'verificationOverlay', 'bidOverlay', 'offerOverlay', 'cartOverlay', 'legalOverlay', 'mfaEnrollOverlay', 'contactFormOverlay']
     .map(id => document.getElementById(id)).filter(Boolean);
   if (!overlays.length) return;
   let lastFocus = null;
@@ -3786,17 +3797,27 @@ const VISUAL_LABELS = [
 ];
 const CAT_ES = { electronics: 'Electrónica', vehicles: 'Vehículos', fashion: 'Moda', home2: 'Hogar', sports: 'Deportes', services: 'Servicios', agro: 'Agropecuario' };
 
-let _clipPipe = null, _clipLoading = null, _visualCancelled = false;
+let _clipPipe = null, _clipLoading = null, _visualRun = 0;
 
 async function loadClip(onProgress) {
   if (_clipPipe) return _clipPipe;
   if (!_clipLoading) {
     _clipLoading = (async () => {
-      const TF = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-      TF.env.allowLocalModels = false;
-      TF.env.useBrowserCache = true;
-      return TF.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32',
-        { quantized: true, progress_callback: onProgress });
+      const load = (async () => {
+        const TF = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+        TF.env.allowLocalModels = false;
+        TF.env.useBrowserCache = true;
+        return TF.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32',
+          { quantized: true, progress_callback: onProgress });
+      })();
+      const timeout = new Promise((_, rej) =>
+        setTimeout(() => rej(new Error('timeout carga CLIP')), 60000));
+      try {
+        return await Promise.race([load, timeout]);
+      } catch (e) {
+        _clipLoading = null; // permite reintento limpio tras un fallo o timeout
+        throw e;
+      }
     })();
   }
   _clipPipe = await _clipLoading;
@@ -3812,27 +3833,27 @@ async function handleImageSearch(input) {
   try { dataUrl = await reencodeToJpeg(file, 512, 0.9); }
   catch (_) { showToast('No se pudo procesar la imagen.'); return; }
 
-  _visualCancelled = false;
+  const myRun = ++_visualRun;
   showVisualOverlay(dataUrl);
 
   let pipe;
   try {
     pipe = await loadClip(p => {
-      if (_visualCancelled) return;
+      if (myRun !== _visualRun) return;
       if (p && p.status === 'progress' && typeof p.progress === 'number')
         setVisualStatus(`Preparando la IA… ${Math.round(p.progress)}%`);
     });
   } catch (e) {
-    if (!_visualCancelled) setVisualStatus('No se pudo cargar la búsqueda visual. Revisa tu conexión e inténtalo de nuevo.', true);
+    if (myRun === _visualRun) setVisualStatus('No se pudo cargar la búsqueda visual. Revisa tu conexión e inténtalo de nuevo.', true);
     return;
   }
-  if (_visualCancelled) return;
+  if (myRun !== _visualRun) return;
 
   setVisualStatus('Analizando tu imagen…');
   let out;
   try { out = await pipe(dataUrl, VISUAL_LABELS.map(l => l.en)); }
-  catch (e) { if (!_visualCancelled) setVisualStatus('No se pudo analizar la imagen.', true); return; }
-  if (_visualCancelled) return;
+  catch (e) { if (myRun === _visualRun) setVisualStatus('No se pudo analizar la imagen.', true); return; }
+  if (myRun !== _visualRun) return;
 
   const ranked = out.map(o => {
     const m = VISUAL_LABELS.find(l => l.en === o.label);
@@ -3843,7 +3864,7 @@ async function handleImageSearch(input) {
   renderVisualResults(ranked, dataUrl);
 }
 
-function cancelVisualSearch() { _visualCancelled = true; hideVisualOverlay(); }
+function cancelVisualSearch() { _visualRun++; hideVisualOverlay(); }
 
 function showVisualOverlay(previewUrl) {
   let ov = document.getElementById('visualOverlay');
@@ -3856,14 +3877,40 @@ function showVisualOverlay(previewUrl) {
       <div class="visual-hint">La primera vez puede tardar (se descarga el modelo de IA). Tu foto no sale de tu dispositivo. 🔒</div>
       <button class="visual-cancel" onclick="cancelVisualSearch()">Cancelar</button>
     </div>`;
+  // Gestión de foco (WCAG 2.1.2 / 2.4.3): el overlay es aria-modal pero se crea
+  // tras los IIFE de a11y, así que se gestiona aquí de forma autosuficiente.
+  ov._trigger = document.querySelector('.img-search-btn') || document.activeElement;
   ov.style.display = 'flex';
+  const modal = ov.querySelector('.visual-modal');
+  const cancelBtn = ov.querySelector('.visual-cancel');
+  if (cancelBtn) setTimeout(() => cancelBtn.focus(), 30);
+  ov._onKey = e => {
+    if (e.key === 'Escape' || e.keyCode === 27) { e.preventDefault(); cancelVisualSearch(); return; }
+    if (e.key === 'Tab' && modal) {
+      const f = [...modal.querySelectorAll('button,[href],input:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+        .filter(n => n.offsetWidth || n.offsetHeight || n.getClientRects().length);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', ov._onKey, true);
 }
 function setVisualStatus(msg, isError) {
   const s = document.getElementById('visualStatus');
   if (s) { s.textContent = msg; s.classList.toggle('visual-status-error', !!isError); }
   if (isError) { const sp = document.querySelector('#visualOverlay .visual-spinner'); if (sp) sp.style.display = 'none'; }
 }
-function hideVisualOverlay() { const ov = document.getElementById('visualOverlay'); if (ov) ov.style.display = 'none'; }
+function hideVisualOverlay() {
+  const ov = document.getElementById('visualOverlay');
+  if (!ov) return;
+  ov.style.display = 'none';
+  if (ov._onKey) { document.removeEventListener('keydown', ov._onKey, true); ov._onKey = null; }
+  const t = ov._trigger; ov._trigger = null;
+  if (t && typeof t.focus === 'function') { try { t.focus(); } catch (_) {} }
+}
 
 // Tarjeta de producto reutilizable (mismo marcado que el listado)
 function productCardHTML(p) {

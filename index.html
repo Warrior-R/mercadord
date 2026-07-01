@@ -40,18 +40,18 @@
 <link rel="dns-prefetch" href="https://flsixfuzvbapwnfepmwr.supabase.co">
 
 <!-- Estilos -->
-<link rel="stylesheet" href="css/styles.css?v=20260622q">
-<link rel="stylesheet" href="css/auth.css?v=20260622q">
-<link rel="stylesheet" href="css/footer.css?v=20260622q">
-<link rel="stylesheet" href="css/subsections.css?v=20260622q">
-<link rel="stylesheet" href="css/carousel.css?v=20260622q">
-<link rel="stylesheet" href="css/verification.css?v=20260622q">
-<link rel="stylesheet" href="css/auctions.css?v=20260622q">
-<link rel="stylesheet" href="css/account.css?v=20260622q">
-<link rel="stylesheet" href="css/chatbot.css?v=20260622q">
+<link rel="stylesheet" href="css/styles.css?v=20260622r">
+<link rel="stylesheet" href="css/auth.css?v=20260622r">
+<link rel="stylesheet" href="css/footer.css?v=20260622r">
+<link rel="stylesheet" href="css/subsections.css?v=20260622r">
+<link rel="stylesheet" href="css/carousel.css?v=20260622r">
+<link rel="stylesheet" href="css/verification.css?v=20260622r">
+<link rel="stylesheet" href="css/auctions.css?v=20260622r">
+<link rel="stylesheet" href="css/account.css?v=20260622r">
+<link rel="stylesheet" href="css/chatbot.css?v=20260622r">
 
 <!-- Supabase SDK (defer: no bloquea el renderizado; en modo demo no se usa) -->
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0/dist/umd/supabase.js" integrity="sha384-3wY11tldQ5+yWqAvmTN4XtQvnjoTva0cV15O/O/O5NTtp0ivVopSzLOzsVXWZse9" crossorigin="anonymous"></script>
 </head>
 <body>
 <a href="#mainContent" class="skip-link">Saltar al contenido principal</a>
@@ -134,7 +134,7 @@
     <!-- Paso 1: Datos -->
     <div class="auth-step active" id="rs1">
      <button class="auth-btn btn-goog" onclick="loginGoogle()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" style="vertical-align:middle;margin-right:8px">Registrarse con Google
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="" style="vertical-align:middle;margin-right:8px">Registrarse con Google
      </button>
      <div class="divider">o con formulario</div>
      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -478,12 +478,6 @@
      <div class="subsection-card-desc">Accede a tu perfil, configuración de privacidad y datos personales.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
-    <div class="subsection-card" onclick="closeSubsection();requireAuth('orders')">
-     <div class="subsection-card-icon">📦</div>
-     <div class="subsection-card-title">Mis Compras</div>
-     <div class="subsection-card-desc">Historial de compras, pedidos activos y seguimiento de envíos.</div>
-     <a class="subsection-card-link">Ver detalles →</a>
-    </div>
     <div class="subsection-card" onclick="closeSubsection();showView('favs')">
      <div class="subsection-card-icon">❤️</div>
      <div class="subsection-card-title">Mis Favoritos</div>
@@ -512,12 +506,6 @@
      <div class="subsection-card-icon">❓</div>
      <div class="subsection-card-title">¿Cómo Comprar?</div>
      <div class="subsection-card-desc">Guía paso a paso para realizar compras seguras en MercadoRD.</div>
-     <a class="subsection-card-link">Ver detalles →</a>
-    </div>
-    <div class="subsection-card" onclick="closeSubsection();requireAuth('orders')">
-     <div class="subsection-card-icon">🚚</div>
-     <div class="subsection-card-title">Seguimiento de Envío</div>
-     <div class="subsection-card-desc">Rastrea tu paquete en tiempo real hasta tu puerta.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
    </div>
@@ -567,7 +555,7 @@
     <div class="subsection-card" onclick="openInfo('premium')">
      <div class="subsection-card-icon">⭐</div>
      <div class="subsection-card-title">Vendedor Premium</div>
-     <div class="subsection-card-desc">Destácate con una insignia Premium, envío gratis y soporte prioritario.</div>
+     <div class="subsection-card-desc">Destácate con una insignia Premium, posicionamiento prioritario y soporte prioritario.</div>
      <a class="subsection-card-link">Ver detalles →</a>
     </div>
     <div class="subsection-card" onclick="openInfo('ads')">
@@ -744,15 +732,15 @@
   </div>
  </div>
  <nav class="nav" aria-label="Categorías de productos">
-  <div class="nav-item active" onclick="setNav(this,'all')">🏪 Inicio</div>
-  <div class="nav-item" onclick="setNav(this,'electronics')">📱 Electrónica</div>
-  <div class="nav-item" onclick="setNav(this,'vehicles')">🚗 Vehículos</div>
-  <div class="nav-item" onclick="setNav(this,'fashion')">👗 Moda</div>
-  <div class="nav-item" onclick="setNav(this,'home2')">🏠 Hogar</div>
-  <div class="nav-item" onclick="setNav(this,'sports')">⚽ Deportes</div>
-  <div class="nav-item" onclick="setNav(this,'services')">🔧 Servicios</div>
-  <div class="nav-item" onclick="setNav(this,'agro')">🌿 Agropecuario</div>
-  <div class="nav-item" onclick="showView('auctions')" style="color:var(--accent2);font-weight:600">🔥 Subastas</div>
+  <div class="nav-item active" role="button" tabindex="0" onclick="setNav(this,'all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">🏪 Inicio</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'electronics')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">📱 Electrónica</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'vehicles')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">🚗 Vehículos</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'fashion')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">👗 Moda</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'home2')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">🏠 Hogar</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'sports')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">⚽ Deportes</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'services')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">🔧 Servicios</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="setNav(this,'agro')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">🌿 Agropecuario</div>
+  <div class="nav-item" role="button" tabindex="0" onclick="showView('auctions')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" style="color:var(--accent2);font-weight:600">🔥 Subastas</div>
  </nav>
 </header>
 
@@ -760,7 +748,7 @@
 <div class="banner" id="heroBanner">
  <div style="font-size:28px;margin-bottom:8px">🇩🇴</div>
  <h1>Compra y vende en República Dominicana</h1>
- <p>Millones de productos · Vendedores verificados · Envíos a todo el país</p>
+ <p>Anuncios verificados · Contacto directo por WhatsApp · Cobertura en las 32 provincias</p>
  <div class="banner-btns">
   <button class="bbtn bbtn-main" onclick="requireAuth('sell')">Comenzar a vender gratis</button>
   <button class="bbtn bbtn-sec" onclick="showView('auctions')">Ver subastas activas 🔥</button>
@@ -804,14 +792,14 @@
   <div class="scard">
    <div class="scard-title">Categorías</div>
    <div class="scard-body">
-    <div class="scat active" onclick="filterCat('all',this)"><span class="scat-icon">🏪</span>Todas</div>
-    <div class="scat" onclick="filterCat('electronics',this)"><span class="scat-icon">📱</span>Electrónica</div>
-    <div class="scat" onclick="filterCat('vehicles',this)"><span class="scat-icon">🚗</span>Vehículos</div>
-    <div class="scat" onclick="filterCat('fashion',this)"><span class="scat-icon">👗</span>Moda</div>
-    <div class="scat" onclick="filterCat('home2',this)"><span class="scat-icon">🏠</span>Hogar</div>
-    <div class="scat" onclick="filterCat('sports',this)"><span class="scat-icon">⚽</span>Deportes</div>
-    <div class="scat" onclick="filterCat('services',this)"><span class="scat-icon">🔧</span>Servicios</div>
-    <div class="scat" onclick="filterCat('agro',this)"><span class="scat-icon">🌿</span>Agropecuario</div>
+    <div class="scat active" role="button" tabindex="0" onclick="filterCat('all',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">🏪</span>Todas</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('electronics',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">📱</span>Electrónica</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('vehicles',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">🚗</span>Vehículos</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('fashion',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">👗</span>Moda</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('home2',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">🏠</span>Hogar</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('sports',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">⚽</span>Deportes</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('services',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">🔧</span>Servicios</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCat('agro',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">🌿</span>Agropecuario</div>
    </div>
   </div>
   <div class="scard">
@@ -827,19 +815,19 @@
   <div class="scard">
    <div class="scard-title">Condición</div>
    <div class="scard-body">
-    <div class="scat" onclick="filterCond('new',this)"><span class="scat-icon">✨</span>Nuevo</div>
-    <div class="scat" onclick="filterCond('used',this)"><span class="scat-icon">♻️</span>Usado</div>
-    <div class="scat" onclick="filterCond('refurb',this)"><span class="scat-icon">🔧</span>Reacondicionado</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCond('new',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">✨</span>Nuevo</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCond('used',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">♻️</span>Usado</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterCond('refurb',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">🔧</span>Reacondicionado</div>
    </div>
   </div>
   <div class="scard">
    <div class="scard-title">Ubicación</div>
    <div class="scard-body" id="locFilterBody" style="max-height:280px;overflow-y:auto">
-    <div class="scat" onclick="filterLoc('SD',this)"><span class="scat-icon">📍</span>Santo Domingo</div>
-    <div class="scat" onclick="filterLoc('STI',this)"><span class="scat-icon">📍</span>Santiago</div>
-    <div class="scat" onclick="filterLoc('PP',this)"><span class="scat-icon">📍</span>Puerto Plata</div>
-    <div class="scat" onclick="filterLoc('LR',this)"><span class="scat-icon">📍</span>La Romana</div>
-    <div class="scat" onclick="filterLoc('PC',this)"><span class="scat-icon">📍</span>Punta Cana</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterLoc('SD',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">📍</span>Santo Domingo</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterLoc('STI',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">📍</span>Santiago</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterLoc('PP',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">📍</span>Puerto Plata</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterLoc('LR',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">📍</span>La Romana</div>
+    <div class="scat" role="button" tabindex="0" onclick="filterLoc('PC',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><span class="scat-icon">📍</span>Punta Cana</div>
    </div>
   </div>
  </div>
@@ -870,8 +858,8 @@
  <div id="adFooter"></div>
  <div class="footer-newsletter">
   <div class="footer-newsletter-text">
-   <h3>📬 Suscríbete y ahorra más</h3>
-   <p>Recibe ofertas exclusivas, subastas nuevas y novedades de MercadoRD en tu correo.</p>
+   <h3>📬 Suscríbete a los nuevos anuncios</h3>
+   <p>Recibe los nuevos anuncios, subastas destacadas y novedades de MercadoRD en tu correo.</p>
   </div>
   <div class="newsletter-form">
    <input type="email" id="nlEmail" placeholder="tu@correo.com" aria-label="Tu correo electrónico" autocomplete="email">
@@ -886,10 +874,9 @@
   </div>
 
   <div class="footer-col">
-   <h4 onclick="openBuyers()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🛒 Compradores</h4>
+   <h4 role="button" tabindex="0" onclick="openBuyers()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBuyers()}" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🛒 Compradores</h4>
    <ul>
     <li><a onclick="openBuyers()"><span class="flink-icon">👤</span>Mi cuenta</a></li>
-    <li><a onclick="openBuyers()"><span class="flink-icon">📦</span>Mis compras</a></li>
     <li><a onclick="openBuyers()"><span class="flink-icon">❤️</span>Mis favoritos</a></li>
     <li><a onclick="openBuyers()"><span class="flink-icon">🔥</span>Subastas activas</a></li>
     <li><a onclick="openBuyers()"><span class="flink-icon">🛡️</span>Protección al comprador</a></li>
@@ -898,7 +885,7 @@
   </div>
 
   <div class="footer-col">
-   <h4 onclick="openSellers()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏷️ Vendedores</h4>
+   <h4 role="button" tabindex="0" onclick="openSellers()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSellers()}" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏷️ Vendedores</h4>
    <ul>
     <li><a onclick="openSellers()"><span class="flink-icon">➕</span>Publicar anuncio</a></li>
     <li><a onclick="openSellers()"><span class="flink-icon">📊</span>Seller Center</a></li>
@@ -911,7 +898,7 @@
   </div>
 
   <div class="footer-col">
-   <h4 onclick="openAbout()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏪 MercadoRD</h4>
+   <h4 role="button" tabindex="0" onclick="openAbout()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAbout()}" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">🏪 MercadoRD</h4>
    <ul>
     <li><a onclick="openAbout()"><span class="flink-icon">🇩🇴</span>Quiénes somos</a></li>
     <li><a onclick="openAbout()"><span class="flink-icon">👥</span>Comunidad</a></li>
@@ -922,7 +909,7 @@
   </div>
 
   <div class="footer-col">
-   <h4 onclick="openContact()" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">📞 Contacto</h4>
+   <h4 role="button" tabindex="0" onclick="openContact()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openContact()}" style="cursor:pointer;transition:color .2s" onmouseover="this.style.color='#0a4ab8'" onmouseout="this.style.color='#fff'">📞 Contacto</h4>
    <ul>
     <li><a onclick="openContact()"><span class="flink-icon">❓</span>Centro de ayuda</a></li>
     <li><a onclick="openContact()"><span class="flink-icon">💬</span>Chat en vivo</a></li>
@@ -1106,11 +1093,11 @@
 <!-- ══════════════════════════════════════════════════
      SCRIPTS (orden importante)
 ════════════════════════════════════════════════════ -->
-<script defer src="js/storage.js?v=20260622q"></script>
-<script defer src="js/data.js?v=20260622q"></script>
-<script defer src="js/auth.js?v=20260622q"></script>
-<script defer src="js/app.js?v=20260622q"></script>
-<script defer src="js/chatbot.js?v=20260622q"></script>
+<script defer src="js/storage.js?v=20260622r"></script>
+<script defer src="js/data.js?v=20260622r"></script>
+<script defer src="js/auth.js?v=20260622r"></script>
+<script defer src="js/app.js?v=20260622r"></script>
+<script defer src="js/chatbot.js?v=20260622r"></script>
 
 </body>
 </html>

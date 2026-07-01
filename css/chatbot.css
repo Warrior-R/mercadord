@@ -92,7 +92,6 @@
 .mrd-msg { max-width: 84%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
 .mrd-msg.bot { align-self: flex-start; background: #fff; color: var(--text, #1a1a2e); border: 1px solid var(--border, #dde3ee); border-bottom-left-radius: 4px; }
 .mrd-msg.user { align-self: flex-end; background: var(--primary, #003087); color: #fff; border-bottom-right-radius: 4px; }
-.mrd-msg.note { align-self: center; background: #e8f5ee; color: var(--green, #0a8a4a); border: 1px solid #bfe6cf; font-size: 12px; font-weight: 600; border-radius: 10px; }
 
 .mrd-chat-typing { align-self: flex-start; display: flex; gap: 4px; padding: 11px 14px; background: #fff; border: 1px solid var(--border, #dde3ee); border-radius: 14px; border-bottom-left-radius: 4px; }
 .mrd-chat-typing span { width: 7px; height: 7px; border-radius: 50%; background: #b9c2d4; animation: mrdBlink 1.3s infinite both; }
