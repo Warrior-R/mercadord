@@ -4,7 +4,7 @@ test("home carga con marca, nav de categorías y banner", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/MercadoRD/);
   await expect(page.getByRole("banner").getByRole("link", { name: "MercadoRD" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Categorías" }).getByRole("link", { name: "Electrónica" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Categorías", exact: true }).getByRole("link", { name: "Electrónica" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Compra y vende en República Dominicana/ })).toBeVisible();
 });
 

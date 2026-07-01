@@ -64,6 +64,18 @@ export async function getProductById(id: string): Promise<Product | null> {
   return (data as Product | null) ?? null;
 }
 
+/** Productos publicados por un usuario (para su cuenta). */
+export async function listProductsByUser(userId: string): Promise<Product[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select(COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Product[];
+}
+
 /** Ids + títulos para el sitemap dinámico. */
 export async function listProductRefs(): Promise<
   { id: string; title: string; created_at: string | null }[]

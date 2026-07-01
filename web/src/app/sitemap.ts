@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { CATEGORIES } from "@/lib/categories";
+import { LEGAL_DOCS } from "@/lib/legal";
 import { listProductRefs } from "@/lib/products";
 import { slugify } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
@@ -20,6 +21,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/categoria/${c.slug}`,
       changeFrequency: "daily" as const,
       priority: 0.8,
+    })),
+    ...LEGAL_DOCS.map((d) => ({
+      url: `${SITE_URL}/legal/${d.slug}`,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
     })),
     ...products.map((p) => ({
       url: `${SITE_URL}/producto/${slugify(p.title)}-${p.id}`,

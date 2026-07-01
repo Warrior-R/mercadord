@@ -34,9 +34,12 @@ export async function UserMenu() {
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <span className="hidden max-w-[140px] truncate text-sm text-white/90 sm:inline">
+      <Link
+        href="/cuenta"
+        className="hidden max-w-[140px] truncate text-sm text-white/90 hover:text-white sm:inline"
+      >
         {name}
-      </span>
+      </Link>
       <form action={signOut}>
         <button
           type="submit"
