@@ -2564,11 +2564,15 @@ function replaceRoute(path) {
 
 // Añade/quita <meta name="robots" content="noindex"> dinámico (para no indexar 404 ni URLs inexistentes)
 function setNoindex(on) {
-  let m = document.querySelector('meta[name="robots"][data-dyn]');
+  const m = document.querySelector('meta[name="robots"]');
+  if (!m) return;
   if (on) {
-    if (!m) { m = document.createElement('meta'); m.setAttribute('name', 'robots'); m.setAttribute('data-dyn', ''); document.head.appendChild(m); }
+    if (m.dataset.orig === undefined) m.dataset.orig = m.getAttribute('content') || 'index,follow';
     m.setAttribute('content', 'noindex, follow');
-  } else if (m) { m.remove(); }
+  } else if (m.dataset.orig !== undefined) {
+    m.setAttribute('content', m.dataset.orig);   // restaura el robots original al salir de la 404
+    delete m.dataset.orig;
+  }
 }
 
 // Vista 404: URL que no corresponde a ninguna ruta, o anuncio inexistente/eliminado.

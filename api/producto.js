@@ -114,7 +114,7 @@ module.exports = async (req, res) => {
     html = html.replace('</head>', jsonld);
   } else {
     html = html.replace(/<title>[^<]*<\/title>/i, `<title>Anuncio no encontrado | MercadoRD</title>`);
-    html = html.replace('</head>', '<meta name="robots" content="noindex">\n</head>');
+    html = html.replace(/(<meta name="robots" content=")[^"]*(">)/i, '$1noindex$2');
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
