@@ -107,10 +107,10 @@ const legalContent = {
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Todos los derechos de marca, logo y contenido de MercadoRD son propiedad exclusiva. No puedes copiar, distribuir o modificar nuestro contenido sin autorización escrita previa.</p>
 
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">6. Transacciones y pagos</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Todos los pagos se realizan a través de plataformas seguras. MercadoRD no es responsable de fallos de terceros como bancos. No emitimos reembolsos por cambio de opinión después de comprar.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD conecta a compradores y vendedores; el pago y la entrega se acuerdan directamente entre ambas partes (por ejemplo, por WhatsApp). MercadoRD no procesa pagos ni es responsable de acuerdos hechos fuera de la plataforma.</p>
 
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">7. Limitación de responsabilidad</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD actúa como intermediario. No somos responsables de daños indirectos, pérdida de datos o lucro cesante. Tu máximo recurso es reembolso del monto pagado.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">MercadoRD actúa como intermediario que conecta a las partes. No somos responsables de daños indirectos, pérdida de datos, lucro cesante ni de los acuerdos, pagos o entregas pactados directamente entre comprador y vendedor.</p>
 
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">8. Cancelación de cuenta</h3>
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Puedes cancelar tu cuenta en cualquier momento desde tu perfil. Las transacciones activas deben completarse. Las cuentas con deudas no se pueden cancelar hasta regularizar.</p>
@@ -145,15 +145,6 @@ const legalContent = {
       <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Desconfía si el precio es muy bajo, piden pagar fuera de la plataforma o solicitan datos personales por WhatsApp.</p>
       <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">MercadoRD colabora con el Departamento de Cibercrimen de la RD.</p>`
   },
-  returns: {
-    title: '🔄 MercadoRD Retorno',
-    body: `
-      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">15 días para devolver</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Desde la recepción, si el producto no corresponde a la descripción, llegó dañado o es defectuoso.</p>
-      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--primary)">Proceso</h3>
-      <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">1. Abre caso desde "Mis compras". 2. Adjunta fotos. 3. MercadoRD media. 4. Reembolso en 3-5 días hábiles.</p>
-      <p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Conforme a Ley 358-05 del Consumidor de la República Dominicana.</p>`
-  },
   accessibility: {
     title: '♿ Accesibilidad',
     body: `<p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:14px">Seguimos pautas WCAG 2.1 nivel AA. Si encuentras alguna barrera, contáctanos en accesibilidad@mercadord.net y la resolvemos en 5 días hábiles. <span style="color:var(--primary);cursor:pointer;font-weight:600" onclick="openContactForm('accesibilidad')">✉️ Escríbenos</span></p><p style="font-size:11px;color:var(--text2);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">Última actualización: enero 2025</p>`
@@ -171,12 +162,12 @@ const infoContent = {
   protection: {
     title: '🛡️ Protección al Comprador',
     body: `
-      <h3 style="${H3}">Garantía MercadoRD</h3>
-      <p style="${P}">Cada compra realizada dentro de la plataforma está cubierta: si el artículo no llega, llega dañado o no corresponde a la descripción, te devolvemos el 100% de tu dinero.</p>
-      <h3 style="${H3}">Cómo funciona</h3>
-      <p style="${P}">1. El pago queda retenido hasta que confirmes la recepción.<br>2. Tienes 15 días para abrir un reclamo desde "Mis compras".<br>3. MercadoRD media entre comprador y vendedor.<br>4. Reembolso en 3-5 días hábiles si procede.</p>
-      <h3 style="${H3}">Qué NO cubre</h3>
-      <p style="${P}">Transacciones fuera de la plataforma, pagos por WhatsApp o entregas en mano sin registro. Siempre completa la compra dentro de MercadoRD.</p>`
+      <h3 style="${H3}">Vendedores verificados</h3>
+      <p style="${P}">Todo vendedor verifica su identidad con cédula dominicana (KYC). Da prioridad a los anuncios de cuentas verificadas y revisa el perfil antes de coordinar.</p>
+      <h3 style="${H3}">Compra segura por WhatsApp</h3>
+      <p style="${P}">1. Revisa las fotos reales y los detalles del anuncio.<br>2. Acuerda ver el producto en persona, en un lugar público y concurrido.<br>3. Verifica el artículo antes de pagar.<br>4. Desconfía de precios demasiado bajos o de quien exige adelantos.</p>
+      <h3 style="${H3}">Reportar fraude</h3>
+      <p style="${P}">Si algo no cuadra, repórtalo desde "Reportar fraude". Suspendemos de inmediato las cuentas sospechosas y colaboramos con el Departamento de Cibercrimen de la RD.</p>`
   },
   payments: {
     title: '💳 Métodos de Pago',
