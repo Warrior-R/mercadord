@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/lib/auth-actions";
+
+export async function UserMenu() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="flex shrink-0 items-center gap-2">
+        <Link
+          href="/entrar"
+          className="rounded-md border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent2"
+        >
+          Entrar
+        </Link>
+        <Link
+          href="/registro"
+          className="hidden rounded-md bg-accent2 px-3 py-1.5 text-xs font-semibold text-ink transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white sm:inline-block"
+        >
+          Crear cuenta
+        </Link>
+      </div>
+    );
+  }
+
+  const name =
+    (typeof user.user_metadata?.name === "string" && user.user_metadata.name) ||
+    user.email ||
+    "Mi cuenta";
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <span className="hidden max-w-[140px] truncate text-sm text-white/90 sm:inline">
+        {name}
+      </span>
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="rounded-md border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent2"
+        >
+          Salir
+        </button>
+      </form>
+    </div>
+  );
+}

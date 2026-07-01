@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search-bar";
+import { UserMenu } from "@/components/user-menu";
 
 export function SiteHeader() {
   return (
@@ -14,6 +15,7 @@ export function SiteHeader() {
         <div className="min-w-0 max-w-[620px] flex-1">
           <SearchBar />
         </div>
+        <UserMenu />
       </div>
     </header>
   );

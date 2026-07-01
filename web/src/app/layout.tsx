@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora } from "next/font/google";
 import { SITE_URL } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
+import { CategoryBar } from "@/components/category-bar";
 import "./globals.css";
 
 const sora = Sora({
@@ -32,6 +33,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SiteHeader />
+        <CategoryBar />
         <div className="flex-1">{children}</div>
       </body>
     </html>

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { listProducts } from "@/lib/products";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
-import { CategoryNav } from "@/components/category-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +48,6 @@ export default async function Home() {
             </Link>
           </div>
         </div>
-      </section>
-
-      <section className="mb-6">
-        <h2 className="sr-only">Categorías</h2>
-        <CategoryNav />
       </section>
 
       <section>

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { categoryBySlug } from "@/lib/categories";
 import { listProducts } from "@/lib/products";
 import { ProductCard } from "@/components/product-card";
-import { CategoryNav } from "@/components/category-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -29,24 +28,20 @@ export default async function CategoryPage({ params }: Params) {
   const products = await listProducts({ category: cat.key });
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8">
-      <nav aria-label="Ruta" className="mb-3 text-sm text-neutral-500">
-        <Link href="/" className="hover:underline">
+    <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-5">
+      <nav aria-label="Ruta" className="mb-3 text-sm text-ink-soft">
+        <Link href="/" className="hover:text-primary hover:underline">
           Inicio
         </Link>{" "}
-        / <span className="text-neutral-700 dark:text-neutral-300">{cat.name}</span>
+        / <span className="text-ink">{cat.name}</span>
       </nav>
 
-      <h1 className="mb-4 text-2xl font-bold tracking-tight">
+      <h1 className="mb-5 text-2xl font-bold tracking-tight text-ink">
         <span aria-hidden className="mr-2">
           {cat.icon}
         </span>
         {cat.name}
       </h1>
-
-      <div className="mb-6">
-        <CategoryNav activeSlug={cat.slug} />
-      </div>
 
       {products.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700">
