@@ -955,8 +955,8 @@ function renderSellForm() {
     setv('sellCond', sellEdit.cond);
     // El WhatsApp de anuncios en BD no viaja en el feed (protegido por RLS): traerlo aparte.
     if (sellEdit._db && sellEdit.sbId && typeof sb !== 'undefined' && sb) {
-      sb.from('seller_contacts').select('wa').eq('ref_id', sellEdit.sbId).eq('kind', 'product').maybeSingle()
-        .then(({ data }) => { const el = document.getElementById('sellWa'); if (el && data?.wa) el.value = data.wa; });
+      sb.rpc('get_seller_contact', { p_ref_id: sellEdit.sbId, p_kind: 'product' })
+        .then(({ data }) => { const el = document.getElementById('sellWa'); if (el && data) el.value = data; });
     }
     if (sellEdit.img) {
       const prev = document.getElementById('sellPhotoPreview');
@@ -3406,9 +3406,9 @@ async function contactSellerWhatsApp(itemOrId, isAuction) {
   if (dbRef && typeof sb !== 'undefined' && sb) {
     const w = window.open('', '_blank');   // abrir sincrónico para evitar bloqueo de pop-ups
     try {
-      const { data, error } = await sb.from('seller_contacts').select('wa')
-        .eq('ref_id', dbRef).eq('kind', isAuction ? 'auction' : 'product').maybeSingle();
-      const num = (!error && data) ? String(data.wa || '').replace(/\D/g, '') : '';
+      const { data, error } = await sb.rpc('get_seller_contact',
+        { p_ref_id: dbRef, p_kind: isAuction ? 'auction' : 'product' });
+      const num = (!error && data) ? String(data || '').replace(/\D/g, '') : '';
       if (num) {
         const url = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
         if (w) w.location = url; else window.open(url, '_blank', 'noopener');
