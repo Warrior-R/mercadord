@@ -1,63 +1,72 @@
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { listProducts } from "@/lib/products";
+import type { Product } from "@/lib/types";
+import { ProductCard } from "@/components/product-card";
+import { CategoryNav } from "@/components/category-nav";
 
 export const dynamic = "force-dynamic";
 
-async function getStatus() {
-  try {
-    const supabase = await createClient();
-    const { count, error } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true });
-    if (error) return { ok: false, detail: error.message };
-    return { ok: true, count: count ?? 0 };
-  } catch (e) {
-    return {
-      ok: false,
-      detail: e instanceof Error ? e.message : "error desconocido",
-    };
-  }
-}
-
 export default async function Home() {
-  const status = await getStatus();
+  let products: Product[] = [];
+  let loadError: string | null = null;
+  try {
+    products = await listProducts({ limit: 24 });
+  } catch (e) {
+    loadError = e instanceof Error ? e.message : "error desconocido";
+  }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-6 py-16">
-      <div>
+    <div className="mx-auto w-full max-w-6xl px-4 py-8">
+      <section className="mb-8">
         <p className="text-sm font-medium uppercase tracking-widest text-neutral-500">
-          MarketplaceDR · Fase 1
+          MarketplaceDR
         </p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight">
-          Migración a Next.js
+        <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
+          Compra y vende en República Dominicana
         </h1>
-        <p className="mt-3 text-neutral-600 dark:text-neutral-400">
-          Scaffold Next.js 16 + TypeScript + Tailwind v4, conectado al backend
-          Supabase existente vía SSR. El catálogo con rutas reales llega a
-          continuación.
+        <p className="mt-2 max-w-2xl text-neutral-600 dark:text-neutral-400">
+          Explora productos por categoría. Compra, vende y subasta de forma
+          segura.
         </p>
-      </div>
+      </section>
 
-      <div
-        className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-800"
-        data-testid="supabase-status"
-      >
-        <h2 className="text-sm font-semibold text-neutral-500">
-          Estado de conexión (SSR → Supabase)
-        </h2>
-        {status.ok ? (
-          <p className="mt-1 text-lg">
-            <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-green-500 align-middle" />
-            Conectado · <strong>{status.count}</strong> productos en la base de
-            datos
+      <section className="mb-8">
+        <h2 className="sr-only">Categorías</h2>
+        <CategoryNav />
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-lg font-semibold">Publicaciones recientes</h2>
+
+        {loadError ? (
+          <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            No se pudo cargar el catálogo: {loadError}
           </p>
+        ) : products.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700">
+            <p className="text-4xl">🛒</p>
+            <p className="mt-3 font-medium">Aún no hay productos publicados</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Ejecuta <code>supabase/seed-products.sql</code> para poblar el
+              catálogo de desarrollo, o publica un producto.
+            </p>
+          </div>
         ) : (
-          <p className="mt-1 text-lg">
-            <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-amber-500 align-middle" />
-            Sin lectura de <code>products</code>:{" "}
-            <span className="text-neutral-500">{status.detail}</span>
-          </p>
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {products.map((p) => (
+              <li key={p.id}>
+                <ProductCard product={p} />
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
-    </main>
+      </section>
+
+      <footer className="mt-12 border-t border-neutral-200 pt-6 text-sm text-neutral-500 dark:border-neutral-800">
+        <Link href="/categoria/electronica" className="underline">
+          Ver Electrónica
+        </Link>
+      </footer>
+    </div>
   );
 }
