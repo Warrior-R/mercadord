@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listProducts } from "@/lib/products";
+import { listFeaturedIds } from "@/lib/featured";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
 
@@ -8,11 +9,17 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   let products: Product[] = [];
   let loadError: string | null = null;
+  let featuredIds = new Set<string>();
   try {
-    products = await listProducts({ limit: 24 });
+    [products, featuredIds] = await Promise.all([
+      listProducts({ limit: 24 }),
+      listFeaturedIds(),
+    ]);
   } catch (e) {
     loadError = e instanceof Error ? e.message : "error desconocido";
   }
+
+  const featured = products.filter((p) => featuredIds.has(p.id));
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-5 sm:px-5">
@@ -50,6 +57,21 @@ export default async function Home() {
         </div>
       </section>
 
+      {featured.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-ink">
+            <span aria-hidden>⭐</span> Anuncios destacados
+          </h2>
+          <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {featured.map((p) => (
+              <li key={p.id}>
+                <ProductCard product={p} featured />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-4 text-base font-bold text-ink">
           Publicaciones recientes
@@ -74,7 +96,7 @@ export default async function Home() {
           <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((p) => (
               <li key={p.id}>
-                <ProductCard product={p} />
+                <ProductCard product={p} featured={featuredIds.has(p.id)} />
               </li>
             ))}
           </ul>

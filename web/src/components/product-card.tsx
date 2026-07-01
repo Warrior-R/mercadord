@@ -4,7 +4,13 @@ import type { Product } from "@/lib/types";
 import { formatPrice, productHref } from "@/lib/format";
 import { categoryByKey } from "@/lib/categories";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  featured = false,
+}: {
+  product: Product;
+  featured?: boolean;
+}) {
   const cat = categoryByKey(product.category);
   const discount =
     product.old_price && product.old_price > product.price
@@ -17,6 +23,11 @@ export function ProductCard({ product }: { product: Product }) {
       className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-card transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(0,48,135,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-light"
     >
       <div className="relative flex aspect-square items-center justify-center bg-tile">
+        {featured && (
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-accent2 px-2 py-0.5 text-[10px] font-bold text-ink shadow">
+            ⭐ Destacado
+          </span>
+        )}
         {product.image_url ? (
           <Image
             src={product.image_url}

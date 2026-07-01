@@ -7,13 +7,22 @@ import { idFromSlug, formatPrice } from "@/lib/format";
 import { conditionLabel } from "@/lib/filters";
 import { categoryByKey } from "@/lib/categories";
 import { SITE_URL } from "@/lib/site";
+import { isProductFeatured } from "@/lib/featured";
 import { ContactSeller } from "@/components/contact-seller";
+import { SellerReviews } from "@/components/seller-reviews";
+import { ReportListing } from "@/components/report-listing";
+import { AdminFeaturedToggle } from "@/components/admin-featured-toggle";
 
 export const dynamic = "force-dynamic";
 
 type Params = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ msg?: string }>;
+  searchParams: Promise<{
+    msg?: string;
+    rev?: string;
+    rep?: string;
+    feat?: string;
+  }>;
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -42,12 +51,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function ProductPage({ params, searchParams }: Params) {
   const { slug } = await params;
-  const { msg } = await searchParams;
+  const { msg, rev, rep, feat } = await searchParams;
   const id = idFromSlug(slug);
   const product = id ? await getProductById(id) : null;
   if (!product) notFound();
 
   const cat = categoryByKey(product.category);
+  const featured = await isProductFeatured(product.id);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -104,6 +114,11 @@ export default async function ProductPage({ params, searchParams }: Params) {
         </div>
 
         <div>
+          {featured && (
+            <span className="mb-2 inline-block rounded-full bg-accent2 px-2.5 py-1 text-xs font-bold text-ink">
+              ⭐ Anuncio destacado
+            </span>
+          )}
           <h1 className="text-2xl font-bold tracking-tight">{product.title}</h1>
           <p className="mt-3 text-3xl font-bold text-accent">
             {formatPrice(product.price)}
@@ -147,6 +162,9 @@ export default async function ProductPage({ params, searchParams }: Params) {
           )}
 
           <ContactSeller product={product} slug={slug} status={msg} />
+          <SellerReviews product={product} slug={slug} status={rev} />
+          <ReportListing product={product} slug={slug} status={rep} />
+          <AdminFeaturedToggle product={product} slug={slug} status={feat} />
         </div>
       </div>
     </div>

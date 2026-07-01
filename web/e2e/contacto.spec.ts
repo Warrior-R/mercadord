@@ -18,3 +18,8 @@ test("la barra inferior móvil incluye Mensajes", async ({ page }) => {
   const bottom = page.getByRole("navigation", { name: "Navegación principal" });
   await expect(bottom.getByRole("link", { name: /Mensajes/ })).toBeVisible();
 });
+
+test("moderación admin sin sesión redirige a /entrar", async ({ page }) => {
+  await page.goto("/admin/reportes");
+  await expect(page).toHaveURL(/\/entrar/);
+});
