@@ -73,10 +73,10 @@ export default async function Home({
               Explorar productos
             </Link>
             <Link
-              href="/buscar"
-              className="rounded-lg border-2 border-white/60 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+              href="/subastas"
+              className="rounded-lg border-2 border-accent2 px-6 py-3 text-sm font-bold text-accent2 transition hover:bg-accent2 hover:text-ink"
             >
-              Ver categorías
+              🔨 Ver subastas
             </Link>
           </div>
         </div>

@@ -25,6 +25,11 @@ export function productHref(product: { id: string; title: string }): string {
   return `/producto/${slugify(product.title)}-${product.id}`;
 }
 
+/** URL canónica de una subasta: /subasta/<slug-titulo>-<uuid>. */
+export function auctionHref(auction: { id: string; title: string }): string {
+  return `/subasta/${slugify(auction.title)}-${auction.id}`;
+}
+
 /** Deja solo dígitos de un teléfono. */
 export function phoneDigits(phone: string): string {
   return phone.replace(/\D+/g, "");

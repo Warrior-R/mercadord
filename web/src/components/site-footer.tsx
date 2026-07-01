@@ -37,6 +37,11 @@ export function SiteFooter() {
                 Vender
               </Link>
             </li>
+            <li>
+              <Link href="/subastas" className="hover:text-primary">
+                Subastas
+              </Link>
+            </li>
             {LEGAL_DOCS.map((d) => (
               <li key={d.slug}>
                 <Link href={`/legal/${d.slug}`} className="hover:text-primary">
