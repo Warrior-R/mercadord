@@ -11,6 +11,10 @@ let acat  = 'all';
 let stxt  = '';
 let cview = 'home';
 let adBanners = [];   // banners de patrocinadores activos (declarado arriba: doRender lo usa en el arranque)
+// ─── Router por hash (URLs compartibles + botón Atrás). Estado declarado arriba para evitar TDZ. ───
+let _routing = false, _lastRoute = null;
+const VIEW_TO_SLUG = { home:'', auctions:'subastas', sell:'vender', account:'cuenta', favs:'favoritos', myads:'mis-anuncios', sales:'mis-ventas', orders:'mis-compras', messages:'mensajes', addresses:'direcciones', settings:'configuracion', notifs:'notificaciones', security:'seguridad', admin:'publicidad', seller:'vendedor' };
+const SLUG_TO_VIEW = Object.fromEntries(Object.entries(VIEW_TO_SLUG).map(([v, s]) => [s, v]));
 let sortMode = 'relevance';
 let fconds = new Set();   // filtro condición (vacío = todas)
 let flocs  = new Set();   // filtro ubicación (vacío = todas)
@@ -182,6 +186,7 @@ function goHome() {
   const pr = document.querySelector('.sidebar input[type="range"]'); if (pr) pr.value = 200000;
   const po = document.getElementById('priceOut'); if (po) po.textContent = fmt(200000);
   doRender();
+  if (!_routing) pushRoute('');
 }
 
 // Restaura la vista de listado (home) SIN reiniciar los filtros activos
@@ -338,6 +343,7 @@ function showDetail(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
   cview = 'detail';
+  if (!_routing) pushRoute('producto=' + id);
   document.title = `${p.title} — MercadoRD`;
   const mt = document.getElementById('mainTabs');
   if (mt) mt.style.display = 'none';
@@ -505,7 +511,9 @@ function showView(v) {
   } else if (v === 'home') {
     // Blindaje: goHome() restaura el hero y el carrusel que ocultamos arriba y re-renderiza el listado
     goHome();
+    return;   // goHome ya empuja su propia ruta
   }
+  if (!_routing) pushRoute(VIEW_TO_SLUG.hasOwnProperty(cview) ? VIEW_TO_SLUG[cview] : cview);
 }
 
 // ══════════════════════════════════════════════════
@@ -2426,6 +2434,7 @@ function openLegal(key) {
   const c = legalContent[key];
   if (!c) { console.warn('openLegal: clave legal inexistente:', key); return; }
   showPage(c.body, c.title);
+  if (!_routing) pushRoute('legal=' + key);
 }
 
 // ─── Contenido informativo: se muestra como sección propia (antes reutilizaba el modal legal) ───
@@ -2433,6 +2442,7 @@ function openInfo(key) {
   const c = infoContent[key];
   if (!c) { console.warn('openInfo: clave informativa inexistente:', key); return; }
   showPage(c.body, c.title);
+  if (!_routing) pushRoute('info=' + key);
 }
 
 // Cerrar modales de puja/oferta al hacer clic fuera
@@ -2706,6 +2716,7 @@ let currentAuctionDetailId = null;
 let auctionDetailData = null;
 
 async function openAuctionById(id) {
+  if (!_routing) pushRoute('subasta=' + id);
   // Modo demo (sin servidor): buscar en el arreglo local
   if (typeof sb === 'undefined' || !sb) {
     const a = auctions.find(x => x.id == id);
@@ -2836,10 +2847,37 @@ function checkAuctionHash() {
   if (m) { openAuctionById(m[1]); return true; }
   return false;
 }
-window.addEventListener('hashchange', () => {
-  const m = location.hash.match(/^#subasta=([\w-]+)$/);
-  if (m) openAuctionById(m[1]);
-});
+// ─── Router por hash: URLs compartibles + botón Atrás/Adelante ───
+// La navegación llama pushRoute() (empuja al historial SIN re-render); back/forward
+// dispara routeFromHash() (renderiza SIN empujar). El flag _routing y la deduplicación
+// por _lastRoute evitan bucles y dobles renders. #fv= (modo QR móvil del KYC) se ignora.
+function pushRoute(hash) {
+  if (_routing) return;
+  const newHash = hash ? ('#' + hash) : '';
+  if ((location.hash || '') === newHash) { _lastRoute = newHash; return; }  // ya estamos ahí
+  try { history.pushState(null, '', newHash || (location.pathname + location.search)); } catch (e) {}
+  _lastRoute = location.hash || '';
+}
+function routeFromHash() {
+  const h = location.hash || '';
+  if (h.indexOf('#fv=') === 0) return;         // modo QR móvil: no tocar
+  if (h === _lastRoute) return;                // dedup (doble evento / ya aplicado)
+  _lastRoute = h;
+  _routing = true;
+  try {
+    let m;
+    if ((m = h.match(/^#subasta=([\w-]+)$/)))        openAuctionById(m[1]);
+    else if ((m = h.match(/^#producto=([\w-]+)$/)))  { const id = Number(m[1]); if (!isNaN(id)) showDetail(id); else goHome(); }
+    else if ((m = h.match(/^#legal=([\w-]+)$/)))     { if (typeof legalContent !== 'undefined' && legalContent[m[1]]) openLegal(m[1]); else goHome(); }
+    else if ((m = h.match(/^#info=([\w-]+)$/)))      { if (typeof infoContent !== 'undefined' && infoContent[m[1]]) openInfo(m[1]); else goHome(); }
+    else { const v = SLUG_TO_VIEW[h.replace(/^#/, '')]; if (v) showView(v); else goHome(); }
+  } catch (e) { console.warn('router', e); }
+  finally { _routing = false; }
+}
+window.addEventListener('popstate', routeFromHash);
+window.addEventListener('hashchange', routeFromHash);
+// Deep-link inicial: si la URL ya trae una sección al cargar (no el modo QR #fv=), abrirla.
+if (location.hash && location.hash !== '#' && location.hash.indexOf('#fv=') !== 0) setTimeout(routeFromHash, 0);
 
 // ─── Notificaciones (campana en el header) ───
 let notifItems = [];
