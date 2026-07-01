@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/products";
 import { idFromSlug, formatPrice } from "@/lib/format";
+import { conditionLabel } from "@/lib/filters";
 import { categoryByKey } from "@/lib/categories";
 import { SITE_URL } from "@/lib/site";
 
@@ -110,7 +111,7 @@ export default async function ProductPage({ params }: Params) {
             {product.condition && (
               <div className="flex gap-2">
                 <dt className="font-medium text-neutral-500">Condición:</dt>
-                <dd>{product.condition}</dd>
+                <dd>{conditionLabel(product.condition)}</dd>
               </div>
             )}
             {product.location && (
