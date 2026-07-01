@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const description =
     product.description?.slice(0, 160) ??
-    `${product.title} en MarketplaceDR — República Dominicana.`;
+    `${product.title} en MercadoRD — República Dominicana.`;
 
   return {
     title: product.title,

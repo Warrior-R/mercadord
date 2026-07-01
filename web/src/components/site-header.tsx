@@ -9,7 +9,7 @@ export function SiteHeader() {
           href="/"
           className="shrink-0 text-lg font-extrabold tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
         >
-          <span className="text-blue-600">Marketplace</span>DR
+          <span className="text-blue-600">Mercado</span>RD
         </Link>
         <div className="min-w-0 flex-1">
           <SearchBar />

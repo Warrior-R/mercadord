@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!cat) return { title: "Categoría no encontrada" };
   return {
     title: cat.name,
-    description: `Compra ${cat.name} en MarketplaceDR — República Dominicana.`,
+    description: `Compra ${cat.name} en MercadoRD — República Dominicana.`,
     alternates: { canonical: `/categoria/${cat.slug}` },
   };
 }

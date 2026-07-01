@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "MarketplaceDR — Compra y vende en República Dominicana",
-    template: "%s · MarketplaceDR",
+    default: "MercadoRD — Compra y vende en República Dominicana",
+    template: "%s · MercadoRD",
   },
   description:
-    "Marketplace nacional de República Dominicana: compra, vende y subasta de forma segura.",
+    "MercadoRD, el marketplace nacional de República Dominicana: compra, vende y subasta de forma segura.",
 };
 
 export default function RootLayout({
