@@ -6,13 +6,17 @@ import { categoryByKey } from "@/lib/categories";
 
 export function ProductCard({ product }: { product: Product }) {
   const cat = categoryByKey(product.category);
+  const discount =
+    product.old_price && product.old_price > product.price
+      ? Math.round((1 - product.price / product.old_price) * 100)
+      : null;
 
   return (
     <Link
       href={productHref(product)}
-      className="group flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white transition hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-neutral-800 dark:bg-neutral-900"
+      className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-card transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(0,48,135,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-light"
     >
-      <div className="relative aspect-square bg-neutral-100 dark:bg-neutral-800">
+      <div className="relative flex aspect-square items-center justify-center bg-tile">
         {product.image_url ? (
           <Image
             src={product.image_url}
@@ -22,20 +26,30 @@ export function ProductCard({ product }: { product: Product }) {
             className="object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-5xl">
-            {cat?.icon ?? "📦"}
-          </div>
+          <span className="text-5xl">{cat?.icon ?? "📦"}</span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="line-clamp-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+      <div className="flex flex-1 flex-col p-3">
+        <h3 className="line-clamp-2 text-[13px] font-medium leading-snug text-ink">
           {product.title}
         </h3>
-        <p className="mt-auto text-lg font-bold text-neutral-900 dark:text-neutral-50">
-          {formatPrice(product.price)}
-        </p>
+        {product.seller_name && (
+          <p className="mt-1 truncate text-[11px] text-ink-soft">
+            {product.seller_name}
+          </p>
+        )}
+        <div className="mt-auto flex items-baseline gap-1.5 pt-2">
+          <span className="text-lg font-bold text-accent">
+            {formatPrice(product.price)}
+          </span>
+          {discount !== null && (
+            <span className="text-[11px] font-semibold text-brand-green">
+              -{discount}%
+            </span>
+          )}
+        </div>
         {product.location && (
-          <p className="text-xs text-neutral-500">{product.location}</p>
+          <p className="mt-1 text-[11px] text-ink-soft">📍 {product.location}</p>
         )}
       </div>
     </Link>

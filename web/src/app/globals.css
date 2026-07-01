@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* dark: solo se activaría con la clase .dark (no por preferencia del SO).
+   MercadoRD es light por ahora; así no se activa dark a medias. */
+@custom-variant dark (&:where(.dark, .dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ── Sistema de diseño MercadoRD (tomado de css/styles.css del sitio actual) ── */
+@theme {
+  --color-primary: #003087;
+  --color-primary-light: #0a4ab8;
+  --color-accent: #e43e2b;
+  --color-accent-dark: #c0321f;
+  --color-accent2: #f5a623;
+  --color-page: #f4f6f9;
+  --color-card: #ffffff;
+  --color-tile: #f8f9fc;
+  --color-ink: #1a1a2e;
+  --color-ink-soft: #555555;
+  --color-line: #dde3ee;
+  --color-brand-green: #0a8a4a;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-sora), system-ui, sans-serif;
+  --radius-card: 10px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }

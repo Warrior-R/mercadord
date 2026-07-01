@@ -12,10 +12,10 @@ export function CategoryNav({ activeSlug }: { activeSlug?: string }) {
             href={`/categoria/${c.slug}`}
             aria-current={active ? "page" : undefined}
             className={
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 " +
+              "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-light " +
               (active
-                ? "border-blue-600 bg-blue-600 text-white"
-                : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300")
+                ? "border-primary bg-primary text-white"
+                : "border-line bg-card text-ink-soft hover:border-primary/40 hover:text-primary")
             }
           >
             <span aria-hidden>{c.icon}</span>

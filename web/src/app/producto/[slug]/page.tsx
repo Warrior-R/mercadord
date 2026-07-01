@@ -100,7 +100,9 @@ export default async function ProductPage({ params }: Params) {
 
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{product.title}</h1>
-          <p className="mt-3 text-3xl font-bold">{formatPrice(product.price)}</p>
+          <p className="mt-3 text-3xl font-bold text-accent">
+            {formatPrice(product.price)}
+          </p>
           {product.old_price && product.old_price > product.price && (
             <p className="text-sm text-neutral-500 line-through">
               {formatPrice(product.old_price)}

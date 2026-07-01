@@ -109,7 +109,7 @@ export function FilterPanel({ filters }: { filters: SearchFilters }) {
       <div className="flex flex-col gap-2">
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          className="rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-light"
         >
           Aplicar filtros
         </button>
