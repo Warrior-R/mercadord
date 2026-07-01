@@ -7,6 +7,8 @@
 node_modules/
 package-lock.json
 yarn.lock
+# …pero el lockfile de la app Next SÍ se versiona (CI usa `npm ci`, que lo exige).
+!web/package-lock.json
 
 # IDE
 .vscode/
