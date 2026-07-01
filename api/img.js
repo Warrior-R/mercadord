@@ -2,7 +2,8 @@
 //  MercadoRD — imagen del producto para vista previa social (/api/img?id=UUID)
 //  La foto se guarda como dataURL base64 en products.image_url; aquí se decodifica
 //  y se devuelve como imagen real para que WhatsApp/Facebook la muestren.
-//  Si es una URL http(s) se redirige; si no hay foto, cae al og-image por defecto.
+//  Si es una URL de Supabase Storage se redirige; cualquier otra URL externa o
+//  ausencia de foto cae al og-image por defecto (evita open redirect vía image_url).
 // ════════════════════════════════════════════════════════════════════
 const SB_URL = 'https://flsixfuzvbapwnfepmwr.supabase.co';
 const SB_KEY = 'sb_publishable_zf5bkvNdhlr1AJQNrd8vcA_aCIe2NDH';
@@ -29,6 +30,7 @@ module.exports = async (req, res) => {
     res.statusCode = 200;
     return res.end(buf);
   }
-  if (/^https?:\/\//.test(img)) { res.statusCode = 302; res.setHeader('Location', img); return res.end(); }
+  // Redirigir SOLO a almacenamiento propio (Supabase Storage); no a URLs externas arbitrarias.
+  if (/^https:\/\/[a-z0-9-]+\.supabase\.co\//i.test(img)) { res.statusCode = 302; res.setHeader('Location', img); return res.end(); }
   return fallback();
 };

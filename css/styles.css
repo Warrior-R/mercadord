@@ -280,3 +280,17 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .admin-btn:hover{background:#eef0f3}
 .admin-btn.admin-on{background:#fff7e6;border-color:#e0b34d;color:#8a5a00}
 .admin-btn.admin-del{color:var(--red,#dc2626)}
+
+
+/* ── A11y (WCAG 2.5.8): área táctil mínima en controles de glifo ── */
+.eye { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; }
+.social-btn { min-width: 24px; min-height: 24px; }
+.carousel-dot { min-width: 24px; min-height: 24px; }
+
+
+/* ── Estado vacío del catálogo (bienvenida de marca) ── */
+.empty-hero { text-align:center; padding:56px 24px; max-width:560px; margin:0 auto; }
+.empty-hero-emoji { font-size:58px; margin-bottom:12px; }
+.empty-hero h2 { font-size:22px; font-weight:700; color:var(--text); margin-bottom:10px; }
+.empty-hero p { font-size:15px; color:var(--text2); line-height:1.55; margin-bottom:22px; }
+.empty-hero-cta { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }

@@ -4,7 +4,6 @@
 // ═══════════════════════════════════════════════════
 
 // ─── Estado (restaurado desde localStorage) ───
-let cart  = MRD.get(K.CART, []);
 let favs  = new Set(MRD.get(K.FAVS, []));
 let pmax  = 200000;
 let acat  = 'all';
@@ -15,6 +14,20 @@ let adBanners = [];   // banners de patrocinadores activos (declarado arriba: do
 let _routing = false, _lastRoute = null, _booting = true, _pendingProduct = null;
 const VIEW_TO_SLUG = { home:'', auctions:'subastas', sell:'vender', account:'cuenta', favs:'favoritos', myads:'mis-anuncios', sales:'mis-ventas', orders:'mis-compras', messages:'mensajes', addresses:'direcciones', settings:'configuracion', notifs:'notificaciones', security:'seguridad', admin:'publicidad', seller:'vendedor' };
 const SLUG_TO_VIEW = Object.fromEntries(Object.entries(VIEW_TO_SLUG).map(([v, s]) => [s, v]));
+// Categorías con URL propia (/categoria/<slug>) + etiqueta visible
+const CAT_TO_SLUG = { electronics:'electronica', vehicles:'vehiculos', fashion:'moda', home2:'hogar', sports:'deportes', services:'servicios', agro:'agropecuario' };
+const SLUG_TO_CAT = Object.fromEntries(Object.entries(CAT_TO_SLUG).map(([c, s]) => [s, c]));
+const CAT_LABELS  = { electronics:'Electrónica', vehicles:'Vehículos', fashion:'Moda', home2:'Hogar', sports:'Deportes', services:'Servicios', agro:'Agropecuario' };
+// Vistas que requieren sesión: al deep-linkearlas se enrutan por requireAuth (no showView directo)
+const GATED = new Set(['account','orders','sales','myads','messages','addresses','settings','notifs','security','sell','seller','admin']);
+// Título del documento por sección (SEO + orientación del usuario)
+const SECTION_TITLES = {
+  auctions:'Subastas en vivo — MercadoRD', sell:'Publicar anuncio — MercadoRD', account:'Mi cuenta — MercadoRD',
+  favs:'Mis favoritos — MercadoRD', messages:'Mensajes — MercadoRD', addresses:'Mis direcciones — MercadoRD',
+  settings:'Configuración — MercadoRD', notifs:'Notificaciones — MercadoRD', security:'Seguridad — MercadoRD',
+  orders:'Mis compras — MercadoRD', sales:'Mis ventas — MercadoRD', myads:'Mis anuncios — MercadoRD',
+  admin:'Publicidad — MercadoRD', seller:'Perfil del vendedor — MercadoRD'
+};
 let sortMode = 'relevance';
 let fconds = new Set();   // filtro condición (vacío = todas)
 let flocs  = new Set();   // filtro ubicación (vacío = todas)
@@ -54,7 +67,6 @@ let userState = MRD.get(K.USERSTATE, {
   verificationStatus: 'none' // 'none' | 'pending' | 'verified' | 'rejected'
 });
 
-function saveCart()      { MRD.set(K.CART, cart); }
 function saveFavs()      { MRD.set(K.FAVS, [...favs]); }
 function saveOrders()    { MRD.set(K.ORDERS, orders); }
 function saveUserState() { MRD.set(K.USERSTATE, userState); }
@@ -211,6 +223,7 @@ function setNav(el, cat) {
   const idx = cats.indexOf(cat);
   catScats().forEach((x, i) => x.classList.toggle('active', i === idx));
   doRender();
+  if (!_routing) pushRoute(cat === 'all' ? '' : 'categoria/' + (CAT_TO_SLUG[cat] || cat));
 }
 
 function setTab(el) {
@@ -225,9 +238,16 @@ function setTab(el) {
 }
 
 // ─── Filtros ───
+let _searchTimer = null;
 function filterProducts() {
   stxt = document.getElementById('searchInput').value;
-  showHomeListing();
+  // Debounce: no reconstruir el grid entero en cada tecla (evita jank con muchos anuncios)
+  if (_searchTimer) clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    showHomeListing();
+    // Búsqueda como URL compartible sin llenar el historial en cada tecla (replaceState)
+    if (!_routing) replaceRoute(stxt.trim() ? 'buscar?q=' + encodeURIComponent(stxt.trim()) : '');
+  }, 180);
 }
 
 function filterCat(cat, el) {
@@ -235,6 +255,21 @@ function filterCat(cat, el) {
   catScats().forEach(x => x.classList.remove('active'));
   el.classList.add('active');
   showHomeListing();
+  if (!_routing) pushRoute(cat === 'all' ? '' : 'categoria/' + (CAT_TO_SLUG[cat] || cat));
+}
+
+// Aplica una categoría desde el router (deep-link/back), SIN empujar ruta
+function applyCat(cat) {
+  cview = 'home'; acat = cat; stxt = '';
+  const si = document.getElementById('searchInput'); if (si) si.value = '';
+  const hb = document.getElementById('heroBanner'); if (hb) hb.style.display = '';
+  restoreHome();
+  const cats = ['all','electronics','vehicles','fashion','home2','sports','services','agro'];
+  const idx = cats.indexOf(cat);
+  catScats().forEach((x, i) => x.classList.toggle('active', i === idx));
+  document.querySelectorAll('.nav-item').forEach((x, i) => x.classList.toggle('active', i === idx));
+  document.title = CAT_LABELS[cat] ? CAT_LABELS[cat] + ' — MercadoRD' : 'MercadoRD';
+  doRender();
 }
 
 function filterCond(c, el) {
@@ -295,7 +330,22 @@ function doRender() {
 
   const topBanner = (typeof bannerHTML === 'function') ? bannerHTML('top') : '';
   if (!fp.length) {
-    area.innerHTML = topBanner + '<div class="no-results"><div>🔍</div><p>No se encontraron productos.</p></div>';
+    const noFilters = !stxt && acat === 'all' && !fconds.size && !flocs.size && pmax >= 200000;
+    if (noFilters) {
+      // Catálogo global vacío: bienvenida de marca + CTAs (no un "búsqueda fallida")
+      area.innerHTML = topBanner + `
+        <div class="empty-hero">
+          <div class="empty-hero-emoji">🛍️</div>
+          <h2>Sé de los primeros en vender en MercadoRD</h2>
+          <p>Aún no hay anuncios publicados. Publica el tuyo <strong>gratis</strong> en minutos y llega a compradores de las 32 provincias.</p>
+          <div class="empty-hero-cta">
+            <button class="submit-btn" style="width:auto;padding:13px 26px" onclick="requireAuth('sell')">Publicar anuncio gratis</button>
+            <button class="submit-btn" style="width:auto;padding:13px 26px;background:var(--primary)" onclick="showView('auctions')">Ver subastas</button>
+          </div>
+        </div>`;
+    } else {
+      area.innerHTML = topBanner + '<div class="no-results"><div>🔍</div><p>No se encontraron productos con esos filtros.</p><button class="submit-btn" style="width:auto;padding:11px 22px;margin-top:12px" onclick="goHome()">Limpiar filtros</button></div>';
+    }
     return;
   }
 
@@ -317,7 +367,7 @@ function doRender() {
               : (p.badge === 'new'  ? '<div class="badge badge-new">NUEVO</div>'
                : p.badge === 'hot'  ? '<div class="badge badge-hot">🔥 HOT</div>'
                : p.badge === 'deal' ? '<div class="badge badge-deal">OFERTA</div>' : '')}
-            <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)" role="button" aria-label="Añadir a favoritos">
+            <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)" role="button" aria-pressed="${favs.has(p.id)}" aria-label="${favs.has(p.id) ? 'Quitar de favoritos' : 'Añadir a favoritos'}">
               ${favs.has(p.id) ? '❤️' : '♡'}
             </div>
             ${prodImg(p)}
@@ -339,11 +389,16 @@ function doRender() {
 }
 
 // ─── Detalle de producto ───
+// Slug legible para las URLs de producto (tildes/ñ fuera); el UUID va al final.
+function slugify(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'anuncio';
+}
 function showDetail(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
   cview = 'detail';
-  if (!_routing) pushRoute('producto/' + (p.sbId || id));
+  if (!_routing) pushRoute('producto/' + slugify(p.title) + '-' + (p.sbId || id));
   document.title = `${p.title} — MercadoRD`;
   const mt = document.getElementById('mainTabs');
   if (mt) mt.style.display = 'none';
@@ -513,6 +568,7 @@ function showView(v) {
     goHome();
     return;   // goHome ya empuja su propia ruta
   }
+  const _st = SECTION_TITLES[cview]; if (_st) document.title = _st;
   if (!_routing) pushRoute(VIEW_TO_SLUG.hasOwnProperty(cview) ? VIEW_TO_SLUG[cview] : cview);
 }
 
@@ -751,86 +807,6 @@ async function tryBuyNow(id) {
   contactSellerWhatsApp(a, true);
 }
 
-// ══════════════════════════════════════════════════
-// MEJOR OFERTA (negociación estilo eBay "Best Offer")
-// ══════════════════════════════════════════════════
-let offerProdId = null;
-
-function tryOffer(id) {
-  if (!user) {
-    openAuth('login');
-    showAlert('info', 'Inicia sesión para hacer una oferta al vendedor.');
-    return;
-  }
-  const p = products.find(x => x.id === id);
-  if (p?.mine) { showToast('No puedes ofertar en tu propio anuncio'); return; }
-  openOffer(id);
-}
-
-function openOffer(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  offerProdId = id;
-  document.getElementById('offerItemTitle').textContent = p.title;
-  document.getElementById('offerBody').innerHTML = `
-    <div style="background:#f8f9fc;border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px">
-      <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Precio publicado</span><strong>${fmt(p.price)}</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Vendedor</span><strong>${esc(p.seller)}</strong></div>
-    </div>
-    <div class="fg"><label>Tu oferta (RD$)</label><input type="number" id="offerAmount" placeholder="0" min="1"><div class="ferr" id="offerErr"></div></div>
-    <button class="auth-btn btn-pri" onclick="sendOffer()">Enviar oferta 💰</button>
-    <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:10px">El vendedor puede aceptar, rechazar o contraofertar.</p>`;
-  document.getElementById('offerOverlay').style.display = 'flex';
-}
-
-function closeOffer() { document.getElementById('offerOverlay').style.display = 'none'; }
-
-function sendOffer() {
-  const p = products.find(x => x.id === offerProdId);
-  if (!p) return;
-  const amt = parseFloat(document.getElementById('offerAmount').value);
-  if (!Number.isFinite(amt) || amt <= 0) { fe('offerErr', 'Ingresa una oferta válida.'); return; }
-  if (amt > p.price * 1.5) { fe('offerErr', 'La oferta no puede superar 1.5× el precio publicado.'); return; }
-  const ratio = amt / p.price;
-  const body  = document.getElementById('offerBody');
-  // Demo: el "vendedor" responde según qué tan cerca esté la oferta del precio
-  if (ratio >= 0.9) {
-    addOfferToCart(p, Math.round(amt));
-    body.innerHTML = `
-      <div class="vc"><div class="vc-icon">🎉</div><div class="vc-title">¡Oferta aceptada!</div>
-      <div class="vc-desc"><strong>${esc(p.seller)}</strong> aceptó tu oferta de <strong>${fmt(amt)}</strong>. El producto ya está en tu carrito con el precio negociado.</div></div>
-      <button class="auth-btn btn-pri" onclick="closeOffer()">Ir al checkout →</button>
-      <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="closeOffer()">Seguir comprando</button>`;
-  } else if (ratio >= 0.7) {
-    const counter = Math.round(p.price * 0.95);
-    body.innerHTML = `
-      <div class="vc"><div class="vc-icon">🤝</div><div class="vc-title">Contraoferta del vendedor</div>
-      <div class="vc-desc"><strong>${esc(p.seller)}</strong> no acepta ${fmt(amt)}, pero te ofrece el artículo por <strong>${fmt(counter)}</strong>.</div></div>
-      <button class="auth-btn btn-pri" onclick="acceptCounter(${counter})">Aceptar ${fmt(counter)} ✓</button>
-      <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="openOffer(${p.id})">Hacer otra oferta</button>`;
-  } else {
-    body.innerHTML = `
-      <div class="vc"><div class="vc-icon">😕</div><div class="vc-title">Oferta rechazada</div>
-      <div class="vc-desc"><strong>${esc(p.seller)}</strong> rechazó tu oferta de ${fmt(amt)} por estar muy por debajo del precio publicado.</div></div>
-      <button class="auth-btn btn-pri" onclick="openOffer(${p.id})">Intentar otra oferta</button>
-      <button class="auth-btn" style="background:#f0f3f8;color:var(--text2);margin-top:10px" onclick="closeOffer()">Cerrar</button>`;
-  }
-}
-
-function acceptCounter(price) {
-  const p = products.find(x => x.id === offerProdId);
-  if (!p) return;
-  addOfferToCart(p, price);
-  closeOffer();
-  showToast(`🤝 Trato cerrado: ${fmt(price)} — ya está en tu carrito`);
-}
-
-function addOfferToCart(p, price) {
-  cart = cart.filter(c => c.id !== p.id);
-  cart.push({ id: p.id, sbId: p.sbId || null, title: p.title + ' (oferta aceptada)', price, icon: p.icon, img: p.img || null, qty: 1 });
-  saveCart();
-  updateCartBadge();
-}
 
 // ══════════════════════════════════════════════════
 // FAVORITOS (watchlist estilo eBay)
@@ -848,7 +824,7 @@ function renderFavs() {
           ${list.map(p => `
           <div class="product-card" onclick="showDetail(${p.id})">
             <div class="product-img">
-              <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this);renderFavs()" role="button" aria-label="Quitar de favoritos">❤️</div>
+              <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this);renderFavs()" role="button" aria-pressed="true" aria-label="Quitar de favoritos">❤️</div>
               ${prodImg(p)}
             </div>
             <div class="product-info">
@@ -1045,6 +1021,25 @@ async function handleSellPhoto(input) {
   showToast('Foto cargada ✓');
 }
 
+// Sube la foto (dataURL) a Supabase Storage y devuelve su URL pública. Si ya es
+// una URL http la deja igual; si no hay sesión o falla, cae al base64 (modo demo).
+async function uploadProductImage(dataUrl) {
+  if (!dataUrl) return null;
+  if (/^https?:\/\//i.test(dataUrl)) return dataUrl;            // ya es una URL (edición)
+  if (!/^data:/i.test(dataUrl)) return dataUrl;
+  if (typeof sb === 'undefined' || !sb || !(user && user.id)) return dataUrl; // demo: sin Storage
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    const rnd = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+    const path = user.id + '/' + rnd + '.jpg';
+    const { error } = await sb.storage.from('product-images')
+      .upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: true });
+    if (error) throw error;
+    const { data } = sb.storage.from('product-images').getPublicUrl(path);
+    return (data && data.publicUrl) || dataUrl;
+  } catch (e) { console.warn('Storage upload falló, uso base64:', e.message || e); return dataUrl; }
+}
+
 function publishProduct() {
   if (!userState.verified) {
     showToast('🪪 Necesitas identidad verificada para publicar');
@@ -1118,9 +1113,10 @@ function publishProduct() {
     if (ex && ex._db && typeof sb !== 'undefined' && sb && user?.id) {
       (async () => {
         try {
+          const imgUrl = await uploadProductImage(sellImgData);
           const { error } = await sb.from('products').update({
             title, description: desc, price, category: cat, condition: cond,
-            location: loc, image_url: sellImgData || ex.img || null
+            location: loc, image_url: imgUrl || ex.img || null
           }).eq('id', ex.sbId);
           if (error) throw error;
           await sb.from('seller_contacts').upsert(
@@ -1149,9 +1145,10 @@ function publishProduct() {
   if (typeof sb !== 'undefined' && sb && user?.id) {
     (async () => {
       try {
+        const imgUrl = await uploadProductImage(sellImgData);
         const { data: ins, error } = await sb.from('products').insert({
           user_id: user.id, seller_name: sellerName, title, description: desc,
-          price, category: cat, condition: cond, location: loc, image_url: sellImgData || null
+          price, category: cat, condition: cond, location: loc, image_url: imgUrl || null
         }).select('id').single();
         if (error) throw error;
         // Guardar el WhatsApp del vendedor en tabla protegida (solo verificados lo leen)
@@ -1249,237 +1246,6 @@ function renderMyAds() {
         </div>`).join('')}`;
 }
 
-// ══════════════════════════════════════════════════
-// CHECKOUT (funcional)
-// ══════════════════════════════════════════════════
-function renderCheckout() {
-  if (!cart.length) {
-    showToast('Tu carrito está vacío');
-    goHome();
-    return;
-  }
-  const sub   = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const itbis = Math.round(sub * 0.18);
-  const total = sub + 350 + itbis;
-
-  // Prellenar con la dirección predeterminada / perfil del usuario
-  const da = (typeof defaultAddress === 'function') ? defaultAddress() : null;
-  const pf = (typeof getProfile === 'function') ? getProfile() : {};
-  const vName  = da?.name  || pf.name || user?.user_metadata?.full_name || '';
-  const vPhone = da?.phone || pf.phone || '';
-  const vAddr  = da?.addr  || '';
-  const selProv = da?.prov || pf.province || 'Santo Domingo';
-  const provs = ['Santo Domingo','Distrito Nacional','Santiago','Puerto Plata','La Romana','La Altagracia','San Cristóbal','San Pedro de Macorís','La Vega','Otra'];
-
-  document.getElementById('contentArea').innerHTML = `
-    <button class="back-btn" onclick="goHome()">← Seguir comprando</button>
-    <div class="sell-form">
-      <h2 style="font-size:20px;font-weight:700;margin-bottom:18px">💳 Finalizar compra</h2>
-
-      <div style="background:#f8f9fc;border-radius:8px;padding:14px;margin-bottom:18px">
-        ${cart.map(c => `
-          <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span>${esc(c.title.slice(0, 38))}${c.title.length > 38 ? '…' : ''} × ${c.qty}</span>
-            <strong>${fmt(c.price * c.qty)}</strong>
-          </div>`).join('')}
-        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span>Envío</span><span>RD$350</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span>ITBIS (18%)</span><span>${fmt(itbis)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--primary);padding-top:8px;border-top:1px solid var(--border)"><span>Total</span><span>${fmt(total)}</span></div>
-      </div>
-
-      <form id="checkoutForm" onsubmit="event.preventDefault();confirmOrder()">
-        <h3 class="co-sec">📍 Dirección de entrega</h3>
-        <div class="form-grid">
-          <div class="fg2"><label for="coName">Nombre completo *</label><input type="text" id="coName" value="${esc(vName)}" autocomplete="name" required></div>
-          <div class="fg2"><label for="coPhone">Teléfono *</label><input type="tel" id="coPhone" value="${esc(vPhone)}" placeholder="809-000-0000" autocomplete="tel" required></div>
-          <div class="fg2" style="grid-column:1/-1"><label for="coAddr">Dirección de entrega *</label><input type="text" id="coAddr" value="${esc(vAddr)}" placeholder="Calle, número, sector" autocomplete="street-address" required></div>
-          <div class="fg2"><label for="coProv">Provincia *</label>
-            <select id="coProv">${provOptions(selProv, false)}</select>
-          </div>
-        </div>
-        <label class="co-check"><input type="checkbox" id="coSaveAddr"> Guardar esta dirección en mi libreta</label>
-
-        <h3 class="co-sec">💳 Método de pago</h3>
-        <div class="pay-methods">
-          <label class="pay-opt"><input type="radio" name="payMethod" value="card" checked onchange="onPayMethod()"><span>💳 Tarjeta de crédito o débito</span></label>
-          <label class="pay-opt"><input type="radio" name="payMethod" value="cash" onchange="onPayMethod()"><span>💵 Efectivo contra entrega</span></label>
-        </div>
-
-        <div id="cardFields">
-          <div class="fg2" style="margin-bottom:12px"><label for="ccNum">Número de tarjeta *</label>
-            <input type="text" id="ccNum" inputmode="numeric" placeholder="0000 0000 0000 0000" maxlength="23" oninput="fmtCardInput(this)" autocomplete="cc-number">
-            <div class="ferr" id="ccNumE"></div>
-          </div>
-          <div class="form-grid">
-            <div class="fg2"><label for="ccExp">Vencimiento *</label><input type="text" id="ccExp" inputmode="numeric" placeholder="MM/AA" maxlength="5" oninput="fmtExpiryInput(this)" autocomplete="cc-exp"><div class="ferr" id="ccExpE"></div></div>
-            <div class="fg2"><label for="ccCvv">CVV *</label><input type="password" id="ccCvv" inputmode="numeric" placeholder="123" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,'')" autocomplete="cc-csc"><div class="ferr" id="ccCvvE"></div></div>
-            <div class="fg2" style="grid-column:1/-1"><label for="ccName">Titular de la tarjeta *</label><input type="text" id="ccName" value="${esc(vName)}" placeholder="Como aparece en la tarjeta" autocomplete="cc-name"></div>
-          </div>
-          <div class="cc-brands">🔒 Aceptamos <strong id="ccBrand">Visa · Mastercard · Amex</strong> — pago cifrado SSL 256-bit</div>
-        </div>
-        <div id="cashNote" class="verification-info-box" style="display:none;margin:14px 0">
-          💵 Pagarás en efectivo al recibir tu pedido. Disponible en zonas con cobertura de mensajería.
-        </div>
-
-        <button type="submit" class="submit-btn" id="payBtn">🔒 Pagar ${fmt(total)}</button>
-        <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:10px">Tus datos viajan cifrados. MercadoRD nunca guarda el número completo de tu tarjeta ni tu CVV.</p>
-      </form>
-    </div>`;
-  document.getElementById('cartOverlay').style.display = 'none';
-}
-
-// ─── Utilidades de pago con tarjeta (validación Luhn + marca) ───
-function cardBrand(num) {
-  num = String(num || '').replace(/\D/g, '');
-  if (/^4/.test(num)) return 'Visa';
-  if (/^(5[1-5]|2[2-7])/.test(num)) return 'Mastercard';
-  if (/^3[47]/.test(num)) return 'American Express';
-  if (/^(6011|65|64[4-9])/.test(num)) return 'Discover';
-  return 'Tarjeta';
-}
-function luhnValid(num) {
-  num = String(num || '').replace(/\D/g, '');
-  if (num.length < 13 || num.length > 19) return false;
-  let sum = 0, alt = false;
-  for (let i = num.length - 1; i >= 0; i--) {
-    let d = parseInt(num[i], 10);
-    if (alt) { d *= 2; if (d > 9) d -= 9; }
-    sum += d; alt = !alt;
-  }
-  return sum % 10 === 0;
-}
-function fmtCardInput(el) {
-  const v = el.value.replace(/\D/g, '').slice(0, 19);
-  el.value = v.replace(/(.{4})/g, '$1 ').trim();
-  const b = document.getElementById('ccBrand');
-  if (b) b.textContent = v.length >= 2 ? cardBrand(v) : 'Visa · Mastercard · Amex';
-}
-function fmtExpiryInput(el) {
-  let v = el.value.replace(/\D/g, '').slice(0, 4);
-  if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
-  el.value = v;
-}
-function validExpiry(exp) {
-  const m = /^(\d{2})\/(\d{2})$/.exec(exp || '');
-  if (!m) return false;
-  const mm = parseInt(m[1], 10), yy = 2000 + parseInt(m[2], 10);
-  if (mm < 1 || mm > 12) return false;
-  return new Date(yy, mm, 1) > new Date();   // primer día tras el mes de vencimiento
-}
-function onPayMethod() {
-  const m = document.querySelector('input[name="payMethod"]:checked')?.value || 'card';
-  document.getElementById('cardFields').style.display = m === 'card' ? '' : 'none';
-  document.getElementById('cashNote').style.display   = m === 'cash' ? '' : 'none';
-}
-
-async function confirmOrder() {
-  const name  = document.getElementById('coName').value.trim();
-  const phone = document.getElementById('coPhone').value.trim();
-  const addr  = document.getElementById('coAddr').value.trim();
-  const prov  = document.getElementById('coProv').value;
-  if (name.length < 3 || phone.length < 7 || addr.length < 5) {
-    showToast('Completa todos los campos de entrega');
-    return;
-  }
-
-  const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'card';
-  let card = null;
-  if (method === 'card') {
-    ['ccNumE', 'ccExpE', 'ccCvvE'].forEach(id => fe(id, ''));
-    const num    = (document.getElementById('ccNum').value || '').replace(/\D/g, '');
-    const exp    = document.getElementById('ccExp').value.trim();
-    const cvv    = (document.getElementById('ccCvv').value || '').replace(/\D/g, '');
-    const holder = document.getElementById('ccName').value.trim();
-    let ok = true;
-    if (!luhnValid(num))     { fe('ccNumE', 'Número de tarjeta no válido'); ok = false; }
-    if (!validExpiry(exp))   { fe('ccExpE', 'Vencimiento no válido'); ok = false; }
-    if (cvv.length < 3)      { fe('ccCvvE', 'CVV no válido'); ok = false; }
-    if (holder.length < 3)   { showToast('Ingresa el titular de la tarjeta'); ok = false; }
-    if (!ok) return;
-    card = { brand: cardBrand(num), last4: num.slice(-4) };
-  }
-
-  // Guardar dirección en la libreta si se marcó
-  if (document.getElementById('coSaveAddr')?.checked && typeof addAddress === 'function') {
-    addAddress({ label: 'Entrega', name, phone, addr, prov, def: getAddresses().length === 0 });
-  }
-
-  const sub   = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const itbis = Math.round(sub * 0.18);
-  const total = sub + 350 + itbis;
-
-  // Bloquear el botón antes de crear el pedido para evitar duplicados por doble clic (ambos métodos)
-  const payBtn = document.getElementById('payBtn');
-  if (payBtn) payBtn.disabled = true;
-
-  // Procesamiento de pago con tarjeta (simulado de forma segura — sin pasarela real)
-  if (method === 'card') {
-    if (payBtn) payBtn.innerHTML = '<span class="spin"></span> Procesando pago seguro…';
-    await new Promise(r => setTimeout(r, 1400));
-  }
-
-  // Si hay sesión, el SERVIDOR recalcula precios y totales (create_order, anti-manipulación)
-  // a partir de la tabla products, crea las líneas con vendedor y devuelve el código canónico.
-  // Sin sesión / modo demo: pedido local con los totales calculados en el cliente.
-  const payloadItems = cart.map(c => ({ sb: c.sbId || null, t: c.title, q: c.qty, p: c.price }));
-  let code = 'MRD-' + Date.now().toString(36).toUpperCase();
-  let oSub = sub, oShip = 350, oItbis = itbis, oTotal = total;
-  let oStatus = method === 'card' ? 'pagado' : 'pendiente';
-  let serverOk = false;
-
-  if (typeof sb !== 'undefined' && sb && user?.id) {
-    try {
-      const { data, error } = await sb.rpc('create_order', {
-        p_items: payloadItems, p_buyer: { name, phone, addr, prov }, p_payment: method
-      });
-      if (error) throw error;
-      if (data && data.code) {
-        code = data.code; oSub = Number(data.subtotal); oShip = Number(data.shipping);
-        oItbis = Number(data.itbis); oTotal = Number(data.total); oStatus = data.status || oStatus;
-        serverOk = true;
-      }
-    } catch (e) { console.warn('create_order falló, usando pedido local:', e.message || e); }
-  }
-
-  const order = {
-    id: code,
-    items: cart.map(c => ({ id: c.id, title: c.title, qty: c.qty, price: c.price })),
-    subtotal: oSub, shipping: oShip, itbis: oItbis, total: oTotal,
-    buyer: { name, phone, addr, prov },
-    payment: method,
-    card,
-    status: oStatus,
-    date: new Date().toISOString()
-  };
-  orders.push(order);
-  saveOrders();
-
-  // (Seguridad) Se eliminó el respaldo de inserción directa a `orders`: confiaba en los
-  // totales calculados en el cliente (subtotal/itbis/total). El pedido server-side se crea
-  // únicamente vía la RPC create_order(), que recalcula los precios desde la tabla products.
-
-  cart = [];
-  saveCart();
-  updateCartBadge();
-
-  const payLine = method === 'card'
-    ? `✅ Pago aprobado con <strong>${card.brand} •••• ${card.last4}</strong>.`
-    : `💵 Pagarás <strong>${fmt(order.total)}</strong> en efectivo al recibir.`;
-
-  document.getElementById('contentArea').innerHTML = `
-    <div class="sell-form" style="text-align:center;padding:50px 30px">
-      <div style="font-size:60px;margin-bottom:14px">✅</div>
-      <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">¡Pedido confirmado!</h2>
-      <p style="font-size:14px;color:var(--text2);margin-bottom:6px">Número de pedido: <strong style="color:var(--primary)">${order.id}</strong></p>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:6px">${payLine}</p>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:24px">Total: <strong>${fmt(order.total)}</strong> · Te contactaremos al ${phone} para coordinar la entrega.</p>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button class="submit-btn" style="width:auto;padding:13px 26px" onclick="showView('orders')">Ver mis compras</button>
-        <button class="submit-btn" style="width:auto;padding:13px 26px;background:var(--primary)" onclick="goHome()">Seguir comprando</button>
-      </div>
-    </div>`;
-  showToast('Pedido ' + order.id + ' confirmado 🎉');
-}
 
 function renderOrders() {
   const statusLabel = { pagado:'💳 Pagado', pendiente:'⏳ Pendiente', enviado:'🚚 Enviado', entregado:'✅ Entregado' };
@@ -1595,99 +1361,25 @@ async function deleteMyAccount() {
   location.reload();
 }
 
-// ══════════════════════════════════════════════════
-// CARRITO (persistente)
-// ══════════════════════════════════════════════════
-function addCart(id, silent) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  const ex = cart.find(c => c.id === id);
-  if (ex) ex.qty++;
-  else cart.push({ id: p.id, sbId: p.sbId || null, title: p.title, price: p.price, icon: p.icon, img: p.img || null, qty: 1 });
-  saveCart();
-  updateCartBadge();
-  if (!silent) showToast(`"${p.title.slice(0, 26)}..." añadido 🛒`);
-}
-
-function updateCartBadge() {
-  const el = document.getElementById('cartCount');
-  if (el) el.textContent = cart.reduce((s, c) => s + c.qty, 0);
-}
 
 // Limpia datos locales del usuario anterior al cerrar sesión (claves globales por
 // dispositivo), para que no los herede quien inicie sesión después en el mismo
 // navegador. Llamado desde doLogout() en auth.js.
 function clearUserData() {
   try {
-    cart = [];
     favs = new Set();
-    MRD.del(K.CART); MRD.del(K.FAVS);
+    MRD.del(K.FAVS);
     MRD.del(K.ADDRESSES); MRD.del(K.PROFILE); MRD.del(K.NOTIFPREFS); MRD.del(K.MESSAGES);
-    updateCartBadge();
     if (typeof cview !== 'undefined' && cview === 'home' && typeof doRender === 'function') doRender();
   } catch (e) { /* limpieza best-effort */ }
 }
 
-function renderCart() {
-  const ie = document.getElementById('cartItems');
-  const te = document.getElementById('cartTotal');
-  if (!cart.length) {
-    ie.innerHTML = '<div style="text-align:center;padding:50px 0;color:var(--text2)"><div style="font-size:48px">🛒</div><p style="margin-top:10px">Carrito vacío</p></div>';
-    te.innerHTML = '';
-    return;
-  }
-  ie.innerHTML = cart.map(c => `
-    <div class="cart-item">
-      <div class="cart-item-img" style="overflow:hidden">${c.img ? `<img src="${esc(c.img)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover">` : esc(c.icon)}</div>
-      <div class="cart-item-info">
-        <div class="cart-item-title">${esc(c.title)}</div>
-        <div style="font-size:11px;color:var(--text2)">${fmt(c.price)} c/u</div>
-        <div class="cart-qty">
-          <button class="qty-btn" onclick="chQty('${c.id}',-1)" aria-label="Restar una unidad">−</button>
-          <span class="qty-num">${c.qty}</span>
-          <button class="qty-btn" onclick="chQty('${c.id}',1)" aria-label="Sumar una unidad">+</button>
-          <span class="remove-item" role="button" tabindex="0" onclick="rmCart('${c.id}')" aria-label="Eliminar del carrito">✕</span>
-        </div>
-      </div>
-      <div class="cart-item-total">${fmt(c.price * c.qty)}</div>
-    </div>`).join('');
-
-  const sub   = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const itbis = Math.round(sub * 0.18);
-  te.innerHTML = `
-    <div class="cart-total-section">
-      <div class="total-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
-      <div class="total-row"><span>Envío</span><span>RD$350</span></div>
-      <div class="total-row"><span>ITBIS 18%</span><span>${fmt(itbis)}</span></div>
-      <div class="total-row final"><span>Total</span><span>${fmt(sub + 350 + itbis)}</span></div>
-      <button class="checkout-btn" onclick="toggleCart()">Proceder al pago →</button>
-      <div class="payment-icons">💳 Tarjeta &nbsp; 💵 Efectivo contra entrega &nbsp; 🔒 Pago seguro</div>
-    </div>`;
-}
-
-function chQty(id, d) {
-  const c = cart.find(x => String(x.id) === String(id));
-  if (!c) return;
-  c.qty += d;
-  if (c.qty <= 0) cart = cart.filter(x => String(x.id) !== String(id));
-  else if (c.qty > 99) { c.qty = 99; showToast('Máximo 99 unidades por artículo'); }
-  saveCart();
-  updateCartBadge();
-  renderCart();
-}
-function rmCart(id) { cart = cart.filter(x => String(x.id) !== String(id)); saveCart(); updateCartBadge(); renderCart(); }
-function toggleCart() {
-  const ov   = document.getElementById('cartOverlay');
-  const open = ov.style.display === 'none' || !ov.style.display;
-  ov.style.display = open ? 'flex' : 'none';
-  if (open) renderCart();
-}
-function closeCartOut(e) { if (e.target === document.getElementById('cartOverlay')) toggleCart(); }
 
 // ─── Favoritos (persistentes) ───
 function toggleFav(id, el) {
   if (favs.has(id)) { favs.delete(id); if (el) el.textContent = '♡';  showToast('Eliminado de favoritos'); }
   else              { favs.add(id);    if (el) el.textContent = '❤️'; showToast('Añadido a favoritos ❤️'); }
+  if (el) { const on = favs.has(id); el.setAttribute('aria-pressed', on ? 'true' : 'false'); el.setAttribute('aria-label', on ? 'Quitar de favoritos' : 'Añadir a favoritos'); }
   saveFavs();
 }
 
@@ -2058,6 +1750,8 @@ function ensureQRLib(cb) {
   if (window.QRCode) return cb(true);
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6/qrcode.min.js'; // pin a commit inmutable (no @master)
+  s.integrity = 'sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU';
+  s.crossOrigin = 'anonymous';
   s.onload = () => cb(true);
   s.onerror = () => cb(false);
   document.head.appendChild(s);
@@ -2445,12 +2139,10 @@ function openInfo(key) {
   if (!_routing) pushRoute('info/' + key);
 }
 
-// Cerrar modales de puja/oferta al hacer clic fuera
-['bidOverlay', 'offerOverlay'].forEach(id => {
-  document.getElementById(id).addEventListener('click', e => {
-    if (e.target.id !== id) return;
-    if (id === 'bidOverlay') closeBid(); else closeOffer();
-  });
+// Cerrar el modal de puja al hacer clic fuera
+const _bidOverlayEl = document.getElementById('bidOverlay');
+if (_bidOverlayEl) _bidOverlayEl.addEventListener('click', e => {
+  if (e.target.id === 'bidOverlay') closeBid();
 });
 
 // ─── Init ───
@@ -2458,7 +2150,6 @@ function openInfo(key) {
 // verificación: solo se muestra la pantalla de captura para el celular.
 if (!fvMobileMode()) {
   cview = 'home';
-  updateCartBadge();
   refreshHeader();
   doRender();
   renderCarousel();
@@ -2771,7 +2462,7 @@ function renderAuctionDetail(a) {
   const over = !left || a.status === 'ended' || a.status === 'sold';
   const uid = (typeof user !== 'undefined' && user) ? user.id : null;
   const iWon = over && uid && ((a.winner_id && a.winner_id === uid) || (a.high_bidder && a.high_bidder === uid));
-  const link = location.origin + location.pathname + '#subasta=' + a.id;
+  const link = location.origin + '/subasta/' + a.id;
   const badge = a.status === 'sold' ? '<span class="adt-badge sold">VENDIDA</span>'
               : over ? '<span class="adt-badge ended">FINALIZADA</span>'
               : '<span class="adt-badge live">EN VIVO</span>';
@@ -2861,11 +2552,21 @@ function pushRoute(path) {
   try { history.pushState(null, '', p); } catch (e) {}
   _lastRoute = location.pathname;
 }
+// Como pushRoute pero SIN crear entrada de historial (búsqueda incremental, filtros)
+function replaceRoute(path) {
+  if (_routing || _booting) return;
+  const p = '/' + (path || '');
+  try { history.replaceState(null, '', p); } catch (e) {}
+  _lastRoute = location.pathname;
+}
 // /producto/<uuid>: resolver el anuncio; si aún no cargó de la BD, dejarlo pendiente.
 function openProductRoute(key) {
-  const prod = products.find(p => p.sbId === key || String(p.id) === key);
+  // La URL puede ser slug-uuid o id pelado: quedarnos con el UUID final si existe.
+  const um = String(key).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  const k = um ? um[1] : key;
+  const prod = products.find(p => p.sbId === k || String(p.id) === k);
   if (prod) { _pendingProduct = null; showDetail(prod.id); }
-  else { _pendingProduct = key; goHome(); }
+  else { _pendingProduct = k; goHome(); }
 }
 function resolvePendingProduct() {
   if (!_pendingProduct) return;
@@ -2887,9 +2588,11 @@ function routeFromPath() {
     if (path === '/' || path === '') goHome();
     else if ((m = path.match(/^\/producto\/(.+?)\/?$/)))  openProductRoute(m[1]);
     else if ((m = path.match(/^\/subasta\/(.+?)\/?$/)))   openAuctionById(m[1]);
+    else if ((m = path.match(/^\/categoria\/(.+?)\/?$/)))  { const c = SLUG_TO_CAT[m[1]]; c ? applyCat(c) : goHome(); }
+    else if (path === '/buscar') { const q = new URLSearchParams(location.search).get('q') || ''; const si = document.getElementById('searchInput'); if (si) si.value = q; stxt = q; acat = 'all'; showHomeListing(); document.title = q ? ('Buscar: ' + q + ' — MercadoRD') : 'MercadoRD'; }
     else if ((m = path.match(/^\/legal\/(.+?)\/?$/)))     { const k = m[1]; (typeof legalContent !== 'undefined' && legalContent[k]) ? openLegal(k) : goHome(); }
     else if ((m = path.match(/^\/info\/(.+?)\/?$/)))      { const k = m[1]; (typeof infoContent !== 'undefined' && infoContent[k]) ? openInfo(k) : goHome(); }
-    else { const v = SLUG_TO_VIEW[path.replace(/^\//, '').replace(/\/$/, '')]; v ? showView(v) : goHome(); }
+    else { const v = SLUG_TO_VIEW[path.replace(/^\//, '').replace(/\/$/, '')]; if (!v) { goHome(); } else if (GATED.has(v)) { requireAuth(v); } else { showView(v); } }
   } catch (e) { console.warn('router', e); }
   finally { _routing = false; }
 }
@@ -3490,6 +3193,11 @@ function contactSellerById(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
   if (!user) { pendingContact = id; pending = 'messages'; openAuth('login'); showAlert('info', 'Inicia sesión para escribirle al vendedor.'); return; }
+  if (!userState.verified) {
+    showToast('🪪 Verifica tu identidad para contactar al vendedor');
+    openVerification('contact');
+    return;
+  }
   const t = threadFor(p.seller, p.title);
   cview = 'messages';
   document.getElementById('heroBanner').style.display = 'none';
@@ -3682,24 +3390,20 @@ function subscribeNewsletter() {
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' && e.keyCode !== 27) return;
   const isOpen = el => el && getComputedStyle(el).display !== 'none';
-  const offer = document.getElementById('offerOverlay');
   const bid   = document.getElementById('bidOverlay');
   const ver   = document.getElementById('verificationOverlay');
   const legal = document.getElementById('legalOverlay');
   const auth  = document.getElementById('authOverlay');
-  const cart  = document.getElementById('cartOverlay');
   const mfa   = document.getElementById('mfaEnrollOverlay');
   const cf    = document.getElementById('contactFormOverlay');
   const sub   = [...document.querySelectorAll('.subsection-overlay')].find(isOpen);
   if (isOpen(mfa) && typeof cancelMfaEnroll === 'function') return cancelMfaEnroll();
   if (isOpen(cf)  && typeof closeContactForm === 'function') return closeContactForm();
-  if (isOpen(offer)) return closeOffer();
   if (isOpen(bid))   return closeBid();
   if (isOpen(ver) && typeof closeVerification === 'function') return closeVerification();
   if (sub && typeof closeSubsection === 'function') return closeSubsection();
   if (isOpen(legal)) { legal.style.display = 'none'; return; }
   if (isOpen(auth) && typeof cancelAuth === 'function') return cancelAuth();
-  if (isOpen(cart) && typeof toggleCart === 'function') return toggleCart();
   const np = document.getElementById('notifPanel');
   if (isOpen(np)) { np.style.display = 'none'; }
 });
@@ -3741,7 +3445,7 @@ function a11yTagInteractive(root) {
 // Marcar diálogos para lectores de pantalla y hacer alcanzables por teclado los controles no nativos
 (function a11yEnhance() {
   [['authOverlay', 'Cuenta'], ['legalOverlay', 'Información'], ['verificationOverlay', 'Verificación de identidad'],
-   ['bidOverlay', 'Hacer una puja'], ['offerOverlay', 'Hacer una oferta'], ['cartOverlay', 'Carrito de compras'],
+   ['bidOverlay', 'Hacer una puja'],
    ['mfaEnrollOverlay', 'Activar verificación en dos pasos'], ['contactFormOverlay', 'Escríbenos']]
     .forEach(([id, label]) => {
       const el = document.getElementById(id);
@@ -3752,7 +3456,7 @@ function a11yTagInteractive(root) {
   });
   // Etiquetar lo presente al cargar + re-aplicar tras cada render (las tarjetas se inyectan después en estos contenedores)
   a11yTagInteractive(document);
-  ['contentArea', 'carouselContent', 'cartItems', 'notifList'].forEach(id => {
+  ['contentArea', 'carouselContent', 'notifList'].forEach(id => {
     const c = document.getElementById(id);
     if (c) new MutationObserver(() => a11yTagInteractive(c)).observe(c, { childList: true });
   });
@@ -3771,8 +3475,9 @@ function a11yTagInteractive(root) {
 // Al cerrar: restaura el foco al elemento que lo abrió. Centralizado vía
 // MutationObserver para no tener que tocar cada función open/close.
 (function modalFocusManager() {
-  const overlays = ['authOverlay', 'verificationOverlay', 'bidOverlay', 'offerOverlay', 'cartOverlay', 'legalOverlay', 'mfaEnrollOverlay', 'contactFormOverlay']
-    .map(id => document.getElementById(id)).filter(Boolean);
+  const overlays = ['authOverlay', 'verificationOverlay', 'bidOverlay', 'legalOverlay', 'mfaEnrollOverlay', 'contactFormOverlay']
+    .map(id => document.getElementById(id)).filter(Boolean)
+    .concat([...document.querySelectorAll('.subsection-overlay')]);   // subsecciones también atrapan foco
   if (!overlays.length) return;
   let lastFocus = null;
 
@@ -3785,11 +3490,20 @@ function a11yTagInteractive(root) {
     .filter(n => n.offsetWidth || n.offsetHeight || n.getClientRects().length);
   const openModal = () => overlays.find(isOpen) || null;
 
+  // Deja el fondo INERTE (no tabulable ni leído por lectores) mientras hay un modal abierto (WCAG 2.4.3 / 4.1.2)
+  const bgEls = () => [...document.querySelectorAll('header.header, #heroBanner, #mainContent, #siteFooter, .bottom-nav, .carousel-section')];
+  const setBgInert = (modalEl, on) => bgEls().forEach(el => {
+    if (on && modalEl && el.contains(modalEl)) return;   // no inertizar el contenedor del propio modal
+    if (on) { el.setAttribute('inert', ''); el.setAttribute('aria-hidden', 'true'); }
+    else { el.removeAttribute('inert'); el.removeAttribute('aria-hidden'); }
+  });
+
   overlays.forEach(el => {
     new MutationObserver(() => {
       const open = isOpen(el);
       if (open && !el._a11yOpen) {
         el._a11yOpen = true;
+        setBgInert(el, true);
         if (!el.contains(document.activeElement)) {
           lastFocus = document.activeElement;
           const f = focusables(el);
@@ -3797,6 +3511,7 @@ function a11yTagInteractive(root) {
         }
       } else if (!open && el._a11yOpen) {
         el._a11yOpen = false;
+        if (!openModal()) setBgInert(null, false);   // solo si no queda otro modal abierto
         if (lastFocus && typeof lastFocus.focus === 'function') { try { lastFocus.focus(); } catch (_) {} }
         lastFocus = null;
       }
@@ -3980,7 +3695,7 @@ function productCardHTML(p) {
         ${p.badge === 'new'  ? '<div class="badge badge-new">NUEVO</div>' : ''}
         ${p.badge === 'hot'  ? '<div class="badge badge-hot">🔥 HOT</div>' : ''}
         ${p.badge === 'deal' ? '<div class="badge badge-deal">OFERTA</div>' : ''}
-        <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)" role="button" aria-label="Añadir a favoritos">${favs.has(p.id) ? '❤️' : '♡'}</div>
+        <div class="fav-btn" onclick="event.stopPropagation();toggleFav(${p.id},this)" role="button" aria-pressed="${favs.has(p.id)}" aria-label="${favs.has(p.id) ? 'Quitar de favoritos' : 'Añadir a favoritos'}">${favs.has(p.id) ? '❤️' : '♡'}</div>
         ${prodImg(p)}
       </div>
       <div class="product-info">
