@@ -94,7 +94,10 @@ export default async function BuscarPage({ searchParams }: Props) {
 
       <div className="flex gap-6">
         <aside className="hidden w-60 shrink-0 md:block" aria-label="Filtros">
-          <FilterPanel filters={filters} />
+          <div className="sticky top-20 rounded-xl border border-line bg-white p-4">
+            <h2 className="mb-4 text-sm font-bold text-ink">Filtrar</h2>
+            <FilterPanel filters={filters} />
+          </div>
         </aside>
 
         <div className="min-w-0 flex-1">

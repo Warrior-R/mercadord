@@ -43,6 +43,8 @@ export async function searchProducts(
   if (f.sort === "price_asc") query = query.order("price", { ascending: true });
   else if (f.sort === "price_desc")
     query = query.order("price", { ascending: false });
+  else if (f.sort === "oldest")
+    query = query.order("created_at", { ascending: true });
   else query = query.order("created_at", { ascending: false });
 
   const { from, to } = rangeFor(page, pageSize);

@@ -10,7 +10,8 @@ export function conditionLabel(key: string | null | undefined): string {
 }
 
 export const SORTS = [
-  { value: "recent", label: "Más recientes" },
+  { value: "recent", label: "Publicación más nueva" },
+  { value: "oldest", label: "Publicación más antigua" },
   { value: "price_asc", label: "Precio: menor a mayor" },
   { value: "price_desc", label: "Precio: mayor a menor" },
 ] as const;
