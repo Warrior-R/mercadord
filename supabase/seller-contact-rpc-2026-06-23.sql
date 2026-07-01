@@ -35,6 +35,8 @@ $$;
 revoke all on function public.get_seller_contact(uuid, text) from public, anon;
 grant execute on function public.get_seller_contact(uuid, text) to authenticated;
 
--- ── PASO 3 (ejecutar SOLO después de desplegar el frontend que usa la RPC) ──
--- drop policy if exists sc_select_verified on public.seller_contacts;
--- revoke select on public.seller_contacts from authenticated;
+-- ── PASO 3 — APLICADO 2026-06-23 (tras desplegar el frontend que usa la RPC) ──
+-- Verificado: select directo a seller_contacts da 42501 (anon y authenticated);
+-- get_seller_contact sigue devolviendo el numero a usuarios verificados.
+drop policy if exists sc_select_verified on public.seller_contacts;
+revoke select on public.seller_contacts from authenticated;
