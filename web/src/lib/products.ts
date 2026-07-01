@@ -1,14 +1,31 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Product } from "@/lib/types";
 import type { SearchFilters } from "@/lib/filters";
+import {
+  DEFAULT_PAGE_SIZE,
+  rangeFor,
+  totalPages,
+  type Page,
+} from "@/lib/pagination";
 
 const COLUMNS =
   "id,user_id,title,description,price,old_price,category,condition,location,image_url,seller_name,rating,reviews,created_at";
 
-/** Búsqueda con texto libre + filtros (categoría, condición, precio, ubicación, orden). */
-export async function searchProducts(f: SearchFilters): Promise<Product[]> {
+// PostgREST devuelve este código cuando el offset pedido supera el total de
+// filas: no es un fallo real, solo "estás más allá de la última página".
+const RANGE_NOT_SATISFIABLE = "PGRST103";
+
+/**
+ * Búsqueda con texto libre + filtros, paginada. Devuelve items + total real
+ * (count exact) para poder pintar controles de página.
+ */
+export async function searchProducts(
+  f: SearchFilters,
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+): Promise<Page<Product>> {
   const supabase = await createClient();
-  let query = supabase.from("products").select(COLUMNS);
+  let query = supabase.from("products").select(COLUMNS, { count: "exact" });
 
   if (f.q) {
     // Sanea el término: las comas/paréntesis/% romperían la sintaxis de .or().
@@ -28,27 +45,44 @@ export async function searchProducts(f: SearchFilters): Promise<Product[]> {
     query = query.order("price", { ascending: false });
   else query = query.order("created_at", { ascending: false });
 
-  const { data, error } = await query.limit(60);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Product[];
+  const { from, to } = rangeFor(page, pageSize);
+  const { data, error, count } = await query.range(from, to);
+  if (error && error.code !== RANGE_NOT_SATISFIABLE) throw new Error(error.message);
+  const total = count ?? 0;
+  return {
+    items: error ? [] : ((data ?? []) as Product[]),
+    total,
+    page,
+    pageSize,
+    totalPages: totalPages(total, pageSize),
+  };
 }
 
-/** Lista productos, opcionalmente filtrados por categoría (key de la BD). */
+/** Lista productos paginados, opcionalmente filtrados por categoría (key de la BD). */
 export async function listProducts(
-  opts: { category?: string; limit?: number } = {},
-): Promise<Product[]> {
+  opts: { category?: string; page?: number; pageSize?: number } = {},
+): Promise<Page<Product>> {
+  const page = opts.page ?? 1;
+  const pageSize = opts.pageSize ?? DEFAULT_PAGE_SIZE;
   const supabase = await createClient();
   let query = supabase
     .from("products")
-    .select(COLUMNS)
+    .select(COLUMNS, { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (opts.category) query = query.eq("category", opts.category);
-  if (opts.limit) query = query.limit(opts.limit);
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Product[];
+  const { from, to } = rangeFor(page, pageSize);
+  const { data, error, count } = await query.range(from, to);
+  if (error && error.code !== RANGE_NOT_SATISFIABLE) throw new Error(error.message);
+  const total = count ?? 0;
+  return {
+    items: error ? [] : ((data ?? []) as Product[]),
+    total,
+    page,
+    pageSize,
+    totalPages: totalPages(total, pageSize),
+  };
 }
 
 /** Obtiene un producto por id, o null si no existe. */

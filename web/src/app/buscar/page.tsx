@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { parseFilters, hasActiveFilters } from "@/lib/filters";
 import { searchProducts } from "@/lib/products";
 import { listMyFavoriteIds } from "@/lib/favorites";
+import { parsePage } from "@/lib/pagination";
 import { ProductCard } from "@/components/product-card";
+import { Pagination } from "@/components/pagination";
 import { FilterPanel } from "@/components/filter-panel";
 import { FiltersDrawer } from "@/components/filters-drawer";
 import { SortSelect } from "@/components/sort-select";
@@ -23,10 +25,12 @@ type Props = {
 export default async function BuscarPage({ searchParams }: Props) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
-  const [products, favoriteIds] = await Promise.all([
-    searchProducts(filters),
+  const page = parsePage(sp.page);
+  const [result, favoriteIds] = await Promise.all([
+    searchProducts(filters, page),
     listMyFavoriteIds(),
   ]);
+  const products = result.items;
 
   const activeCount = [
     filters.category,
@@ -54,6 +58,17 @@ export default async function BuscarPage({ searchParams }: Props) {
   if (filters.maxPrice) qw.set("max", String(filters.maxPrice));
   if (filters.location) qw.set("loc", filters.location);
 
+  // Params a preservar en la paginación (todos los filtros activos + sort).
+  const pageParams: Record<string, string | undefined> = {
+    q: filters.q || undefined,
+    cat: filters.category || undefined,
+    cond: filters.condition || undefined,
+    min: filters.minPrice ? String(filters.minPrice) : undefined,
+    max: filters.maxPrice ? String(filters.maxPrice) : undefined,
+    loc: filters.location || undefined,
+    sort: filters.sort !== "recent" ? filters.sort : undefined,
+  };
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6">
       <div className="mb-5">
@@ -66,7 +81,7 @@ export default async function BuscarPage({ searchParams }: Props) {
             {filters.q ? `Resultados para “${filters.q}”` : "Todos los productos"}
           </h1>
           <p className="text-sm text-neutral-500">
-            {products.length} resultado{products.length === 1 ? "" : "s"}
+            {result.total} resultado{result.total === 1 ? "" : "s"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -93,17 +108,25 @@ export default async function BuscarPage({ searchParams }: Props) {
               </p>
             </div>
           ) : (
-            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {products.map((p) => (
-                <li key={p.id}>
-                  <ProductCard
-                    product={p}
-                    favorited={favoriteIds.has(p.id)}
-                    backTo="/buscar"
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {products.map((p) => (
+                  <li key={p.id}>
+                    <ProductCard
+                      product={p}
+                      favorited={favoriteIds.has(p.id)}
+                      backTo="/buscar"
+                    />
+                  </li>
+                ))}
+              </ul>
+              <Pagination
+                basePath="/buscar"
+                params={pageParams}
+                page={result.page}
+                totalPages={result.totalPages}
+              />
+            </>
           )}
         </div>
       </div>

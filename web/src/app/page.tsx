@@ -1,20 +1,40 @@
 import Link from "next/link";
 import { listProducts } from "@/lib/products";
-import { listFeaturedIds } from "@/lib/featured";
+import { listFeaturedProducts, listFeaturedIds } from "@/lib/featured";
 import { listMyFavoriteIds } from "@/lib/favorites";
 import type { Product } from "@/lib/types";
+import { parsePage, type Page } from "@/lib/pagination";
 import { ProductCard } from "@/components/product-card";
+import { Pagination } from "@/components/pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  let products: Product[] = [];
+const EMPTY_PAGE: Page<Product> = {
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 24,
+  totalPages: 1,
+};
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
+
+  let result: Page<Product> = EMPTY_PAGE;
   let loadError: string | null = null;
+  let featured: Product[] = [];
   let featuredIds = new Set<string>();
   let favoriteIds = new Set<string>();
   try {
-    [products, featuredIds, favoriteIds] = await Promise.all([
-      listProducts({ limit: 24 }),
+    [result, featured, featuredIds, favoriteIds] = await Promise.all([
+      listProducts({ page }),
+      // Los destacados sí se muestran completos (no dependen de la página).
+      listFeaturedProducts(),
       listFeaturedIds(),
       listMyFavoriteIds(),
     ]);
@@ -22,7 +42,7 @@ export default async function Home() {
     loadError = e instanceof Error ? e.message : "error desconocido";
   }
 
-  const featured = products.filter((p) => featuredIds.has(p.id));
+  const products = result.items;
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-5 sm:px-5">
@@ -60,7 +80,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {featured.length > 0 && (
+      {featured.length > 0 && page === 1 && (
         <section className="mb-8">
           <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-ink">
             <span aria-hidden>⭐</span> Anuncios destacados
@@ -100,17 +120,25 @@ export default async function Home() {
             </p>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {products.map((p) => (
-              <li key={p.id}>
-                <ProductCard
-                  product={p}
-                  featured={featuredIds.has(p.id)}
-                  favorited={favoriteIds.has(p.id)}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {products.map((p) => (
+                <li key={p.id}>
+                  <ProductCard
+                    product={p}
+                    featured={featuredIds.has(p.id)}
+                    favorited={favoriteIds.has(p.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+            <Pagination
+              basePath="/"
+              params={{}}
+              page={result.page}
+              totalPages={result.totalPages}
+            />
+          </>
         )}
       </section>
     </div>
