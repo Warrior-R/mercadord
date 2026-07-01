@@ -10,6 +10,7 @@ import { SITE_URL } from "@/lib/site";
 import { isProductFeatured } from "@/lib/featured";
 import { listMyFavoriteIds } from "@/lib/favorites";
 import { FavoriteButton } from "@/components/favorite-button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ContactSeller } from "@/components/contact-seller";
 import { OwnerControls } from "@/components/owner-controls";
 import { SellerReviews } from "@/components/seller-reviews";
@@ -88,19 +89,13 @@ export default async function ProductPage({ params, searchParams }: Params) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <nav aria-label="Ruta" className="mb-4 text-sm text-neutral-500">
-        <Link href="/" className="hover:underline">
-          Inicio
-        </Link>
-        {cat && (
-          <>
-            {" / "}
-            <Link href={`/categoria/${cat.slug}`} className="hover:underline">
-              {cat.name}
-            </Link>
-          </>
-        )}
-      </nav>
+      <Breadcrumbs
+        items={[
+          { name: "Inicio", href: "/" },
+          ...(cat ? [{ name: cat.name, href: `/categoria/${cat.slug}` }] : []),
+          { name: product.title },
+        ]}
+      />
 
       <div className="grid gap-8 md:grid-cols-2">
         <div className="relative aspect-square overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-800">

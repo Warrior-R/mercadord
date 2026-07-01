@@ -6,6 +6,7 @@ import type { Product } from "@/lib/types";
 import { parsePage, type Page } from "@/lib/pagination";
 import { ProductCard } from "@/components/product-card";
 import { Pagination } from "@/components/pagination";
+import { BannerStrip } from "@/components/banner-strip";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function Home({
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-5 sm:px-5">
+      {page === 1 && <BannerStrip slot="top" />}
       <section className="relative mb-6 overflow-hidden rounded-xl bg-gradient-to-br from-[#003087] via-[#0a4ab8] to-[#1565c0] px-6 py-10 text-center text-white">
         <div
           aria-hidden

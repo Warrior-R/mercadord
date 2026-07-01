@@ -38,3 +38,13 @@ test("perfil de vendedor con id inválido devuelve 404", async ({ page }) => {
   const res = await page.goto("/vendedor/no-es-uuid");
   expect(res?.status()).toBe(404);
 });
+
+test("panel admin sin sesión redirige a /entrar", async ({ page }) => {
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/entrar/);
+});
+
+test("banners admin sin sesión redirige a /entrar", async ({ page }) => {
+  await page.goto("/admin/banners");
+  await expect(page).toHaveURL(/\/entrar/);
+});

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth-actions";
 import { countUnreadNotifications } from "@/lib/notifications";
+import { isAdmin } from "@/lib/moderation";
 
 export async function UserMenu() {
   const supabase = await createClient();
@@ -33,10 +34,23 @@ export async function UserMenu() {
     user.email ||
     "Mi cuenta";
 
-  const unread = await countUnreadNotifications();
+  const [unread, admin] = await Promise.all([
+    countUnreadNotifications(),
+    isAdmin(),
+  ]);
 
   return (
     <div className="flex shrink-0 items-center gap-2">
+      {admin && (
+        <Link
+          href="/admin"
+          aria-label="Panel admin"
+          className="hidden text-lg text-white/90 hover:text-white sm:inline"
+          title="Panel admin"
+        >
+          🛡️
+        </Link>
+      )}
       <Link
         href="/favoritos"
         aria-label="Favoritos"

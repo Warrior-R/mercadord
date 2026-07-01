@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { categoryBySlug } from "@/lib/categories";
 import { listProducts } from "@/lib/products";
@@ -7,6 +6,7 @@ import { listMyFavoriteIds } from "@/lib/favorites";
 import { parsePage } from "@/lib/pagination";
 import { ProductCard } from "@/components/product-card";
 import { Pagination } from "@/components/pagination";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +15,24 @@ type Params = {
   searchParams: Promise<{ page?: string }>;
 };
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Params): Promise<Metadata> {
   const { slug } = await params;
+  const { page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
   const cat = categoryBySlug(slug);
   if (!cat) return { title: "Categoría no encontrada" };
+  // Canonical incluye la página (>1) para no canibalizar el ranking entre páginas.
+  const canonical =
+    page > 1
+      ? `/categoria/${cat.slug}?page=${page}`
+      : `/categoria/${cat.slug}`;
   return {
-    title: cat.name,
+    title: page > 1 ? `${cat.name} — página ${page}` : cat.name,
     description: `Compra ${cat.name} en MercadoRD — República Dominicana.`,
-    alternates: { canonical: `/categoria/${cat.slug}` },
+    alternates: { canonical },
   };
 }
 
@@ -41,12 +51,9 @@ export default async function CategoryPage({ params, searchParams }: Params) {
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-5">
-      <nav aria-label="Ruta" className="mb-3 text-sm text-ink-soft">
-        <Link href="/" className="hover:text-primary hover:underline">
-          Inicio
-        </Link>{" "}
-        / <span className="text-ink">{cat.name}</span>
-      </nav>
+      <Breadcrumbs
+        items={[{ name: "Inicio", href: "/" }, { name: cat.name }]}
+      />
 
       <h1 className="mb-5 text-2xl font-bold tracking-tight text-ink">
         <span aria-hidden className="mr-2">
