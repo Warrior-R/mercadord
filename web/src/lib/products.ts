@@ -39,6 +39,10 @@ export async function searchProducts(
   if (f.minPrice) query = query.gte("price", f.minPrice);
   if (f.maxPrice) query = query.lte("price", f.maxPrice);
   if (f.location) query = query.ilike("location", `%${f.location}%`);
+  // Rebajados: PostgREST no compara dos columnas entre sí, así que en SQL se
+  // filtra por "tiene precio anterior" y abajo se descartan en JS los que no
+  // suponen una rebaja real (old_price <= price).
+  if (f.deals) query = query.not("old_price", "is", null);
 
   if (f.sort === "price_asc") query = query.order("price", { ascending: true });
   else if (f.sort === "price_desc")
@@ -51,8 +55,13 @@ export async function searchProducts(
   const { data, error, count } = await query.range(from, to);
   if (error && error.code !== RANGE_NOT_SATISFIABLE) throw new Error(error.message);
   const total = count ?? 0;
+
+  let items = error ? [] : ((data ?? []) as Product[]);
+  // Segundo filtro de rebajas (ver nota arriba): descarta los que no bajaron.
+  if (f.deals) items = items.filter((p) => (p.old_price ?? 0) > p.price);
+
   return {
-    items: error ? [] : ((data ?? []) as Product[]),
+    items,
     total,
     page,
     pageSize,

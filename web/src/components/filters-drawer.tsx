@@ -21,7 +21,7 @@ export function FiltersDrawer({
       <Dialog.Trigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium shadow-sm transition hover:border-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-neutral-700 dark:bg-neutral-900 md:hidden"
+          className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink shadow-sm transition hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:hidden"
         >
           <span aria-hidden>⚙️</span>
           Filtros
@@ -35,16 +35,16 @@ export function FiltersDrawer({
 
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-[85%] max-w-sm flex-col overflow-y-auto bg-white p-5 shadow-xl focus:outline-none dark:bg-neutral-950">
+        <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-[85%] max-w-sm flex-col overflow-y-auto bg-page p-5 shadow-xl focus:outline-none">
           <div className="mb-4 flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">
+            <Dialog.Title className="text-lg font-bold text-ink">
               Filtros
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
                 type="button"
                 aria-label="Cerrar filtros"
-                className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:hover:bg-neutral-800"
+                className="rounded-lg p-1.5 text-ink-soft transition hover:bg-tile hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               >
                 ✕
               </button>

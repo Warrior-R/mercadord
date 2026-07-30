@@ -25,6 +25,8 @@ export type SearchFilters = {
   minPrice?: number;
   maxPrice?: number;
   location?: string;
+  /** Solo anuncios rebajados (con precio anterior mayor al actual). */
+  deals?: boolean;
   sort: SortKey;
 };
 
@@ -50,18 +52,25 @@ export function parseFilters(sp: RawParams): SearchFilters {
   const maxPrice = Number.isFinite(maxRaw) && maxRaw > 0 ? maxRaw : undefined;
 
   const location = first(sp.loc)?.trim() || undefined;
+  const deals = first(sp.deals) === "1" || undefined;
 
   const sortRaw = first(sp.sort);
   const sort: SortKey = SORTS.some((s) => s.value === sortRaw)
     ? (sortRaw as SortKey)
     : "recent";
 
-  return { q, category, condition, minPrice, maxPrice, location, sort };
+  return { q, category, condition, minPrice, maxPrice, location, deals, sort };
 }
 
 /** ¿Hay al menos un filtro activo (además del orden)? */
 export function hasActiveFilters(f: SearchFilters): boolean {
   return Boolean(
-    f.q || f.category || f.condition || f.minPrice || f.maxPrice || f.location,
+    f.q ||
+      f.category ||
+      f.condition ||
+      f.minPrice ||
+      f.maxPrice ||
+      f.location ||
+      f.deals,
   );
 }
