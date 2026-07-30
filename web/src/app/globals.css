@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* dark: solo se activaría con la clase .dark (no por preferencia del SO).
+   MercadoRD es light por ahora; así no se activa dark a medias. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Sistema de diseño MercadoRD (tomado de css/styles.css del sitio actual) ── */
+@theme {
+  --color-primary: #003087;
+  --color-primary-light: #0a4ab8;
+  --color-accent: #e43e2b;
+  --color-accent-dark: #c0321f;
+  --color-accent2: #f5a623;
+  --color-page: #f4f6f9;
+  --color-card: #ffffff;
+  --color-tile: #f8f9fc;
+  --color-ink: #1a1a2e;
+  --color-ink-soft: #555555;
+  --color-line: #dde3ee;
+  --color-brand-green: #0a8a4a;
+
+  --font-sans: var(--font-sora), system-ui, sans-serif;
+  --radius-card: 10px;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Respeta a quien prefiere menos movimiento: sin animaciones ni transiciones. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

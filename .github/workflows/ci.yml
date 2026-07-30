@@ -1,0 +1,49 @@
+name: CI (web)
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths: ["web/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["web/**", ".github/workflows/ci.yml"]
+
+# La publishable key es pública por diseño (viaja al navegador); la seguridad la dan las RLS.
+# Se exponen aquí para que build/E2E funcionen sin configurar secretos.
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://flsixfuzvbapwnfepmwr.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zf5bkvNdhlr1AJQNrd8vcA_aCIe2NDH
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  quality:
+    name: Lint · Types · Unit · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
