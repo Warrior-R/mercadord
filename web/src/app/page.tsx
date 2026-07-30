@@ -7,6 +7,7 @@ import { parsePage, type Page } from "@/lib/pagination";
 import { ProductCard } from "@/components/product-card";
 import { Pagination } from "@/components/pagination";
 import { BannerStrip } from "@/components/banner-strip";
+import { CategoryTiles } from "@/components/category-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,8 @@ export default async function Home({
           </div>
         </div>
       </section>
+
+      {page === 1 && <CategoryTiles />}
 
       {featured.length > 0 && page === 1 && (
         <section className="mb-8">
