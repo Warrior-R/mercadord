@@ -1,27 +1,33 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search-bar";
-import { UserMenu } from "@/components/user-menu";
+import { HeaderTopBar } from "@/components/header-top-bar";
 
+/** Cabecera estilo eBay: barra superior (eyebrow) + fila principal blanca con logo y buscador. */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 bg-primary shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
-      <div className="mx-auto flex max-w-[1280px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-5">
+    <header className="sticky top-0 z-30 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+      <HeaderTopBar />
+
+      <div className="mx-auto flex max-w-[1280px] items-center gap-3 px-4 py-3 sm:gap-6 sm:px-5">
         <Link
           href="/"
-          className="shrink-0 text-2xl font-bold tracking-tight text-white transition hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent2"
+          className="shrink-0 text-2xl font-extrabold tracking-tight text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           Mercado<span className="text-accent2">RD</span>
         </Link>
-        <div className="min-w-0 max-w-[620px] flex-1">
-          <SearchBar />
+
+        <div className="min-w-0 flex-1">
+          <SearchBar showCategory />
         </div>
+
+        {/* Acceso a cuenta compacto en móvil (en escritorio está en la barra superior). */}
         <Link
-          href="/vender"
-          className="hidden shrink-0 rounded-md bg-accent2 px-3 py-1.5 text-xs font-bold text-ink transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white md:inline-block"
+          href="/cuenta"
+          aria-label="Mi cuenta"
+          className="shrink-0 text-2xl text-ink-soft transition hover:text-primary md:hidden"
         >
-          + Vender
+          👤
         </Link>
-        <UserMenu />
       </div>
     </header>
   );

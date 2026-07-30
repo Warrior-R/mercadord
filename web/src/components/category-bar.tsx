@@ -4,24 +4,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CATEGORIES } from "@/lib/categories";
 
-/** Barra de navegación de categorías bajo el header (estilo .nav del sitio actual). */
+/** Barra de categorías tipo pestañas (nav claro estilo eBay), bajo el header. */
 export function CategoryBar() {
   const pathname = usePathname();
+  const auctionsActive = pathname.startsWith("/subasta");
+
+  const base =
+    "whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] transition focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
 
   return (
-    <div className="bg-primary-light">
+    <div className="border-b border-line bg-white">
       <nav
         aria-label="Categorías"
-        className="mx-auto flex max-w-[1280px] gap-0 overflow-x-auto px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mx-auto flex max-w-[1280px] gap-1 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <Link
           href="/subastas"
-          aria-current={pathname.startsWith("/subasta") ? "page" : undefined}
+          aria-current={auctionsActive ? "page" : undefined}
           className={
-            "whitespace-nowrap border-b-2 px-4 py-2.5 text-[13px] font-bold transition focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent2 " +
-            (pathname.startsWith("/subasta")
-              ? "border-accent2 text-white"
-              : "border-transparent text-accent2 hover:border-accent2 hover:text-white")
+            base +
+            " font-bold " +
+            (auctionsActive
+              ? "border-accent2 text-accent"
+              : "border-transparent text-accent hover:border-accent2")
           }
         >
           🔨 Subastas
@@ -34,10 +39,11 @@ export function CategoryBar() {
               href={`/categoria/${c.slug}`}
               aria-current={active ? "page" : undefined}
               className={
-                "whitespace-nowrap border-b-2 px-4 py-2.5 text-[13px] font-medium transition focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent2 " +
+                base +
+                " font-medium " +
                 (active
-                  ? "border-accent2 text-white"
-                  : "border-transparent text-white/85 hover:border-accent2 hover:text-white")
+                  ? "border-accent2 text-primary"
+                  : "border-transparent text-ink-soft hover:border-accent2 hover:text-primary")
               }
             >
               {c.name}
