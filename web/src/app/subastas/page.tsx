@@ -19,8 +19,8 @@ export default async function SubastasPage() {
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-5">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-ink">
-            <span aria-hidden>🔨</span> Subastas en vivo
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            Subastas en vivo
           </h1>
           <p className="mt-1 text-sm text-ink-soft">
             Puja en tiempo real. El que va ganando cuando el reloj llega a cero
@@ -37,8 +37,7 @@ export default async function SubastasPage() {
 
       {auctions.length === 0 ? (
         <div className="rounded-[10px] border border-dashed border-line bg-card p-10 text-center">
-          <p className="text-4xl">🔨</p>
-          <p className="mt-3 font-semibold text-ink">
+          <p className="font-semibold text-ink">
             No hay subastas activas ahora mismo
           </p>
           <p className="mt-1 text-sm text-ink-soft">

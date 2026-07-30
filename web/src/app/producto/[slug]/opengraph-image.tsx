@@ -67,7 +67,7 @@ export default async function Image({
             </div>
           )}
           {location && (
-            <div style={{ fontSize: 32, color: "#555555" }}>📍 {location}</div>
+            <div style={{ fontSize: 32, color: "#555555" }}>{location}</div>
           )}
         </div>
 

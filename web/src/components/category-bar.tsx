@@ -29,7 +29,7 @@ export function CategoryBar() {
               : "border-transparent text-accent hover:border-accent2")
           }
         >
-          🔨 Subastas
+          Subastas
         </Link>
         {CATEGORIES.map((c) => {
           const active = pathname === `/categoria/${c.slug}`;

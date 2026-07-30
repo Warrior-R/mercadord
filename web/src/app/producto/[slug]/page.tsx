@@ -141,7 +141,7 @@ export default async function ProductPage({ params, searchParams }: Params) {
         <div>
           {featured && (
             <span className="mb-2 inline-block rounded-full bg-accent2 px-2.5 py-1 text-xs font-bold text-ink">
-              ⭐ Anuncio destacado
+              Anuncio destacado
             </span>
           )}
           <h1 className="text-2xl font-bold tracking-tight">{product.title}</h1>

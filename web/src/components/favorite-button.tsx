@@ -29,7 +29,7 @@ export function FavoriteButton({
           aria-pressed={favorited}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
         >
-          <span aria-hidden>{favorited ? "❤️" : "🤍"}</span> {label}
+          <span aria-hidden>{favorited ? "♥" : "♡"}</span> {label}
         </button>
       </form>
     );
@@ -47,9 +47,11 @@ export function FavoriteButton({
         type="submit"
         aria-label={label}
         aria-pressed={favorited}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm shadow transition hover:scale-110"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-base shadow transition hover:scale-110"
       >
-        <span aria-hidden>{favorited ? "❤️" : "🤍"}</span>
+        <span aria-hidden className={favorited ? "text-accent" : "text-ink-soft"}>
+          {favorited ? "♥" : "♡"}
+        </span>
       </button>
     </form>
   );

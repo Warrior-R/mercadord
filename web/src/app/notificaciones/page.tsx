@@ -54,8 +54,7 @@ export default async function NotificacionesPage() {
 
       {notifications.length === 0 ? (
         <div className="mt-8 rounded-[10px] border border-dashed border-line bg-card p-10 text-center">
-          <p className="text-4xl">🔔</p>
-          <p className="mt-3 font-semibold text-ink">No tienes notificaciones</p>
+          <p className="font-semibold text-ink">No tienes notificaciones</p>
           <p className="mt-1 text-sm text-ink-soft">
             Aquí verás mensajes y reseñas nuevas.
           </p>

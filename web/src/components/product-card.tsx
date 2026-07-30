@@ -39,7 +39,7 @@ export function ProductCard({
       <div className="relative flex aspect-square items-center justify-center bg-tile">
         {featured && (
           <span className="absolute left-2 top-2 z-10 rounded-full bg-accent2 px-2 py-0.5 text-[10px] font-bold text-ink shadow">
-            ⭐ Destacado
+            Destacado
           </span>
         )}
         {product.image_url ? (
@@ -74,7 +74,7 @@ export function ProductCard({
           )}
         </div>
         {product.location && (
-          <p className="mt-1 text-[11px] text-ink-soft">📍 {product.location}</p>
+          <p className="mt-1 text-[11px] text-ink-soft">{product.location}</p>
         )}
       </div>
       </Link>
