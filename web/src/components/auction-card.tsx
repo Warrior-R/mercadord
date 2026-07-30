@@ -12,7 +12,7 @@ export function AuctionCard({ auction }: { auction: Auction }) {
     >
       <div className="relative flex aspect-square items-center justify-center bg-tile">
         <span className="absolute left-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white shadow">
-          🔨 Subasta
+          Subasta
         </span>
         {auction.image_url ? (
           <Image

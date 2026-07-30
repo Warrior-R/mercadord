@@ -27,7 +27,7 @@ export function AuctionCountdown({
     <span
       className={`tabular-nums ${urgent ? "text-accent font-bold" : ""} ${className ?? ""}`}
     >
-      {remaining > 0 ? `⏱️ ${formatTimeLeft(remaining)}` : "Finalizada"}
+      {remaining > 0 ? formatTimeLeft(remaining) : "Finalizada"}
     </span>
   );
 }

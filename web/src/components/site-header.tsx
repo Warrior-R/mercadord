@@ -23,10 +23,9 @@ export function SiteHeader() {
         {/* Acceso a cuenta compacto en móvil (en escritorio está en la barra superior). */}
         <Link
           href="/cuenta"
-          aria-label="Mi cuenta"
-          className="shrink-0 text-2xl text-ink-soft transition hover:text-primary md:hidden"
+          className="shrink-0 text-sm font-medium text-ink-soft transition hover:text-primary md:hidden"
         >
-          👤
+          Cuenta
         </Link>
       </div>
     </header>

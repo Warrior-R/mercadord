@@ -76,7 +76,7 @@ export default async function Home({
               href="/subastas"
               className="rounded-lg border-2 border-accent2 px-6 py-3 text-sm font-bold text-accent2 transition hover:bg-accent2 hover:text-ink"
             >
-              🔨 Ver subastas
+              Ver subastas
             </Link>
           </div>
         </div>
@@ -84,8 +84,8 @@ export default async function Home({
 
       {featured.length > 0 && page === 1 && (
         <section className="mb-8">
-          <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-ink">
-            <span aria-hidden>⭐</span> Anuncios destacados
+          <h2 className="mb-4 text-base font-bold text-ink">
+            Anuncios destacados
           </h2>
           <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {featured.map((p) => (
@@ -112,8 +112,7 @@ export default async function Home({
           </p>
         ) : products.length === 0 ? (
           <div className="rounded-[10px] border border-dashed border-line bg-card p-10 text-center">
-            <p className="text-4xl">🛒</p>
-            <p className="mt-3 font-semibold text-ink">
+            <p className="font-semibold text-ink">
               Aún no hay productos publicados
             </p>
             <p className="mt-1 text-sm text-ink-soft">

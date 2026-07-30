@@ -58,13 +58,13 @@ export default async function AdminHome() {
           href="/admin/reportes"
           className="rounded-lg border border-line bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary"
         >
-          🛡️ Moderación de reportes
+          Moderación de reportes
         </Link>
         <Link
           href="/admin/banners"
           className="rounded-lg border border-line bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary"
         >
-          📢 Banners de publicidad
+          Banners de publicidad
         </Link>
       </nav>
     </div>

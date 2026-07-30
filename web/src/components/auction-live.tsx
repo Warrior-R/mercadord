@@ -142,7 +142,7 @@ export function AuctionLive({
           </p>
           {live && remaining < 120_000 && (
             <p className="text-xs font-semibold text-accent">
-              ⏱️ ¡Últimos minutos! Pujar extiende el cierre.
+              ¡Últimos minutos! Pujar extiende el cierre.
             </p>
           )}
         </div>

@@ -85,9 +85,6 @@ export default async function CategoryPage({ params, searchParams }: Params) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">
-            <span aria-hidden className="mr-2">
-              {cat.icon}
-            </span>
             {cat.name}
           </h1>
           <p className="text-sm text-ink-soft">

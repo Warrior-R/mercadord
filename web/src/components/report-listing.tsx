@@ -34,7 +34,7 @@ export function ReportListing({
 
       <details className="group rounded-xl border border-line bg-white">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-ink-soft transition hover:text-accent">
-          <span aria-hidden>⚑</span> Reportar este anuncio
+          Reportar este anuncio
         </summary>
         <form
           action={submitReport}

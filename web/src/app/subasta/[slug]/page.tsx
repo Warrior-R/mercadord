@@ -76,7 +76,7 @@ export default async function AuctionPage({ params, searchParams }: Params) {
               {auction.title}
             </h1>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft">
-              {auction.location && <span>📍 {auction.location}</span>}
+              {auction.location && <span>{auction.location}</span>}
               {auction.seller_name && (
                 <span>
                   Vendedor:{" "}

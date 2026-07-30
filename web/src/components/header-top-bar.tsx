@@ -36,7 +36,7 @@ export async function HeaderTopBar() {
             )}
           </span>
           <Link href="/subastas" className={linkClass}>
-            🔨 Subastas
+            Subastas
           </Link>
           <Link href="/legal/sobre-nosotros" className={linkClass}>
             Ayuda
@@ -62,7 +62,7 @@ export async function HeaderTopBar() {
                   unread > 0 ? `Notificaciones (${unread} sin leer)` : "Notificaciones"
                 }
               >
-                🔔
+                Notificaciones
                 {unread > 0 && (
                   <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold text-white">
                     {unread > 9 ? "9+" : unread}
@@ -71,7 +71,7 @@ export async function HeaderTopBar() {
               </Link>
               {admin && (
                 <Link href="/admin" className={linkClass} title="Panel admin">
-                  🛡️ Admin
+                  Admin
                 </Link>
               )}
               <Link href="/cuenta" className="font-semibold text-primary hover:underline">

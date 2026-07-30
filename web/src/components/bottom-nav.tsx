@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
-  { href: "/", label: "Inicio", icon: "🏠" },
-  { href: "/buscar", label: "Buscar", icon: "🔍" },
-  { href: "/vender", label: "Vender", icon: "➕" },
-  { href: "/mensajes", label: "Mensajes", icon: "💬" },
-  { href: "/cuenta", label: "Cuenta", icon: "👤" },
+  { href: "/", label: "Inicio" },
+  { href: "/buscar", label: "Buscar" },
+  { href: "/vender", label: "Vender" },
+  { href: "/mensajes", label: "Mensajes" },
+  { href: "/cuenta", label: "Cuenta" },
 ];
 
 export function BottomNav() {
@@ -28,13 +28,10 @@ export function BottomNav() {
             href={it.href}
             aria-current={active ? "page" : undefined}
             className={
-              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary " +
+              "flex flex-1 items-center justify-center py-3 text-xs font-semibold transition focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary " +
               (active ? "text-primary" : "text-ink-soft")
             }
           >
-            <span aria-hidden className="text-xl">
-              {it.icon}
-            </span>
             {it.label}
           </Link>
         );
