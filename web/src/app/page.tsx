@@ -1,14 +1,28 @@
 import Link from "next/link";
-import { listProducts } from "@/lib/products";
-import { listFeaturedProducts, listFeaturedIds } from "@/lib/featured";
+import { searchProducts } from "@/lib/products";
+import { listFeaturedIds } from "@/lib/featured";
 import { listMyFavoriteIds } from "@/lib/favorites";
 import type { Product } from "@/lib/types";
+import { parseFilters, hasActiveFilters } from "@/lib/filters";
 import { parsePage, type Page } from "@/lib/pagination";
+import {
+  parseTab,
+  tabWantsDeals,
+  tabWantsLocation,
+} from "@/lib/browse-tabs";
+import type { BrowseParams } from "@/lib/browse-url";
 import { ProductCard } from "@/components/product-card";
 import { Pagination } from "@/components/pagination";
 import { BannerStrip } from "@/components/banner-strip";
+import { BrowseSidebar } from "@/components/browse-sidebar";
+import { BrowseTabBar } from "@/components/browse-tab-bar";
+import { BrowseEmptyState } from "@/components/browse-empty-state";
+import { ProvincePicker } from "@/components/province-picker";
+import { FiltersDrawer } from "@/components/filters-drawer";
 
 export const dynamic = "force-dynamic";
+
+const BASE = "/";
 
 const EMPTY_PAGE: Page<Product> = {
   items: [],
@@ -21,21 +35,31 @@ const EMPTY_PAGE: Page<Product> = {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { page: pageParam } = await searchParams;
-  const page = parsePage(pageParam);
+  const sp = await searchParams;
+  const page = parsePage(sp.page);
+  const tab = parseTab(sp.tab);
+
+  // Los filtros vienen de la URL; la pestaña añade su propio criterio.
+  const urlFilters = parseFilters(sp);
+  const filters = {
+    ...urlFilters,
+    deals: tabWantsDeals(tab) ? true : urlFilters.deals,
+  };
+
+  // "Cerca de mí" exige provincia: sin ella no se listan anuncios.
+  const needsProvince = tabWantsLocation(tab) && !filters.location;
 
   let result: Page<Product> = EMPTY_PAGE;
   let loadError: string | null = null;
-  let featured: Product[] = [];
   let featuredIds = new Set<string>();
   let favoriteIds = new Set<string>();
   try {
-    [result, featured, featuredIds, favoriteIds] = await Promise.all([
-      listProducts({ page }),
-      // Los destacados sí se muestran completos (no dependen de la página).
-      listFeaturedProducts(),
+    [result, featuredIds, favoriteIds] = await Promise.all([
+      needsProvince
+        ? Promise.resolve(EMPTY_PAGE)
+        : searchProducts(filters, page),
       listFeaturedIds(),
       listMyFavoriteIds(),
     ]);
@@ -43,11 +67,46 @@ export default async function Home({
     loadError = e instanceof Error ? e.message : "error desconocido";
   }
 
-  const products = result.items;
+  let products = result.items;
+  // En "Destacados" los anuncios promocionados van primero.
+  if (tab === "destacados" && featuredIds.size > 0) {
+    products = [...products].sort(
+      (a, b) =>
+        Number(featuredIds.has(b.id)) - Number(featuredIds.has(a.id)),
+    );
+  }
+
+  // Parámetros que deben sobrevivir a cada enlace de filtro/pestaña.
+  const params: BrowseParams = {
+    tab: tab === "destacados" ? undefined : tab,
+    cat: filters.category,
+    cond: filters.condition,
+    max: filters.maxPrice ? String(filters.maxPrice) : undefined,
+    loc: filters.location,
+    sort: filters.sort !== "recent" ? filters.sort : undefined,
+  };
+
+  const sidebar = (
+    <BrowseSidebar
+      basePath={BASE}
+      params={params}
+      category={filters.category}
+      condition={filters.condition}
+      maxPrice={filters.maxPrice}
+    />
+  );
+
+  const activeCount = [
+    filters.category,
+    filters.condition,
+    filters.maxPrice,
+    filters.location,
+  ].filter(Boolean).length;
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-5 sm:px-5">
       {page === 1 && <BannerStrip slot="top" />}
+
       <section className="relative mb-6 overflow-hidden rounded-xl bg-gradient-to-br from-[#003087] via-[#0a4ab8] to-[#1565c0] px-6 py-10 text-center text-white">
         <div
           aria-hidden
@@ -62,15 +121,15 @@ export default async function Home({
             Compra y vende en República Dominicana
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm opacity-85">
-            Miles de productos y subastas. Compra, vende y subasta de forma
-            segura.
+            Publica gratis, contacta al vendedor y participa en subastas en
+            vivo.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Link
-              href="/buscar"
+              href="/vender"
               className="rounded-lg bg-accent2 px-6 py-3 text-sm font-bold text-ink transition hover:-translate-y-px hover:shadow-lg"
             >
-              Explorar productos
+              Publicar anuncio gratis
             </Link>
             <Link
               href="/subastas"
@@ -82,66 +141,69 @@ export default async function Home({
         </div>
       </section>
 
-      {featured.length > 0 && page === 1 && (
-        <section className="mb-8">
-          <h2 className="mb-4 text-base font-bold text-ink">
-            Anuncios destacados
-          </h2>
-          <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {featured.map((p) => (
-              <li key={p.id}>
-                <ProductCard
-                  product={p}
-                  featured
-                  favorited={favoriteIds.has(p.id)}
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <div className="flex gap-6">
+        <aside className="hidden w-60 shrink-0 lg:block" aria-label="Filtros">
+          <div className="sticky top-24">{sidebar}</div>
+        </aside>
 
-      <section>
-        <h2 className="mb-4 text-base font-bold text-ink">
-          Publicaciones recientes
-        </h2>
-
-        {loadError ? (
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
-            No se pudo cargar el catálogo: {loadError}
-          </p>
-        ) : products.length === 0 ? (
-          <div className="rounded-[10px] border border-dashed border-line bg-card p-10 text-center">
-            <p className="font-semibold text-ink">
-              Aún no hay productos publicados
-            </p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Ejecuta <code>supabase/seed-products.sql</code> para poblar el
-              catálogo de desarrollo, o publica un producto.
-            </p>
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 lg:hidden">
+            <FiltersDrawer activeCount={activeCount}>{sidebar}</FiltersDrawer>
           </div>
-        ) : (
-          <>
-            <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {products.map((p) => (
-                <li key={p.id}>
-                  <ProductCard
-                    product={p}
-                    featured={featuredIds.has(p.id)}
-                    favorited={favoriteIds.has(p.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-            <Pagination
-              basePath="/"
-              params={{}}
-              page={result.page}
-              totalPages={result.totalPages}
+
+          <BrowseTabBar basePath={BASE} params={params} current={tab} />
+
+          {tabWantsLocation(tab) && (
+            <ProvincePicker
+              basePath={BASE}
+              params={params}
+              value={filters.location}
             />
-          </>
-        )}
-      </section>
+          )}
+
+          {loadError ? (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+              No se pudo cargar el catálogo: {loadError}
+            </p>
+          ) : needsProvince ? (
+            <div className="rounded-xl border border-dashed border-line bg-white p-12 text-center">
+              <h2 className="text-lg font-bold text-ink">
+                Elige tu provincia
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
+                Selecciona arriba dónde estás y te mostramos los anuncios
+                publicados cerca de ti.
+              </p>
+            </div>
+          ) : products.length === 0 ? (
+            <BrowseEmptyState
+              basePath={BASE}
+              hasFilters={hasActiveFilters(filters)}
+            />
+          ) : (
+            <>
+              <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-4">
+                {products.map((p) => (
+                  <li key={p.id}>
+                    <ProductCard
+                      product={p}
+                      featured={featuredIds.has(p.id)}
+                      favorited={favoriteIds.has(p.id)}
+                      backTo={BASE}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <Pagination
+                basePath={BASE}
+                params={params}
+                page={result.page}
+                totalPages={result.totalPages}
+              />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
