@@ -1,359 +1,228 @@
-# 🇩🇴 MercadoRD — Marketplace de República Dominicana
+# MercadoRD
 
-**Plataforma segura de compra y venta en línea con verificación obligatoria de identidad (Ley 172-13 RD)**
+**Marketplace de compra-venta y subastas para República Dominicana, con verificación de identidad obligatoria.**
 
----
-
-## 📋 Índice
-
-1. [Características](#-características)
-2. [Instalación local](#-instalación-local)
-3. [Deployment a producción](#-deployment-a-producción)
-4. [Estructura del proyecto](#-estructura-del-proyecto)
-5. [Guía de usuario](#-guía-de-usuario)
-6. [Soporte técnico](#-soporte-técnico)
+Publicar o comprar exige haber pasado un KYC real. La aprobación de identidad no
+depende del navegador en ningún punto: se decide en el servidor, a partir de un
+webhook firmado por el proveedor, y la base de datos impide por diseño que una
+cuenta se marque a sí misma como verificada.
 
 ---
 
-## ✨ Características
+## Índice
 
-### 🏪 Marketplace
-- ✅ **16+ productos** con categorías (Electrónica, Vehículos, Inmuebles, etc.)
-- ✅ **Filtros avanzados**: categoría, rango de precio (RD$0 → RD$200k), condición, ubicación
-- ✅ **Búsqueda en tiempo real** con autocompletado
-- ✅ **Carrusel interactivo** con 3 tabs:
-  - 🔥 **Ofertas** - Descuentos especiales hasta 40%
-  - ⏰ **Subastas por finalizar** - Lotes en tiempo real
-  - 📈 **Trending** - Productos más vistos
-- ✅ **Perfil detallado del producto** con imágenes, reseñas, ubicación del vendedor
-- ✅ **Carrito de compras** con cálculo de ITBIS (18%) + envío RD$350
-- ✅ **Sistema de favoritos** para guardas productos
-- ✅ **Publicación de anuncios** - Vendedores pueden crear listados propios
-- ✅ **5 subastas activas** con contador regresivo y pujas en vivo
-- ✅ **Diseño 100% responsivo** (móvil, tablet, desktop)
-
-### 🔐 Verificación de Identidad (Obligatoria)
-**Cumple Ley 172-13 de la República Dominicana - Ley Contra el Lavado de Dinero**
-
-- ✅ **Paso 1 - Documento**: Cédula dominicana o pasaporte
-- ✅ **Paso 2 - Carga de archivo**: Foto del documento (DNI/Pasaporte)
-- ✅ **Paso 3 - Verificación biométrica**: Captura de rostro en vivo con cámara
-- ✅ **Verificación obligatoria** para comprar o vender
-- ✅ **Almacenamiento seguro** en Supabase con encriptación
-- ✅ **Sistema anti-fraude** automático
-
-### 🔓 Autenticación (Supabase)
-- ✅ **Multiple métodos**: 
-  - Email + contraseña
-  - Google OAuth
-  - SMS OTP (vía Twilio)
-- ✅ **Registro en 4 pasos**:
-  1. Email + contraseña
-  2. Verificación por SMS (6 dígitos)
-  3. Datos personales (edad, cédula)
-  4. Verificación biométrica + documento
-- ✅ **Recuperación de contraseña** automática
-- ✅ **2FA (autenticación de dos factores)**
-- ✅ **Bloqueo anti-brute-force** (máx 5 intentos fallidos)
-- ✅ **Modo demo automático** si no has configurado Supabase
-
-### 📱 Footer Inteligente
-- ✅ **Para Compradores**: Cómo comprar, guía de seguridad, preguntas frecuentes
-- ✅ **Para Vendedores**: Cómo vender, comisiones, publicación de anuncios
-- ✅ **Sobre MercadoRD**: Quiénes somos, contacto, redes sociales
-- ✅ **Términos legales**: 10 cláusulas completas de términos de uso
-- ✅ **Modales interactivos** con iconos y información detallada
+1. [Qué hace](#qué-hace)
+2. [Arquitectura](#arquitectura)
+3. [Verificación de identidad (KYC)](#verificación-de-identidad-kyc)
+4. [Seguridad](#seguridad)
+5. [Estructura del repositorio](#estructura-del-repositorio)
+6. [Desarrollo local](#desarrollo-local)
+7. [Pruebas y CI](#pruebas-y-ci)
+8. [Despliegue](#despliegue)
 
 ---
 
-## 🚀 Instalación Local
+## Qué hace
 
-### Requisitos
-- **Git** (opcional: para clonar el repo)
-- **Navegador moderno** (Chrome, Firefox, Safari, Edge)
-- **VS Code** (opcional: para editar código)
+**Catálogo y descubrimiento**
+- Navegación por categorías, búsqueda y filtros por precio, condición y ubicación.
+- Fichas de producto y perfiles públicos de vendedor.
+- Favoritos y notificaciones.
 
-### Paso 1 — Descargar el proyecto
-```bash
-# Opción A: Clonar desde GitHub (cuando esté disponible)
-git clone https://github.com/tunombre/mercadord.git
-cd mercadord
+**Venta**
+- Publicación de anuncios con imágenes (Supabase Storage).
+- Subastas con puja, cierre programado y resolución del ganador.
+- Panel de cuenta con los anuncios propios.
 
-# Opción B: Descargar ZIP manualmente
-# Ve a https://github.com/tunombre/mercadord
-# Click "Code" → Download ZIP
-# Descomprime la carpeta
-```
+**Compra**
+- Carrito con cálculo de ITBIS (18 %) y envío.
+- Mensajería entre comprador y vendedor.
+- Reseñas y sistema de reportes/moderación.
 
-### Paso 2 — Ejecutar con Live Server
-**En VS Code:**
-1. Abre la carpeta `mercadord` en VS Code
-2. Instala la extensión **Live Server** (opción: haz click en el ícono de Extensions en la barra izquierda)
-3. Haz click derecho en `index.html` → **"Open with Live Server"**
-4. Se abre automáticamente en `http://localhost:5500`
+**Administración**
+- Reportes de contenido y gestión de banners publicitarios.
+- Estadísticas de plataforma.
 
-**O simplemente abre en tu navegador:**
-- Arrastra `index.html` al navegador (funciona sin servidor)
-- Acceso en la mayoría de casos sin Supabase configurada (modo DEMO)
-
-### Paso 3 — Variables de entorno (opcional)
-Para conectar con la base de datos real en desarrollo:
-
-1. Crea un archivo `.env.local` en la raíz del proyecto:
-```env
-VITE_SUPABASE_URL=https://tuproyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu_clave_anonima_aqui
-```
-
-2. Reemplaza en `js/auth.js` líneas 8-9 con tus credenciales reales de Supabase
+**Cuenta**
+- Registro con correo o Google OAuth.
+- Verificación de teléfono.
+- Verificación de identidad (documento + biometría) antes de operar.
+- Eliminación de cuenta.
 
 ---
 
-## 🌐 Deployment a Producción
+## Arquitectura
 
-### Opción Recomendada: Vercel + Supabase
+| Capa | Tecnología |
+|---|---|
+| Aplicación | Next.js 16 (App Router), React 19, TypeScript |
+| Estilos | Tailwind CSS 4, Radix UI |
+| Datos | PostgreSQL en Supabase, con Row Level Security |
+| Sesión | Supabase Auth (`@supabase/ssr`) — correo y Google OAuth |
+| Lógica de servidor | Edge Functions en Deno |
+| Archivos | Supabase Storage |
+| Pruebas | Vitest (unitarias) y Playwright (end-to-end) |
+| CI/CD | GitHub Actions y Vercel |
 
-**⏱️ Tiempo aproximado: 30 minutos**
+El repositorio contiene dos generaciones del producto:
 
-Lee la **[GUÍA COMPLETA DE DEPLOYMENT](DEPLOY_GUIDE.md)** que incluye:
-- ✅ Paso 1: Crear archivo `.env.local`
-- ✅ Paso 2: Registrarse en Supabase + crear proyecto + deploy SQL
-- ✅ Paso 3: Subir código a GitHub
-- ✅ Paso 4: Conectar Vercel con GitHub (auto-deploy)
-- ✅ Paso 5: Configurar variables de entorno en Vercel
-- ✅ Paso 6: Probar en producción
+- **`web/`** — la aplicación actual en Next.js. Es donde se desarrolla.
+- **raíz** (`index.html`, `js/`, `css/`) — la primera versión, un sitio estático
+  en HTML y JavaScript sin bundler ni framework. Se conserva porque es lo que
+  sirve `vercel.json` mientras se completa el corte a Next.js.
 
-**Resultado:** Tu sitio estará en vivo en `https://mercadord.vercel.app` (o tu dominio personalizado)
+Ambas hablan con el mismo proyecto de Supabase, así que el esquema, las políticas
+RLS y las Edge Functions son compartidos.
+
+### Edge Functions
+
+| Función | Responsabilidad |
+|---|---|
+| `kyc` | Abre la sesión de verificación con el proveedor y recibe su webhook firmado |
+| `phone-verify` | Verificación del número de teléfono |
+| `contact` | Contacto con el vendedor sin exponer sus datos |
+| `chatbot` | Asistente de la tienda |
+| `delete-account` | Borrado de cuenta y de sus datos asociados |
 
 ---
 
-## 📁 Estructura del Proyecto
+## Verificación de identidad (KYC)
+
+El requisito de fondo viene de la Ley 172-13: para operar hay que saber quién
+está detrás de la cuenta. Lo relevante técnicamente es **dónde se toma la
+decisión**.
+
+1. El cliente pide una sesión de verificación. La Edge Function `kyc` la crea
+   contra el proveedor (Didit) usando credenciales que nunca salen del servidor.
+2. El usuario completa documento y biometría en el flujo del proveedor.
+3. El proveedor llama de vuelta al webhook. La función **verifica la firma** del
+   mensaje antes de aceptarlo y solo entonces actualiza el perfil.
+4. Un trigger de PostgreSQL (`protect_profiles_verification`) rechaza cualquier
+   intento de modificar el estado de verificación que no venga de ese camino.
+
+El resultado: aunque alguien manipule por completo el navegador, no puede
+otorgarse la verificación. Es una decisión de servidor de principio a fin.
+
+---
+
+## Seguridad
+
+- **Row Level Security** activo en las tablas de datos de usuario. La clave
+  publicable de Supabase viaja al navegador por diseño: lo que protege los datos
+  son las políticas, no el secreto de la clave.
+- **Trigger anti-escalada** sobre el estado de verificación (arriba).
+- **Cabeceras de seguridad** configuradas en el despliegue: Content-Security-Policy,
+  HSTS con `preload`, `X-Frame-Options: DENY`, `X-Content-Type-Options`,
+  Referrer-Policy, Cross-Origin-Opener/Resource-Policy y una Permissions-Policy
+  que solo concede la cámara al propio origen (la necesita la captura biométrica).
+- **Webhooks firmados** — ningún callback se acepta sin validar su firma.
+- Las migraciones de endurecimiento viven versionadas en `supabase/*.sql`.
+
+---
+
+## Estructura del repositorio
 
 ```
 mercadord/
+├── web/                      Aplicación Next.js (desarrollo activo)
+│   ├── src/app/              Rutas del App Router
+│   │   ├── producto/[slug]/    ficha de producto
+│   │   ├── categoria/[slug]/   catálogo por categoría
+│   │   ├── subasta/[slug]/     subasta con puja
+│   │   ├── subastas/crear/     alta de subasta
+│   │   ├── vendedor/[id]/      perfil público de vendedor
+│   │   ├── vender/             publicar anuncio
+│   │   ├── buscar/             búsqueda
+│   │   ├── favoritos/          favoritos
+│   │   ├── mensajes/           mensajería
+│   │   ├── notificaciones/     notificaciones
+│   │   ├── cuenta/             cuenta y verificación
+│   │   ├── admin/              reportes y banners
+│   │   ├── legal/[slug]/       textos legales
+│   │   └── auth/, entrar/, registro/
+│   ├── src/lib/              Lógica pura (validación, filtros, formato) + sus tests
+│   ├── src/components/       Componentes de UI
+│   └── e2e/                  Especificaciones de Playwright
 │
-├── 📄 index.html                ← SPA HTML principal
-├── 📄 index_original.html       ← Respaldo original
+├── supabase/
+│   ├── setup.sql             Esquema base, RLS y triggers
+│   ├── *.sql                 Migraciones por función y endurecimientos
+│   └── functions/            Edge Functions en Deno
 │
-├── 📁 css/
-│   ├── styles.css               ← Estilos globales (header, productos)
-│   ├── auth.css                 ← Modal autenticación
-│   ├── footer.css               ← Pie de página + subsecciones
-│   ├── carousel.css             ← Carrusel 3 tabs (ofertas/subastas/trending)
-│   ├── subsections.css          ← Modales para el footer
-│   └── verification.css         ← Modal verificación identidad biométrica
-│
-├── 📁 js/
-│   ├── auth.js                  ← Autenticación Supabase + gates
-│   ├── app.js                   ← Lógica: carrousel, carrito, modales
-│   └── data.js                  ← Productos, subastas, contenido legal
-│
-├── 📁 assets/                   ← Imágenes y recursos
-│
-├── 📄 package.json              ← Dependencias del proyecto
-├── 📄 vercel.json               ← Configuración Vercel
-├── 📄 .env.local.example        ← Plantilla variables de entorno
-├── 📄 .gitignore                ← Archivos ignorados por Git
-├── 📄 .github/workflows/        ← CI/CD automático (futuro)
-│
-├── 📄 DEPLOY_GUIDE.md           ← **LEER ESTO para ir a producción**
-├── 📄 README.md                 ← Este archivo
-└── 📄 mercadord.code-workspace  ← Abre esto en VS Code
-```
-
-### Descripción de archivos clave:
-
-| Archivo | Descripción |
-|---------|-------------|
-| `index.html` | SPA con modales para auth, verificación, carrusel, footer subsecciones |
-| `js/auth.js` | Integración Supabase + funciones login/register + requireAuth() |
-| `js/app.js` | Lógica producto, carrito, verificación, carrusel automático, favoritos |
-| `js/data.js` | Base datos local: productos, subastas, términos legales, SQL schemas |
-| `DEPLOY_GUIDE.md` | **MÁS IMPORTANTE**: Pasos exactos para llevar a producción |
-| `package.json` | Info proyecto + dependencias (esencialmente Supabase SDK) |
-
----
-
-## 👤 Guía de Usuario
-
-### Para Compradores
-1. **Explorar**: Navega productos en la página principal
-2. **Filtrar**: Usa categoría, precio, condición, ubicación
-3. **Favoritar**: Click en ⭐ (requiere login)
-4. **Carrito**: Add to cart → Sumariza ITBIS + envío
-5. **Comprar**: Checkout → Verifica identidad si es tu primer compra
-6. **Leer términos**: Footer → "Para Compradores"
-
-### Para Vendedores
-1. **Registrarse**: Email + contraseña + verificación SMS + identidad
-2. **Publicar**: "Publicar Anuncio" → Llena formulario (foto, descripción, precio)
-3. **Subastar**: Crea subastas con contador regresivo
-4. **Gestionar**: Perfil → Mis Anuncios → Editar/Borrar
-5. **Cobrar**: Configura método de pago en Settings
-6. **Leer términos**: Footer → "Para Vendedores"
-
-### Seguridad
-- 🔒 **Verify antes de comprar/vender**: Cámara + documento
-- 🔒 **No compartir contraseña** con nadie
-- 🔒 **Usar 2FA** en Settings
-- 🔒 **Reportar estafas**: Footer → Contacto
-
----
-
-## 🧪 Stack Técnico
-
-| Componente | Tecnología | Propósito |
-|-----------|-----------|----------|
-| Frontend | HTML5 + CSS3 + Vanilla JS | UI responsivo, sin frameworks |
-| Backend | Supabase PostgreSQL | Base datos usuarios, productos, órdenes |
-| Auth | Supabase Auth | Login, registro, 2FA, OAuth |
-| Hosting | Vercel | Deploy estático + serverless functions |
-| Versionado | GitHub + Git | Control cambios + CI/CD |
-| Verificación | WebRTC API | Captura cámara real-time biométrica |
-
-### Dependencias instaladas
-```json
-{
-  "@supabase/supabase-js": "^2.38.0"  ← Base datos + auth
-}
+├── index.html, js/, css/     Primera versión estática (aún desplegada)
+├── api/                      Funciones serverless de la versión estática
+├── vercel.json               Rewrites, cabeceras de seguridad y caché
+└── .github/workflows/ci.yml  Integración continua
 ```
 
 ---
 
-## 🧩 Extensiones VS Code Recomendadas
+## Desarrollo local
 
-| Extensión | Propósito |
-|-----------|----------|
-| **Live Server** | Sirve HTML localmente con auto-refresh |
-| **Prettier** | Formatea código automáticamente |
-| **Auto Rename Tag** | Renombra etiquetas HTML pareadas |
-| **Color Highlight** | Visualiza colores CSS inline |
-| **HTML CSS Support** | Autocompletado de clases CSS |
-| **Material Icon Theme** | Íconos vistosos en el explorador |
-| **Thunder Client** | Prueba APIs REST (cuando haya backend propio) |
+Requisitos: Node.js 22.
 
----
+```bash
+cd web
+npm ci
+npm run dev          # http://localhost:3000
+```
 
-## 🔧 Configuración Supabase
+Crea `web/.env.local` con:
 
-### Crear proyecto en Supabase
+| Variable | Para qué |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto de Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave publicable (pública por diseño) |
 
-1. Ve a https://supabase.com
-2. Sign up con tu email o GitHub
-3. Crea nuevo proyecto:
-   - Nombre: `mercadord`
-   - Región: **Americas (sudamérica)** 
-   - Contraseña: genera segura (min 12 caracteres)
-4. Espera ~2 minutos a que provisione
+> El `.env.local.example` de la raíz usa el prefijo `VITE_` y corresponde a la
+> versión estática original, no a la aplicación de `web/`.
 
-### Obtener credenciales
+Las claves privilegiadas (`service_role`, credenciales del proveedor de KYC) solo
+se configuran como secretos de las Edge Functions. **Nunca** en el cliente.
 
-1. Dashboard → Settings → API
-2. Copia:
-   - **Project URL** → `VITE_SUPABASE_URL`
-   - **anon public** → `VITE_SUPABASE_ANON_KEY`
-3. Pega en `.env.local`
-
-### Deploy SQL (tablas de BD)
-
-1. Dashboard → SQL Editor
-2. Copia **TODO** de `DEPLOY_GUIDE.md PASO 2.3`
-3. Pega en Supabase SQL Editor
-4. Click "RUN" (botón play)
-5. ✅ Verifica que ves 6 tablas nuevas: `users`, `verifications`, `products`, `orders`, `auctions`, `favorites`
-
-### Configurar autenticación
-
-1. Dashboard → Authentication → Providers
-2. Habilita:
-   - ✅ **Email** (default ya está)
-   - ✅ **Google** (necesitas OAuth credentials de Google Cloud)
-   - ✅ **Phone** (opcional, requiere Twilio)
-3. Email Templates → Personaliza para MercadoRD
+La configuración de la base de datos está documentada en
+[`SUPABASE_SETUP.md`](SUPABASE_SETUP.md); el despliegue, en
+[`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md).
 
 ---
 
-## 🐛 Solucionar Problemas
+## Pruebas y CI
 
-### Problema: Las imágenes no cargan
-**Solución**: Supabase Storage no está configurado. Por ahora usa URLs externas (imgur, imgbb, etc)
+```bash
+cd web
+npm run lint         # ESLint
+npx tsc --noEmit     # Chequeo de tipos
+npm test             # Vitest
+npm run test:e2e     # Playwright
+npm run build        # Build de producción
+```
 
-### Problema: Login no funciona
-**Solución 1**: ¿Actualizaste `.env.local` con credenciales reales? Si no, está en MODO DEMO (OK)
-**Solución 2**: ¿Supabase project está activo? Revisa en https://app.supabase.com
+Las pruebas unitarias cubren la lógica pura de `src/lib`: validación de productos,
+de reseñas y de reportes, filtros, paginación, utilidades de subasta, formato de
+moneda y construcción de URLs de navegación. Los end-to-end recorren catálogo,
+exploración, subastas, publicación, autenticación, contacto y páginas estáticas.
 
-### Problema: Verificación de identidad no guarda datos
-**Solución**: La cámara captura OK, pero la tabla `verifications` de Supabase no existe. Ejecuta el SQL del DEPLOY_GUIDE.md
-
-### Problema: "Module not found @supabase/supabase-js"
-**Solución**: El navegador la descarga del CDN automáticamente. Si no funciona en producción, instala: `npm install` (si usas build tools)
-
-### Problema: CORS error en consola
-**Solución**: Normal en desarrollo local. Al deploy a Vercel + Supabase, se resuelve automáticamente.
-
-### Ver más ayuda
-Consulta la sección **"Problemas Comunes"** en [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md)
+El workflow `CI (web)` ejecuta lint, tipos, unitarias y build en un job, y
+Playwright en otro, en cada push y pull request que toque `web/`.
 
 ---
 
-## 📞 Soporte
+## Despliegue
 
-| Canal | Para qué | Respuesta |
-|-------|---------|----------|
-| **Issues en GitHub** | Bugs, features requests | 24-48h |
-| **Email**: support@mercadord.do | Soporte usuario | 24h |
-| **WhatsApp**: +1 (XXX) XXX-XXXX | Urgencias | 1-2h |
-| **Discord** (futuro) | Chat comunidad | Real-time |
+Vercel, con despliegue continuo desde `main`. `vercel.json` define los rewrites,
+las cabeceras de seguridad y la política de caché (activos versionados de `css/`
+y `js/` como inmutables durante un año; imágenes y fuentes con revalidación
+diaria).
 
----
+Tras un despliegue puede hacer falta promover explícitamente la build para que
+los dominios apunten a ella:
 
-## 📄 Licencia
-
-MercadoRD © 2024 Todos los derechos reservados.
-
-**Cumplimiento legal:**
-- ✅ Ley 172-13 RD (Verificación de identidad)
-- ✅ Términos de uso (10 cláusulas completas)
-- ✅ Política de privacidad (en footer)
-- ✅ Protección datos personales
+```bash
+vercel promote <url-del-deployment>
+```
 
 ---
 
-## 🎯 Próximas Mejoras
+## Licencia
 
-- 🔄 Sistema de pagos (mPago, Stripe)
-- 📸 Almacenamiento de imágenes en Supabase Storage
-- 💬 Chat en vivo entre comprador-vendedor
-- 📊 Dashboard vendedor con analytics
-- 🏆 Sistema de reputación (estrellas)
-- 🤖 Validación automática de documentos (Google Vision API)
-- 📧 Notificaciones por email
-- 📲 App móvil nativa
-
----
-
-**¿Listo para ir a producción?** Sigue la [GUÍA DE DEPLOYMENT](DEPLOY_GUIDE.md) 🚀
-
-### Footer
-- ✅ Newsletter
-- ✅ 5 columnas: Compradores, Vendedores, MercadoRD, Contacto + Redes
-- ✅ 6 redes sociales con íconos SVG
-- ✅ Sitios especiales: Seller Center, Retorno, Comunidad...
-- ✅ 6 modales legales: Términos, Privacidad, Cookies, Anti-fraude, Devoluciones, Accesibilidad
-- ✅ Métodos de pago dominicanos
-
----
-
-## 🔮 Próximos pasos
-
-- [ ] Base de datos real (Supabase PostgreSQL)
-- [ ] Subida de imágenes (Supabase Storage)
-- [ ] Pasarela de pago (CardNet, Azul, PayPal)
-- [ ] Sistema de mensajería
-- [ ] Panel de administrador
-- [ ] Notificaciones WhatsApp
-- [ ] App móvil (React Native)
-
----
-
-**Desarrollado con ❤️ para la República Dominicana 🇩🇴**
+MercadoRD © 2026. Todos los derechos reservados.
